@@ -60,7 +60,7 @@
   }
 
   async function load() {
-    const snap = root.WC.SNAPSHOT.matches;
+    const snap = (root.WC.SNAPSHOT && root.WC.SNAPSHOT.matches) || [];
     try {
       const live = await fetchLive();
       const payload = { updatedAt: Date.now(), matches: live };
