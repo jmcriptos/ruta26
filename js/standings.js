@@ -72,7 +72,45 @@
     return { teamId: null, label: ph };
   }
 
-  const standings = { computeGroups: computeGroups, groupFinished: groupFinished, rankThirds: rankThirds, resolveSlot: resolveSlot };
+  function nextMatch(num, koMatches) {
+    return koMatches.find(function (x) { return x.phA === "W" + num || x.phB === "W" + num; }) || null;
+  }
+
+  function chainFrom(match, koMatches) {
+    const route = [];
+    let cur = match;
+    while (cur) {
+      route.push(cur);
+      cur = nextMatch(cur.num, koMatches);
+    }
+    return route; // el 3er puesto nunca entra: solo se llega vía RU
+  }
+
+  function teamRoute(teamId, scenario, data) {
+    const team = data.teams[teamId];
+    const ko = data.matches.filter(function (x) { return x.stage !== "group" && x.stage !== "third"; });
+    const real = ko.filter(function (x) { return x.home === teamId || x.away === teamId; });
+    if (real.length) {
+      const eliminated = real.some(function (x) {
+        return x.status === "played" && x.winner && x.winner !== teamId;
+      });
+      const last = real[real.length - 1];
+      const tail = eliminated ? [] : chainFrom(last, ko).slice(1);
+      return { mode: "real", eliminated: eliminated, segments: [{ certain: true, matches: real.concat(tail) }] };
+    }
+    const entries = ko.filter(function (x) {
+      if (scenario === 3) {
+        return [x.phA, x.phB].some(function (p) { return p && /^3[A-L]+$/.test(p) && p.indexOf(team.group) !== -1; });
+      }
+      return x.phA === String(scenario) + team.group || x.phB === String(scenario) + team.group;
+    });
+    return {
+      mode: "scenario", eliminated: false,
+      segments: entries.map(function (e) { return { certain: scenario !== 3, matches: chainFrom(e, ko) }; })
+    };
+  }
+
+  const standings = { computeGroups: computeGroups, groupFinished: groupFinished, rankThirds: rankThirds, resolveSlot: resolveSlot, teamRoute: teamRoute };
   root.WC = root.WC || {};
   root.WC.standings = standings;
   if (typeof module !== "undefined" && module.exports) module.exports = standings;

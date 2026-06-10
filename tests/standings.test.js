@@ -101,3 +101,57 @@ test("resolveSlot: terceros, ganador y perdedor", () => {
   assert.strictEqual(st.resolveSlot("W99", ctx).teamId, null);
   assert.strictEqual(st.resolveSlot("W99", ctx).label, "Gana P99");
 });
+
+function ko(num, stage, phA, phB, extra) {
+  return Object.assign({ id: "m" + num, num: num, stage: stage, group: null, date: "2026-07-01T19:00:00Z",
+    city: "", stadium: "", home: null, away: null, phA: phA, phB: phB,
+    hs: null, as: null, hp: null, ap: null, status: "scheduled", winner: null }, extra || {});
+}
+
+// Mini-bracket: 73 (1A vs 2B) y 74 (3ABCD vs 2A) → 89 (W73 vs W74) → 97 (W89 vs W90)
+const MINI_KO = [
+  ko(73, "r32", "1A", "2B"), ko(74, "r32", "3ABCD", "2A"),
+  ko(89, "r16", "W73", "W74"), ko(90, "r16", "W75", "W76"),
+  ko(97, "qf", "W89", "W90")
+];
+const MINI_TEAMS = makeTeams({ A: ["a1", "a2", "a3", "a4"] });
+const MINI_DATA = { matches: MINI_KO, teams: MINI_TEAMS, tables: {} };
+
+test("teamRoute: escenario 1º — cadena determinista", () => {
+  const r = st.teamRoute("a1", 1, MINI_DATA);
+  assert.strictEqual(r.mode, "scenario");
+  assert.strictEqual(r.segments.length, 1);
+  assert.strictEqual(r.segments[0].certain, true);
+  assert.deepStrictEqual(r.segments[0].matches.map(function (m) { return m.num; }), [73, 89, 97]);
+});
+
+test("teamRoute: escenario 2º — entra por el placeholder 2A", () => {
+  const r = st.teamRoute("a1", 2, MINI_DATA);
+  assert.deepStrictEqual(r.segments[0].matches.map(function (m) { return m.num; }), [74, 89, 97]);
+});
+
+test("teamRoute: escenario 3º — rutas posibles, no certeras", () => {
+  const r = st.teamRoute("a1", 3, MINI_DATA);
+  assert.strictEqual(r.segments.length, 1); // solo el 74 contiene 3ABCD con A
+  assert.strictEqual(r.segments[0].certain, false);
+  assert.deepStrictEqual(r.segments[0].matches.map(function (m) { return m.num; }), [74, 89, 97]);
+});
+
+test("teamRoute: presencia real en el bracket gana al escenario", () => {
+  const matches = MINI_KO.map(function (m) { return Object.assign({}, m); });
+  matches[0].home = "a1"; matches[0].away = "b2"; // a1 ya está en el 73
+  const r = st.teamRoute("a1", 3, { matches: matches, teams: MINI_TEAMS, tables: {} });
+  assert.strictEqual(r.mode, "real");
+  assert.strictEqual(r.eliminated, false);
+  assert.deepStrictEqual(r.segments[0].matches.map(function (m) { return m.num; }), [73, 89, 97]);
+});
+
+test("teamRoute: eliminado en eliminatorias", () => {
+  const matches = MINI_KO.map(function (m) { return Object.assign({}, m); });
+  matches[0].home = "a1"; matches[0].away = "b2";
+  matches[0].status = "played"; matches[0].winner = "b2"; matches[0].hs = 0; matches[0].as = 1;
+  const r = st.teamRoute("a1", 1, { matches: matches, teams: MINI_TEAMS, tables: {} });
+  assert.strictEqual(r.mode, "real");
+  assert.strictEqual(r.eliminated, true);
+  assert.deepStrictEqual(r.segments[0].matches.map(function (m) { return m.num; }), [73]);
+});
