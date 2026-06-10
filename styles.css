@@ -645,12 +645,37 @@ html { scroll-padding-top: calc(84px + env(safe-area-inset-top)); }
   .pick-1x2 button { font-size: 12px; min-width: 72px; }
 }
 
-/* ranking compacto en móvil: solo #, jugador y puntos (el desglose se oculta) */
+/* ranking compacto en móvil: oculta el desglose marcado con .col-x */
 @media (max-width: 680px) {
   .rank-table { font-size: 14px; }
   .rank-table th, .rank-table td { padding: 11px 6px; }
   .rank-table td.num { font-size: 15px; }
-  .rank-table th:nth-child(3), .rank-table td:nth-child(3),
-  .rank-table th:nth-child(4), .rank-table td:nth-child(4),
-  .rank-table th:nth-child(5), .rank-table td:nth-child(5) { display: none; }
+  .rank-table .col-x { display: none; }
+}
+
+/* ===== Quiniela visual: tarjetas de enfrentamiento ===== */
+.pick-card { background: var(--paper-bright); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; margin-bottom: 12px; box-shadow: 0 6px 20px rgba(12,29,23,.04); }
+.pick-card:last-child { margin-bottom: 0; }
+.pick-head { display: flex; justify-content: space-between; font-size: 11px; font-weight: 800; letter-spacing: .5px; text-transform: uppercase; color: var(--muted); margin-bottom: 12px; }
+.pick-matchup { display: flex; align-items: center; justify-content: center; gap: 16px; margin-bottom: 14px; }
+.pick-matchup .pm-team { flex: 1; text-align: center; min-width: 0; }
+.pick-matchup .pm-flag { display: block; font-size: 40px; line-height: 1; }
+.pick-matchup .pm-name { display: block; margin-top: 5px; font-weight: 700; font-size: 14px; }
+.pick-matchup .pm-vs { font: 800 14px "League Spartan", sans-serif; color: var(--line); flex: 0 0 auto; }
+
+.pick-card .pick-controls { display: flex; align-items: center; justify-content: center; gap: 6px; }
+.pick-card .pick-controls .pcf { font-size: 22px; }
+.pick-card .pick-1x2 button .b1f { display: block; font-size: 20px; line-height: 1; margin-bottom: 1px; }
+.pick-card .pick-state { display: block; text-align: right; margin-top: 10px; }
+.pick-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; border-top: 1px solid var(--line); padding-top: 10px; }
+.pick-foot small { color: var(--muted); font-size: 12px; }
+
+/* medallas y bandera del campeón en el ranking */
+.rank-table td.pos { font-size: 18px; text-align: center; width: 30px; }
+.rank-table td.pos .num { font: 800 16px "League Spartan", sans-serif; color: var(--muted); }
+.rank-table td.flag { font-size: 22px; width: 30px; text-align: center; }
+
+@media (max-width: 680px) {
+  .pick-matchup .pm-flag { font-size: 34px; }
+  .pick-card .pick-1x2 button { min-width: 0; }
 }

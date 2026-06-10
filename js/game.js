@@ -39,6 +39,13 @@
   function kicked(m) { return new Date(m.date).getTime() <= Date.now(); }
   function championOpen() { return Date.now() < new Date(WC.scoring.CHAMPION_LOCK).getTime(); }
   function teamName(id) { const t = WC.state.teams[id]; return t ? t.flag + " " + esc(t.name) : "—"; }
+  function teamFlag(id) { const t = WC.state.teams[id]; return t && t.flag ? t.flag : "🏳️"; }
+  // bandera del campeón de un usuario, respetando lo que el RLS dejó ver (champion_picks ajenos
+  // solo llegan tras el cierre; antes, solo el propio). Si no hay pick visible → escudo.
+  function champFlagFor(userId) {
+    const pk = data.picks.find(function (r) { return r.user_id === userId; });
+    return pk ? teamFlag(pk.team_id) : "🛡️";
+  }
 
   /* ---------- auth ---------- */
   async function signUp(username, password) {
@@ -165,11 +172,26 @@
     return "Avanza " + esc(adv) + (v.pens ? " (pen)" : "");
   }
 
+  function advId(m, side) {
+    const direct = side === "home" ? m.home : m.away;
+    if (direct) return direct;
+    const slot = WC.standings.resolveSlot(side === "home" ? m.phA : m.phB, WC.slotCtx());
+    return slot.teamId || null;
+  }
+
+  function matchupHtml(m) {
+    const hId = advId(m, "home"), aId = advId(m, "away");
+    return '<div class="pick-matchup">' +
+      '<div class="pm-team"><span class="pm-flag">' + (hId ? teamFlag(hId) : "🏳️") + '</span><span class="pm-name">' + esc(WC.slotName(m, "home")) + "</span></div>" +
+      '<span class="pm-vs">VS</span>' +
+      '<div class="pm-team"><span class="pm-flag">' + (aId ? teamFlag(aId) : "🏳️") + '</span><span class="pm-name">' + esc(WC.slotName(m, "away")) + "</span></div></div>";
+  }
+
   function pickRowHtml(m) {
     const v = mine[m.id];
     const locked = kicked(m);
-    const when = WC.fmt.dayLocal(m.date) + " · " + WC.fmt.timeLocal(m.date) + " · " + WC.stageLabel(m);
-    const names = esc(WC.slotName(m, "home")) + " vs " + esc(WC.slotName(m, "away"));
+    const when = WC.fmt.dayLocal(m.date) + " · " + WC.fmt.timeLocal(m.date);
+    const head = '<div class="pick-head"><span>' + when + "</span><span>" + WC.stageLabel(m) + "</span></div>" + matchupHtml(m);
     if (locked) {
       const s = WC.scoring.scoreMatch(v ? { hg: v.hg, ag: v.ag, pens: v.pens } : null, m);
       const real = m.status !== "scheduled" && m.hs != null
@@ -178,9 +200,8 @@
       const chip = s.kind === "none" ? '<span class="pick-points miss">sin pick</span>'
         : s.kind === "pending" ? '<span class="pick-points pending">en juego</span>'
         : '<span class="pick-points ' + s.kind + '">' + (s.points > 0 ? "+" + s.points + " pts" : "0 pts") + "</span>";
-      return '<div class="pick-row locked" data-match="' + m.id + '">' +
-        '<div class="pick-info"><strong>' + names + "</strong><small>" + when + " · Tu pick: " + pickLabel(m, v) + " · Real: " + real + "</small></div>" +
-        chip + "</div>";
+      return '<div class="pick-card locked" data-match="' + m.id + '">' + head +
+        '<div class="pick-foot"><small>Tu pick: ' + pickLabel(m, v) + " · Real: " + real + "</small>" + chip + "</div></div>";
     }
     const type = predType(m);
     let controls;
@@ -188,27 +209,29 @@
       const hg = v ? v.hg : "·";
       const ag = v ? v.ag : "·";
       controls = '<div class="pick-controls">' +
+        '<span class="pcf">' + teamFlag(m.home) + "</span>" +
         '<button type="button" data-step="hg,-1" aria-label="Menos goles local">−</button><b data-val="hg">' + hg + "</b>" +
         '<button type="button" data-step="hg,1" aria-label="Más goles local">+</button>' +
         "<i>:</i>" +
         '<button type="button" data-step="ag,-1" aria-label="Menos goles visitante">−</button><b data-val="ag">' + ag + "</b>" +
-        '<button type="button" data-step="ag,1" aria-label="Más goles visitante">+</button></div>';
+        '<button type="button" data-step="ag,1" aria-label="Más goles visitante">+</button>' +
+        '<span class="pcf">' + teamFlag(m.away) + "</span></div>";
     } else if (type === "1x2") {
       const sel = v ? (v.hg > v.ag ? "h" : (v.hg < v.ag ? "a" : "x")) : "";
       controls = '<div class="pick-1x2">' +
-        '<button type="button" data-1x2="h" class="' + (sel === "h" ? "on" : "") + '">Gana ' + esc(WC.slotName(m, "home")) + "</button>" +
+        '<button type="button" data-1x2="h" class="' + (sel === "h" ? "on" : "") + '"><span class="b1f">' + teamFlag(m.home) + "</span>Gana</button>" +
         '<button type="button" data-1x2="x" class="' + (sel === "x" ? "on" : "") + '">Empate</button>' +
-        '<button type="button" data-1x2="a" class="' + (sel === "a" ? "on" : "") + '">Gana ' + esc(WC.slotName(m, "away")) + "</button></div>";
+        '<button type="button" data-1x2="a" class="' + (sel === "a" ? "on" : "") + '"><span class="b1f">' + teamFlag(m.away) + "</span>Gana</button></div>";
     } else {
       const sel = v ? (v.hg > v.ag ? "h" : "a") : "";
+      const hId = advId(m, "home"), aId = advId(m, "away");
       controls = '<div class="pick-1x2 ko">' +
-        '<button type="button" data-adv="h" class="' + (sel === "h" ? "on" : "") + '">Avanza ' + esc(WC.slotName(m, "home")) + "</button>" +
-        '<button type="button" data-adv="a" class="' + (sel === "a" ? "on" : "") + '">Avanza ' + esc(WC.slotName(m, "away")) + "</button>" +
+        '<button type="button" data-adv="h" class="' + (sel === "h" ? "on" : "") + '"><span class="b1f">' + (hId ? teamFlag(hId) : "🏳️") + "</span>Avanza</button>" +
+        '<button type="button" data-adv="a" class="' + (sel === "a" ? "on" : "") + '"><span class="b1f">' + (aId ? teamFlag(aId) : "🏳️") + "</span>Avanza</button>" +
         '<button type="button" data-pens class="pens ' + (v && v.pens ? "on" : "") + '">⚽ Por penales</button></div>';
     }
     const st = stateLabel(v);
-    return '<div class="pick-row" data-match="' + m.id + '" data-type="' + type + '">' +
-      '<div class="pick-info"><strong>' + names + "</strong><small>" + when + "</small></div>" +
+    return '<div class="pick-card" data-match="' + m.id + '" data-type="' + type + '">' + head +
       controls +
       '<span class="pick-state ' + st.cls + '">' + st.text + "</span></div>";
   }
@@ -287,10 +310,11 @@
     const uid = session ? session.user.id : null;
     return '<div class="game-card"><h3>Ranking</h3>' +
       (rows.length === 0 ? '<p class="rank-empty">Aún no hay jugadores. ¡Sé el primero!</p>'
-        : '<table class="rank-table"><tr><th>#</th><th>Jugador</th><th>Exactos</th><th>Resultados</th><th>Bonus</th><th>Pts</th></tr>' +
+        : '<table class="rank-table"><tr><th>#</th><th></th><th>Jugador</th><th class="col-x">Exactos</th><th class="col-x">Resultados</th><th class="col-x">Bonus</th><th>Pts</th></tr>' +
           rows.map(function (r) {
-            return "<tr" + (r.userId === uid ? ' class="me"' : "") + '><td class="num">' + r.pos + "</td><td>" + esc(r.username) + "</td><td>" +
-              r.exact + "</td><td>" + r.outcome + "</td><td>" + (r.bonus || 0) + '</td><td class="pts">' + r.points + "</td></tr>";
+            const medal = r.pos === 1 ? "🥇" : r.pos === 2 ? "🥈" : r.pos === 3 ? "🥉" : '<span class="num">' + r.pos + "</span>";
+            return "<tr" + (r.userId === uid ? ' class="me"' : "") + '><td class="pos">' + medal + '</td><td class="flag">' + champFlagFor(r.userId) + "</td><td>" + esc(r.username) + '</td><td class="col-x">' +
+              r.exact + '</td><td class="col-x">' + r.outcome + '</td><td class="col-x">' + (r.bonus || 0) + '</td><td class="pts">' + r.points + "</td></tr>";
           }).join("") + "</table>") +
       (uid && rows.some(function (r) { return r.userId === uid; })
         ? '<div class="game-actions" style="margin-top:14px"><button class="game-btn secondary" id="gShare">Compartir mi posición</button></div>'
