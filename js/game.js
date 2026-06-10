@@ -322,7 +322,15 @@
       "</div>";
   }
 
+  function updateUserChip() {
+    const chip = document.getElementById("userChip");
+    if (!chip) return;
+    if (session && profile) { chip.textContent = profile.username; chip.hidden = false; }
+    else { chip.textContent = ""; chip.hidden = true; }
+  }
+
   function render() {
+    updateUserChip();
     if (loadError) {
       rootEl.innerHTML = '<div class="game-card game-off"><h3>El juego no está disponible ahora</h3><p>Revisa tu conexión e intenta de nuevo en un momento.</p></div>';
       return;
