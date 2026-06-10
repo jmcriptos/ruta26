@@ -531,3 +531,15 @@ html { -webkit-text-size-adjust: 100%; }
   .b-col-title { display: none; }
   .b-col { gap: 10px; }
 }
+
+/* ===== Safe area superior: el header nunca queda bajo el notch ===== */
+.topbar { height: calc(76px + env(safe-area-inset-top)); padding-top: env(safe-area-inset-top); }
+.search-overlay { padding-top: calc(120px + env(safe-area-inset-top)); }
+html { scroll-padding-top: calc(84px + env(safe-area-inset-top)); }
+
+@media (max-width: 680px) {
+  .topbar { height: calc(64px + env(safe-area-inset-top)); }
+  .hero { padding-top: calc(96px + env(safe-area-inset-top)); }
+  .team-panel { padding-top: calc(24px + env(safe-area-inset-top)); }
+  .team-panel .panel-close { top: calc(18px + env(safe-area-inset-top)); }
+}
