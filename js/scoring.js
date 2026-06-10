@@ -15,7 +15,7 @@
   // (1-0 local, 0-0 empate, 0-1 visitante); eliminatorias 1-0 avanza local / 0-1 avanza visitante.
   // kind: "exact" (solo final) | "outcome" | "miss" | "pending" | "none".
   function scoreMatch(pred, match) {
-    if (!pred) return { points: 0, kind: "none" };
+    if (!pred || pred.hg == null || pred.ag == null || !isFinite(pred.hg) || !isFinite(pred.ag)) return { points: 0, kind: "none" };
     if (match.status !== "played" || match.hs == null) return { points: 0, kind: "pending" };
 
     if (match.stage === "final") {
@@ -29,7 +29,7 @@
       return { points: 0, kind: "miss" };
     }
 
-    // eliminatorias: quién avanza (+ penales)
+    // eliminatorias: quién avanza (+ penales). La UI solo escribe (1,0) local o (0,1) visitante; 0-0 no es pick válido aquí.
     const predWinner = pred.hg > pred.ag ? match.home : match.away;
     if (!match.winner || predWinner !== match.winner) return { points: 0, kind: "miss" };
     let points = POINTS.match;
@@ -71,7 +71,7 @@
       row.bonus = b;
     });
     rows.sort(function (x, y) {
-      return y.points - x.points || y.exact - x.exact || x.username.localeCompare(y.username, "es");
+      return y.points - x.points || y.exact - x.exact || (x.username || "").localeCompare(y.username || "", "es");
     });
     let pos = 0, lastPoints = null;
     rows.forEach(function (r, i) {

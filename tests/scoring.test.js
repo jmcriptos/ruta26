@@ -99,3 +99,8 @@ test("campeón: 0 si la final no se ha jugado", () => {
   const matches = [{ id: "104", stage: "final", status: "scheduled", hs: null, as: null, winner: null, home: null, away: null }];
   assert.strictEqual(sc.scoreChampion({ team_id: "ARG" }, matches), 0);
 });
+
+test("3er puesto puntúa como eliminatoria; pred con goles null no puntúa", () => {
+  assert.deepStrictEqual(sc.scoreMatch({ hg: 1, ag: 0 }, played("third", 1, 0, "H")), { points: 1, kind: "outcome" });
+  assert.deepStrictEqual(sc.scoreMatch({ hg: null, ag: 0 }, played("group", 1, 1)), { points: 0, kind: "none" });
+});
