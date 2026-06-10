@@ -645,10 +645,12 @@ html { scroll-padding-top: calc(84px + env(safe-area-inset-top)); }
   .pick-1x2 button { font-size: 12px; min-width: 72px; }
 }
 
-/* ranking compacto en móvil para que no desborde */
+/* ranking compacto en móvil: solo #, jugador y puntos (el desglose se oculta) */
 @media (max-width: 680px) {
-  .rank-table { font-size: 13px; }
-  .rank-table th, .rank-table td { padding: 9px 4px; }
-  .rank-table th { font-size: 9px; letter-spacing: .3px; }
-  .rank-table td.num { font-size: 14px; }
+  .rank-table { font-size: 14px; }
+  .rank-table th, .rank-table td { padding: 11px 6px; }
+  .rank-table td.num { font-size: 15px; }
+  .rank-table th:nth-child(3), .rank-table td:nth-child(3),
+  .rank-table th:nth-child(4), .rank-table td:nth-child(4),
+  .rank-table th:nth-child(5), .rank-table td:nth-child(5) { display: none; }
 }
