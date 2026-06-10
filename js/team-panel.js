@@ -2,6 +2,7 @@
 (function () {
   const overlay = document.getElementById("teamPanelOverlay");
   const panel = document.getElementById("teamPanel");
+  let currentTeamId = null;
 
   function esc(s) {
     return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -26,7 +27,7 @@
       const own = isHome ? m.hs : m.as, other = isHome ? m.as : m.hs;
       score = '<span class="pm-score">' + own + " – " + other + "</span>";
     } else if (m.status === "live") {
-      score = '<span class="pm-score live">● ' + (m.hs != null ? m.hs + " – " + m.as : "EN VIVO") + "</span>";
+      score = '<span class="pm-score live">● ' + (m.hs != null ? (isHome ? m.hs : m.as) + " – " + (isHome ? m.as : m.hs) : "EN VIVO") + "</span>";
     } else {
       score = '<span class="pm-score next">Próximo</span>';
     }
@@ -37,7 +38,15 @@
   function routeSummary(teamId, pos) {
     const scenario = pos || 1;
     const route = WC.standings.teamRoute(teamId, scenario, WC.state);
-    if (route.eliminated) return "<b>Eliminado.</b> Su mundial terminó en " + WC.stageLabel(route.segments[0].matches[route.segments[0].matches.length - 1]) + ".";
+    if (route.eliminated) {
+      const third = WC.state.matches.find(function (m) {
+        return m.stage === "third" && (m.home === teamId || m.away === teamId);
+      });
+      if (third && third.status !== "played") {
+        return "<b>Va por el 3er puesto:</b> " + WC.fmt.dayLocal(third.date) + " · " + WC.fmt.timeLocal(third.date) + " · " + esc(third.city);
+      }
+      return "<b>Eliminado.</b> Su mundial terminó en " + WC.stageLabel(route.segments[0].matches[route.segments[0].matches.length - 1]) + ".";
+    }
     if (!route.segments.length) return "Sin ruta calculable todavía.";
     const seg = route.segments[0];
     const intro = route.mode === "real" ? "<b>Ruta confirmada:</b> " :
@@ -51,11 +60,12 @@
   function open(teamId) {
     const t = WC.state.teams[teamId];
     if (!t) return;
+    currentTeamId = teamId;
     const info = positionInfo(teamId);
     const games = WC.state.matches.filter(function (m) { return m.home === teamId || m.away === teamId; });
     panel.innerHTML =
       '<button class="panel-close" aria-label="Cerrar">×</button>' +
-      '<div class="panel-head"><span class="panel-flag">' + t.flag + "</span><div><h3>" + t.name + "</h3>" +
+      '<div class="panel-head"><span class="panel-flag">' + t.flag + "</span><div><h3>" + esc(t.name) + "</h3>" +
       "<small>Grupo " + t.group + (t.host ? " · país anfitrión" : "") + "</small></div></div>" +
       '<span class="panel-pos">' + info.text + "</span>" +
       '<p class="panel-kicker">Sus partidos</p>' +
@@ -66,9 +76,12 @@
     overlay.classList.add("open");
     overlay.setAttribute("aria-hidden", "false");
     document.body.style.overflow = "hidden";
+    const closeBtn = panel.querySelector(".panel-close");
+    if (closeBtn) closeBtn.focus();
   }
 
   function close() {
+    currentTeamId = null;
     overlay.classList.remove("open");
     overlay.setAttribute("aria-hidden", "true");
     document.body.style.overflow = "";
@@ -84,5 +97,9 @@
     }
   });
 
-  WC.teamPanel = { open: open, close: close };
+  WC.teamPanel = {
+    open: open,
+    close: close,
+    refresh: function () { if (currentTeamId) open(currentTeamId); }
+  };
 })();

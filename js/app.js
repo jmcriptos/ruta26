@@ -257,6 +257,7 @@
     renderHero();
     renderStatus();
     WC.bracket.render();
+    if (WC.teamPanel.refresh) WC.teamPanel.refresh();
   }
   WC.renderAll = renderAll;
 
