@@ -35,7 +35,7 @@
   function matchById(id) { return matches().find(function (m) { return m.id === id; }); }
   function kicked(m) { return new Date(m.date).getTime() <= Date.now(); }
   function championOpen() { return Date.now() < new Date(WC.scoring.CHAMPION_LOCK).getTime(); }
-  function teamName(id) { const t = WC.state.teams[id]; return t ? t.flag + " " + t.name : "—"; }
+  function teamName(id) { const t = WC.state.teams[id]; return t ? t.flag + " " + esc(t.name) : "—"; }
 
   /* ---------- auth ---------- */
   async function signUp(username, password) {
@@ -106,9 +106,10 @@
         v.state = "err"; v.error = "En eliminatorias no vale empate";
         paintRow(matchId); return;
       }
+      const uid = session.user.id;
       v.state = "saving"; paintRow(matchId);
       const res = await client.from("predictions").upsert({
-        user_id: session.user.id, match_id: matchId, hg: v.hg, ag: v.ag,
+        user_id: uid, match_id: matchId, hg: v.hg, ag: v.ag,
         updated_at: new Date().toISOString()
       });
       if (res.error) {
@@ -116,7 +117,6 @@
         v.error = /policy|row-level|violates/i.test(res.error.message) ? "Este partido ya cerró" : "No se pudo guardar";
       } else {
         v.state = "saved"; v.error = null;
-        const uid = session.user.id;
         const idx = data.predictions.findIndex(function (r) { return r.user_id === uid && r.match_id === matchId; });
         const row = { user_id: uid, match_id: matchId, hg: v.hg, ag: v.ag };
         if (idx >= 0) data.predictions[idx] = row; else data.predictions.push(row);
@@ -126,16 +126,16 @@
   }
 
   async function saveChampion(teamId) {
+    const uid = session.user.id;
     const box = document.getElementById("champState");
     if (box) box.textContent = "Guardando…";
     const res = await client.from("champion_picks").upsert({
-      user_id: session.user.id, team_id: teamId, updated_at: new Date().toISOString()
+      user_id: uid, team_id: teamId, updated_at: new Date().toISOString()
     });
     if (res.error) {
       if (box) box.textContent = /policy|row-level/i.test(res.error.message) ? "La elección de campeón ya cerró" : "No se pudo guardar";
     } else {
       myPick = teamId;
-      const uid = session.user.id;
       const idx = data.picks.findIndex(function (r) { return r.user_id === uid; });
       const row = { user_id: uid, team_id: teamId };
       if (idx >= 0) data.picks[idx] = row; else data.picks.push(row);
@@ -233,7 +233,7 @@
     const opts = Object.values(WC.state.teams)
       .sort(function (a, b) { return a.name.localeCompare(b.name, "es"); })
       .map(function (t) {
-        return '<option value="' + t.id + '"' + (myPick === t.id ? " selected" : "") + ">" + t.flag + " " + t.name + "</option>";
+        return '<option value="' + t.id + '"' + (myPick === t.id ? " selected" : "") + ">" + t.flag + " " + esc(t.name) + "</option>";
       });
     return '<div class="game-card"><h3>Mi campeón 🏆</h3>' +
       (open
@@ -286,6 +286,7 @@
       if (!mine[matchId]) mine[matchId] = { hg: 0, ag: 0, state: "saving" };
       const v = mine[matchId];
       v[field] = Math.max(0, Math.min(99, v[field] + delta));
+      v.state = "saving";
       paintRow(matchId);
       savePrediction(matchId);
       return;
@@ -321,8 +322,19 @@
     if (event.target.id === "gChamp" && event.target.value) saveChampion(event.target.value);
   });
 
+  rootEl.addEventListener("keydown", function (event) {
+    if (event.key === "Enter" && (event.target.id === "gUser" || event.target.id === "gPass")) {
+      const btn = document.getElementById("gLogin");
+      if (btn) btn.click();
+    }
+  });
+
   /* ---------- ciclo de vida ---------- */
+  let lastAuthUserId;
   client.auth.onAuthStateChange(function (eventName, s) {
+    const newId = s && s.user ? s.user.id : null;
+    if (typeof lastAuthUserId !== "undefined" && newId === lastAuthUserId) return; // TOKEN_REFRESHED etc.
+    lastAuthUserId = newId;
     session = s;
     (async function () {
       if (session) await ensureProfile(session.user);
@@ -334,7 +346,7 @@
 
   WC.game = {
     onDataUpdate: function () {
-      // tras cada poll de resultados FIFA, refresca puntos y bloqueos —
+      // tras cada refresh de resultados FIFA (carga inicial o manual), refresca puntos y bloqueos —
       // sin pisar una edición en curso (timers de guardado activos)
       const editing = Object.keys(saveTimers).some(function (k) {
         const v = mine[k]; return v && v.state === "saving";
@@ -347,6 +359,7 @@
   (async function init() {
     const got = await client.auth.getSession();
     session = got.data ? got.data.session : null;
+    lastAuthUserId = session && session.user ? session.user.id : null;
     if (session) await ensureProfile(session.user);
     await loadAll();
     render();
