@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Calendario, selecciones y proyecciones del Mundial 2026.">
+  <title>Ruta 26 | Mundial 2026</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="noise"></div>
+  <header class="topbar">
+    <a class="brand" href="#inicio" aria-label="Ruta 26, volver al inicio">
+      <span class="brand-ball" aria-hidden="true">26</span>
+      <span>RUTA<span>AL</span>TÍTULO</span>
+    </a>
+    <nav class="main-nav" aria-label="Navegación principal">
+      <a class="active" href="#inicio">Inicio</a>
+      <a href="#partidos">Partidos</a>
+      <a href="#equipos">Equipos</a>
+      <a href="#proyecciones">Proyecciones</a>
+    </nav>
+    <div class="header-actions">
+      <button class="icon-button" id="searchToggle" aria-label="Buscar selección" title="Buscar selección">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="m16 16 4 4"></path></svg>
+      </button>
+      <button class="menu-button" id="menuToggle" aria-label="Abrir menú">
+        <span></span><span></span>
+      </button>
+    </div>
+  </header>
+
+  <div class="search-overlay" id="searchOverlay" aria-hidden="true">
+    <div class="search-box">
+      <label for="globalSearch">Encuentra tu selección</label>
+      <div class="search-field">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="m16 16 4 4"></path></svg>
+        <input id="globalSearch" type="search" placeholder="Ej. Argentina, Curaçao, Japón...">
+        <button id="searchClose" aria-label="Cerrar búsqueda">×</button>
+      </div>
+      <div class="search-results" id="searchResults"></div>
+    </div>
+  </div>
+
+  <main>
+    <section class="hero" id="inicio">
+      <div class="hero-orbit orbit-one"></div>
+      <div class="hero-orbit orbit-two"></div>
+      <div class="hero-copy">
+        <div class="eyebrow"><span></span> Canadá · México · Estados Unidos</div>
+        <h1>El mundo<br><em>juega aquí.</em></h1>
+        <p class="hero-lede">Todo el Mundial 2026 en un solo lugar. Fechas, partidos, selecciones y el pulso de cada candidato.</p>
+        <div class="hero-actions">
+          <a class="primary-button" href="#partidos">Ver próximos partidos <span>↗</span></a>
+          <a class="text-button" href="#equipos">Explorar 48 equipos <span>→</span></a>
+        </div>
+      </div>
+
+      <div class="hero-visual" aria-hidden="true">
+        <div class="globe-lines"></div>
+        <div class="ball">
+          <span class="ball-mark ball-mark-one"></span>
+          <span class="ball-mark ball-mark-two"></span>
+          <span class="ball-mark ball-mark-three"></span>
+          <strong>26</strong>
+          <small>UNITED</small>
+        </div>
+        <div class="location-tag tag-mex"><span></span> México</div>
+        <div class="location-tag tag-can"><span></span> Canadá</div>
+        <div class="location-tag tag-usa"><span></span> Estados Unidos</div>
+      </div>
+
+      <div class="countdown-panel">
+        <div class="countdown-intro">
+          <span class="live-dot"></span>
+          <div>
+            <small>Cuenta regresiva</small>
+            <strong>México vs Sudáfrica</strong>
+          </div>
+        </div>
+        <div class="countdown" id="countdown">
+          <div><strong id="days">04</strong><span>Días</span></div>
+          <i>:</i>
+          <div><strong id="hours">00</strong><span>Horas</span></div>
+          <i>:</i>
+          <div><strong id="minutes">00</strong><span>Min</span></div>
+          <i>:</i>
+          <div><strong id="seconds">00</strong><span>Seg</span></div>
+        </div>
+        <div class="opening-meta">
+          <span>11 JUN · 15:00 UTC−4</span>
+          <small>Ciudad de México</small>
+        </div>
+      </div>
+    </section>
+
+    <section class="snapshot section-shell">
+      <div class="stat-card featured">
+        <span class="stat-icon">◉</span>
+        <p>La edición más grande de la historia</p>
+        <strong>48</strong>
+        <small>selecciones clasificadas</small>
+      </div>
+      <div class="stat-card">
+        <span class="stat-number">104</span>
+        <div><strong>Partidos</strong><small>en 39 días</small></div>
+      </div>
+      <div class="stat-card">
+        <span class="stat-number">16</span>
+        <div><strong>Ciudades</strong><small>en 3 países</small></div>
+      </div>
+      <div class="stat-card">
+        <span class="stat-number">12</span>
+        <div><strong>Grupos</strong><small>4 equipos por grupo</small></div>
+      </div>
+    </section>
+
+    <section class="matches section-shell" id="partidos">
+      <div class="section-heading">
+        <div>
+          <span class="section-kicker">El torneo, partido a partido · Horarios UTC−4</span>
+          <h2>Próximos encuentros</h2>
+        </div>
+        <div class="match-tabs" role="tablist" aria-label="Filtrar partidos">
+          <button class="active" data-match-filter="upcoming">Próximos</button>
+          <button data-match-filter="results">Resultados</button>
+          <button data-match-filter="all">Todos</button>
+        </div>
+      </div>
+
+      <div class="date-strip" id="dateStrip" aria-label="Filtrar por fecha"></div>
+      <div class="matches-grid" id="matchesGrid"></div>
+      <div class="results-empty" id="resultsEmpty" hidden>
+        <div class="empty-ball">0–0</div>
+        <div>
+          <h3>El balón todavía no rueda</h3>
+          <p>Los resultados aparecerán aquí desde el partido inaugural del 11 de junio.</p>
+        </div>
+      </div>
+      <button class="outline-button" id="showMoreMatches">Ver más partidos <span>↓</span></button>
+    </section>
+
+    <section class="timeline-section">
+      <div class="section-shell">
+        <div class="section-heading light">
+          <div>
+            <span class="section-kicker">Guarda estas fechas</span>
+            <h2>La ruta hacia la final</h2>
+          </div>
+          <p>De 48 sueños a un campeón. Cinco semanas de fútbol atravesando Norteamérica.</p>
+        </div>
+        <div class="phase-track">
+          <div class="phase active"><span>01</span><strong>Fase de grupos</strong><small>11 – 27 JUN</small></div>
+          <div class="phase"><span>02</span><strong>Dieciseisavos</strong><small>28 JUN – 3 JUL</small></div>
+          <div class="phase"><span>03</span><strong>Octavos</strong><small>4 – 7 JUL</small></div>
+          <div class="phase"><span>04</span><strong>Cuartos</strong><small>9 – 11 JUL</small></div>
+          <div class="phase"><span>05</span><strong>Semifinales</strong><small>14 – 15 JUL</small></div>
+          <div class="phase final"><span>★</span><strong>La gran final</strong><small>19 JUL · NY/NJ</small></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="teams section-shell" id="equipos">
+      <div class="section-heading">
+        <div>
+          <span class="section-kicker">Todos quieren hacer historia</span>
+          <h2>48 selecciones. Un sueño.</h2>
+        </div>
+        <label class="team-search">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="m16 16 4 4"></path></svg>
+          <input id="teamSearch" type="search" placeholder="Buscar equipo">
+        </label>
+      </div>
+      <div class="groups-grid" id="groupsGrid"></div>
+      <p class="no-teams" id="noTeams" hidden>No encontramos una selección con ese nombre.</p>
+    </section>
+
+    <section class="projections" id="proyecciones">
+      <div class="section-shell">
+        <div class="projection-heading">
+          <div>
+            <span class="section-kicker">Radar de favoritos</span>
+            <h2>¿Quién levanta la copa?</h2>
+            <p>Probabilidad estimada por el mercado antes del inicio. No es un resultado oficial y puede cambiar.</p>
+          </div>
+          <div class="update-pill"><span></span> Actualizado 5 JUN 2026</div>
+        </div>
+        <div class="projection-layout">
+          <article class="leader-card">
+            <div class="leader-top">
+              <span class="rank">01</span>
+              <span class="trend up">↗ favorita</span>
+            </div>
+            <span class="mega-flag">🇪🇸</span>
+            <h3>España</h3>
+            <p>Control, juventud y una identidad que ya sabe ganar.</p>
+            <div class="leader-probability">
+              <strong>16.5%</strong>
+              <span>prob. de ser campeón</span>
+            </div>
+            <div class="probability-bar"><span style="width: 82.5%"></span></div>
+          </article>
+          <div class="ranking-list" id="rankingList"></div>
+        </div>
+        <div class="projection-note">
+          <span>i</span>
+          <p>Estas probabilidades reflejan precios de mercado publicados el 5 de junio de 2026. Sirven como termómetro, no como garantía.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="host-cities">
+      <div class="city-card mexico">
+        <span>01</span><div><small>MÉXICO</small><strong>Donde todo comienza</strong><p>Ciudad de México · Guadalajara · Monterrey</p></div>
+      </div>
+      <div class="city-card canada">
+        <span>02</span><div><small>CANADÁ</small><strong>El norte hace historia</strong><p>Toronto · Vancouver</p></div>
+      </div>
+      <div class="city-card usa">
+        <span>03</span><div><small>ESTADOS UNIDOS</small><strong>Donde se corona al campeón</strong><p>11 ciudades · Final en New York New Jersey</p></div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <a class="brand footer-brand" href="#inicio">
+      <span class="brand-ball">26</span>
+      <span>RUTA<span>AL</span>TÍTULO</span>
+    </a>
+    <p>Una guía independiente para vivir el Mundial 2026.</p>
+    <div class="sources">
+      <span>Datos:</span>
+      <a href="https://www.fifa.com/en/tournaments/mens/worldcup/canadamexicousa2026/articles/match-schedule-fixtures-results-teams-stadiums" target="_blank" rel="noreferrer">FIFA</a>
+      <a href="https://www.covers.com/world-cup/odds" target="_blank" rel="noreferrer">Proyecciones</a>
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
