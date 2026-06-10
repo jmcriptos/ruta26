@@ -498,3 +498,36 @@ html { -webkit-text-size-adjust: 100%; }
   main { padding-bottom: 8px; }
   footer { padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
 }
+
+/* ===== Mobile ronda 3: nav limpia, contador y bracket por rondas ===== */
+.round-tabs { display: none; }
+
+@media (max-width: 680px) {
+  /* 1) la bottom bar navega: fuera hamburguesa */
+  .menu-button { display: none; }
+
+  /* 2) contador como tarjeta vertical */
+  .countdown-panel { flex-direction: column; align-items: stretch; gap: 16px; padding: 20px 18px 16px; }
+  .countdown-intro { min-width: 0; }
+  .countdown { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; }
+  .countdown i { display: none; }
+  .countdown div { position: relative; }
+  .countdown div:not(:first-child)::before { content: ""; position: absolute; left: 0; top: 8px; bottom: 12px; width: 1px; background: rgba(255,255,255,.12); }
+  .countdown strong { font-size: 40px; }
+  .countdown span { font-size: 10px; }
+  .opening-meta { min-width: 0; text-align: center; padding-top: 14px; border-top: 1px solid rgba(255,255,255,.1); }
+  .opening-meta span { font-size: 13px; }
+  .opening-meta small { margin-bottom: 4px; }
+
+  /* 3) bracket por rondas: pestañas + lista vertical, cero scroll horizontal */
+  .round-tabs { display: flex; gap: 6px; margin: 10px 0 0; overflow-x: auto; scrollbar-width: none; }
+  .round-tabs::-webkit-scrollbar { display: none; }
+  .round-tabs button { flex: 1 0 auto; min-height: 44px; padding: 10px 14px; border-radius: 999px; border: 1px solid rgba(255,255,255,.2); background: none; color: var(--paper-bright); font-size: 12px; font-weight: 700; cursor: pointer; }
+  .round-tabs button.active { background: var(--lime); border-color: var(--lime); color: var(--ink); }
+  .bracket-scroll { overflow-x: visible; padding-top: 16px; }
+  .bracket { display: block; min-width: 0; }
+  .bracket > div { display: none; }
+  .bracket > div.mobile-active { display: block; }
+  .b-col-title { display: none; }
+  .b-col { gap: 10px; }
+}

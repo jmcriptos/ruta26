@@ -3,12 +3,14 @@
   const grid = document.getElementById("bracketGrid");
   const select = document.getElementById("bracketTeam");
   const toggle = document.getElementById("scenarioToggle");
-  const ROUNDS = [["r32", "Dieciseisavos"], ["r16", "Octavos"], ["qf", "Cuartos"], ["sf", "Semifinales"], ["final", "Final · 19 JUL"]];
+  const roundTabs = document.getElementById("roundTabs");
+  const ROUNDS = [["r32", "Dieciseisavos", "16avos"], ["r16", "Octavos", "8vos"], ["qf", "Cuartos", "4tos"], ["sf", "Semifinales", "Semis"], ["final", "Final · 19 JUL", "Final"]];
 
   let selectedTeam = "";
   let scenario = 1;
   let scenarioManual = false;
   let groupEliminated = false;
+  let mobileRound = "r32";
 
   function esc(s) {
     return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -71,7 +73,7 @@
       const extra = stage === "final"
         ? WC.state.matches.filter(function (m) { return m.stage === "third"; })
         : [];
-      return '<div><p class="b-col-title">' + round[1] + '</p><div class="b-col">' +
+      return '<div data-stage="' + stage + '"' + (stage === mobileRound ? ' class="mobile-active"' : "") + '><p class="b-col-title">' + round[1] + '</p><div class="b-col">' +
         ms.concat(extra).map(function (m) {
           const cls = (classes[m.num] || "") + (m.stage === "final" ? " final-match" : "");
           return '<div class="b-match ' + cls + '">' +
@@ -79,6 +81,10 @@
             '<div class="b-meta">' + (m.stage === "third" ? "3er puesto · " : "") +
             WC.fmt.dayLocal(m.date) + " · " + WC.fmt.timeLocal(m.date) + " · " + esc(m.city) + "</div></div>";
         }).join("") + "</div></div>";
+    }).join("");
+    roundTabs.innerHTML = ROUNDS.map(function (round) {
+      return '<button type="button" data-round="' + round[0] + '"' +
+        (round[0] === mobileRound ? ' class="active"' : "") + ">" + round[2] + "</button>";
     }).join("");
     updateToggle();
   }
@@ -93,12 +99,19 @@
       const idx = rows.findIndex(function (r) { return r.teamId === selectedTeam; });
       groupEliminated = WC.standings.groupStageEliminated(selectedTeam, WC.state);
       scenario = idx >= 0 && rows[idx].pj > 0 ? Math.min(idx + 1, 3) : 1;
+      mobileRound = "r32";
     }
     select.value = selectedTeam;
     render();
   }
 
   select.addEventListener("change", function () { selectTeam(select.value); });
+  roundTabs.addEventListener("click", function (event) {
+    const b = event.target.closest("[data-round]");
+    if (!b) return;
+    mobileRound = b.dataset.round;
+    render();
+  });
   toggle.addEventListener("click", function (event) {
     const b = event.target.closest("[data-pos]");
     if (!b) return;
