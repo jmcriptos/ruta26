@@ -240,6 +240,7 @@
       el.textContent = "Sin conexión · calendario oficial precargado";
     }
     el.className = "data-status " + state.source;
+    el.title = "Toca para actualizar";
     document.getElementById("tzLabel").textContent = "Horarios en tu zona (" + Intl.DateTimeFormat().resolvedOptions().timeZone + ")";
   }
 
@@ -331,7 +332,7 @@
 
   /* nav activa por scroll */
   const sections = Array.from(document.querySelectorAll("main section[id]"));
-  const navLinks = Array.from(document.querySelectorAll(".main-nav a"));
+  const navLinks = Array.from(document.querySelectorAll(".main-nav a, .bottom-nav a"));
   const sectionObserver = new IntersectionObserver(function (entries) {
     entries.forEach(function (entry) {
       if (entry.isIntersecting) {
@@ -351,6 +352,19 @@
     recompute();
     renderAll();
   }
+
+  /* refresco manual al tocar el indicador de datos */
+  let refreshing = false;
+  document.getElementById("dataStatus").addEventListener("click", function () {
+    if (refreshing) return;
+    refreshing = true;
+    const el = document.getElementById("dataStatus");
+    el.textContent = "Actualizando…";
+    WC.api.load().then(function (result) {
+      refreshing = false;
+      applyData(result);
+    });
+  });
 
   recompute();
   renderAll();

@@ -1,5 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=League+Spartan:wght@600;700;800&display=swap');
-
 :root {
   --ink: #0a1512;
   --ink-soft: #14231e;
@@ -452,4 +450,51 @@ html { -webkit-text-size-adjust: 100%; }
   .team-panel { padding: 22px 18px calc(28px + env(safe-area-inset-bottom)); }
   .panel-cta { min-height: 52px; }
   .panel-match { padding: 12px 0; }
+}
+
+/* ===== Mobile friendly: ronda 2 ===== */
+.data-status { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.panel-share { display: block; width: 100%; margin-top: 10px; padding: 13px 16px; border-radius: 999px; border: 1px solid var(--line); background: none; color: var(--ink); font-weight: 700; font-size: 14px; cursor: pointer; }
+.panel-share:hover { border-color: var(--ink); }
+.bottom-nav { display: none; }
+
+@media (max-width: 680px) {
+  /* iOS no hace zoom si los inputs tienen 16px */
+  .team-search input, .search-field input { font-size: 16px; }
+
+  /* legibilidad: nada por debajo de ~11-12px en textos informativos */
+  .match-meta { font-size: 11px; }
+  .match-bottom { font-size: 12px; }
+  .match-bottom strong { font-size: 12px; }
+  .date-button span { font-size: 10px; }
+  .phase small { font-size: 11px; }
+  .group-team .mini-stats { font-size: 12px; }
+  .b-meta { font-size: 12px; }
+  .data-status { font-size: 13px; }
+  .bracket-note { font-size: 13px; }
+  .results-empty p { font-size: 14px; }
+  .countdown-intro small, .opening-meta small { font-size: 10px; }
+
+  /* hero compacto: el contenido fluye, los partidos asoman antes */
+  .hero { min-height: 0; height: auto; padding: 100px 0 30px; }
+  .hero-copy { position: relative; top: auto; left: auto; transform: none; width: auto; margin: 0 20px; }
+  h1 { font-size: 58px; letter-spacing: -4px; }
+  .countdown-panel { position: relative; left: auto; right: auto; bottom: auto; margin: 30px 14px 0; }
+
+  /* barra de navegación inferior */
+  .bottom-nav {
+    position: fixed; z-index: 15; left: 0; right: 0; bottom: 0;
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    padding: 7px 4px calc(7px + env(safe-area-inset-bottom));
+    background: rgba(8, 20, 16, .92); border-top: 1px solid rgba(255,255,255,.09);
+    backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  }
+  .bottom-nav a {
+    display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 5px 2px;
+    color: rgba(255,255,255,.55); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px;
+  }
+  .bottom-nav a svg { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width: 1.7; }
+  .bottom-nav a.active { color: var(--lime); }
+  main { padding-bottom: 8px; }
+  footer { padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
 }

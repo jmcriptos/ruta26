@@ -76,7 +76,8 @@
       games.map(function (m) { return matchLine(m, teamId); }).join("") +
       '<p class="panel-kicker">Su ruta</p>' +
       '<div class="panel-route">' + routeSummary(teamId, info.pos) + "</div>" +
-      '<button class="panel-cta" data-bracket-team="' + t.id + '">Ver su ruta en el bracket →</button>';
+      '<button class="panel-cta" data-bracket-team="' + t.id + '">Ver su ruta en el bracket →</button>' +
+      '<button class="panel-share" data-share-team="' + t.id + '">Compartir ' + t.flag + '</button>';
     overlay.classList.add("open");
     overlay.setAttribute("aria-hidden", "false");
     document.body.style.overflow = "hidden";
@@ -100,6 +101,18 @@
       close();
       WC.bracket.select(cta.dataset.bracketTeam);
       document.getElementById("ruta").scrollIntoView({ behavior: "smooth" });
+    }
+    const shareBtn = event.target.closest("[data-share-team]");
+    if (shareBtn) {
+      const t = WC.state.teams[shareBtn.dataset.shareTeam];
+      const url = location.origin + location.pathname;
+      const text = "La ruta de " + t.name + " " + t.flag + " en el Mundial 2026 ⚽";
+      if (navigator.share) {
+        navigator.share({ title: "Ruta 26", text: text, url: url }).catch(function () {});
+      } else if (navigator.clipboard) {
+        navigator.clipboard.writeText(text + " " + url);
+        shareBtn.textContent = "Enlace copiado ✓";
+      }
     }
   });
 
