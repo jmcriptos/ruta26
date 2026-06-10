@@ -163,3 +163,24 @@ test("teamRoute: equipo desconocido y bracket con ciclo no revientan", () => {
   const r2 = st.teamRoute("a1", 1, { matches: cyclic, teams: MINI_TEAMS, tables: {} });
   assert.deepStrictEqual(r2.segments[0].matches.map(function (m) { return m.num; }), [89, 97]);
 });
+
+test("groupStageEliminated: 4º con grupo cerrado, 3º no clasificado, y casos no eliminados", () => {
+  const teams = makeTeams({ A: ["a1", "a2", "a3", "a4"], B: ["b1", "b2", "b3", "b4"] });
+  const matches = fullGroup("A", { base: 0, ids: ["a1", "a2", "a3", "a4"], thirdGoals: 5 })
+    .concat(fullGroup("B", { base: 10, ids: ["b1", "b2", "b3", "b4"], thirdGoals: 1 }));
+  const tables = st.computeGroups(matches, teams);
+  const thirds = st.rankThirds(tables);
+  const data = { matches: matches, teams: teams, tables: tables, thirds: thirds };
+  assert.strictEqual(st.groupStageEliminated("a4", data), true);  // 4º, grupo cerrado
+  assert.strictEqual(st.groupStageEliminated("a1", data), false); // 1º
+  assert.strictEqual(st.groupStageEliminated("a3", data), false); // 3º que clasifica (top 8)
+  // 3º que NO clasifica (thirds inyectado a mano)
+  const data2 = { matches: matches, teams: teams, tables: tables, thirds: [{ teamId: "a3", qualifies: false }] };
+  assert.strictEqual(st.groupStageEliminated("a3", data2), true);
+  // grupo sin cerrar → nunca eliminado
+  const partial = st.computeGroups(matches.slice(0, 3), teams);
+  assert.strictEqual(st.groupStageEliminated("a4", { matches: matches.slice(0, 3), teams: teams, tables: partial, thirds: [] }), false);
+  // presencia real en eliminatorias gana a todo
+  const withKO = matches.concat([ko(73, "r32", "1A", "2B", { home: "a4", away: "b1" })]);
+  assert.strictEqual(st.groupStageEliminated("a4", { matches: withKO, teams: teams, tables: tables, thirds: thirds }), false);
+});

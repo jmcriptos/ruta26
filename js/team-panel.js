@@ -15,7 +15,8 @@
     const row = rows[idx];
     if (!row || row.pj === 0) return { pos: null, text: "Grupo " + t.group };
     const finished = WC.standings.groupFinished(t.group, WC.state.tables);
-    return { pos: idx + 1, text: (idx + 1) + "º del grupo " + t.group + " · " + row.pts + " pts" + (finished ? " · grupo cerrado" : "") };
+    const eliminated = WC.standings.groupStageEliminated(teamId, WC.state);
+    return { pos: idx + 1, text: (idx + 1) + "º del grupo " + t.group + " · " + row.pts + " pts" + (eliminated ? " · eliminado" : finished ? " · grupo cerrado" : "") };
   }
 
   function matchLine(m, teamId) {
@@ -36,7 +37,10 @@
   }
 
   function routeSummary(teamId, pos) {
-    const scenario = pos || 1;
+    if (WC.standings.groupStageEliminated(teamId, WC.state)) {
+      return "<b>Eliminado en la fase de grupos.</b>";
+    }
+    const scenario = Math.min(pos || 1, 3);
     const route = WC.standings.teamRoute(teamId, scenario, WC.state);
     if (route.eliminated) {
       const third = WC.state.matches.find(function (m) {
@@ -57,7 +61,7 @@
     }).join(" → ");
   }
 
-  function open(teamId) {
+  function open(teamId, isRefresh) {
     const t = WC.state.teams[teamId];
     if (!t) return;
     currentTeamId = teamId;
@@ -76,8 +80,10 @@
     overlay.classList.add("open");
     overlay.setAttribute("aria-hidden", "false");
     document.body.style.overflow = "hidden";
-    const closeBtn = panel.querySelector(".panel-close");
-    if (closeBtn) closeBtn.focus();
+    if (!isRefresh) {
+      const closeBtn = panel.querySelector(".panel-close");
+      if (closeBtn) closeBtn.focus();
+    }
   }
 
   function close() {
@@ -100,6 +106,11 @@
   WC.teamPanel = {
     open: open,
     close: close,
-    refresh: function () { if (currentTeamId) open(currentTeamId); }
+    refresh: function () {
+      if (!currentTeamId) return;
+      const scrollPos = panel.scrollTop;
+      open(currentTeamId, true);
+      panel.scrollTop = scrollPos;
+    }
   };
 })();

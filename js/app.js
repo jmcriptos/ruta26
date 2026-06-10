@@ -22,7 +22,7 @@
   const GROUP_IDS = "ABCDEFGHIJKL".split("");
 
   /* ---------- helpers ---------- */
-  function team(id) { return state.teams[id]; }
+  function team(id) { return state.teams[id] || { id: id, code: "", name: "Por definir", flag: "", group: "", host: false }; }
   function teamByName(name) {
     return Object.values(state.teams).find(function (t) { return t.name === name; }) || null;
   }

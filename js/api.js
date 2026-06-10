@@ -53,7 +53,7 @@
     const ctrl = new AbortController();
     const t = setTimeout(function () { ctrl.abort(); }, 10000);
     try {
-      const res = await fetch(ENDPOINT, { signal: ctrl.signal });
+      const res = await fetch(ENDPOINT, { signal: ctrl.signal, cache: "no-store" });
       if (!res.ok) throw new Error("HTTP " + res.status);
       const json = await res.json();
       return json.Results.map(normalize);

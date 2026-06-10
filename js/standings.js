@@ -113,7 +113,27 @@
     };
   }
 
-  const standings = { computeGroups: computeGroups, groupFinished: groupFinished, rankThirds: rankThirds, resolveSlot: resolveSlot, teamRoute: teamRoute };
+  function groupStageEliminated(teamId, data) {
+    const team = data.teams[teamId];
+    if (!team) return false;
+    const inKO = data.matches.some(function (m) {
+      return m.stage !== "group" && (m.home === teamId || m.away === teamId);
+    });
+    if (inKO) return false; // ya está en el bracket real
+    if (!groupFinished(team.group, data.tables)) return false;
+    const rows = data.tables[team.group] || [];
+    const idx = rows.findIndex(function (r) { return r.teamId === teamId; });
+    if (idx === 3) return true;
+    if (idx === 2) {
+      const allDone = Object.keys(data.tables).every(function (g) { return groupFinished(g, data.tables); });
+      if (!allDone) return false;
+      const third = (data.thirds || []).find(function (t) { return t.teamId === teamId; });
+      return Boolean(third) && !third.qualifies;
+    }
+    return false;
+  }
+
+  const standings = { computeGroups: computeGroups, groupFinished: groupFinished, rankThirds: rankThirds, resolveSlot: resolveSlot, teamRoute: teamRoute, groupStageEliminated: groupStageEliminated };
   root.WC = root.WC || {};
   root.WC.standings = standings;
   if (typeof module !== "undefined" && module.exports) module.exports = standings;

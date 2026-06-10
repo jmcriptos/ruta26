@@ -31,7 +31,7 @@
     const slot = WC.standings.resolveSlot(side === "home" ? m.phA : m.phB, ctx);
     const resolved = id || slot.teamId;
     if (resolved) {
-      const t = WC.state.teams[resolved];
+      const t = WC.state.teams[resolved] || { name: "Por definir", flag: "" };
       const winner = m.status === "played" && m.winner === resolved;
       return '<div class="b-team' + (winner ? " b-winner" : "") + '"><span>' + t.flag + "</span>" + t.name +
         (m.status !== "scheduled" && score != null ? '<span class="b-score">' + score + "</span>" : "") + "</div>";
@@ -91,7 +91,7 @@
       const t = WC.state.teams[selectedTeam];
       const rows = WC.state.tables[t.group] || [];
       const idx = rows.findIndex(function (r) { return r.teamId === selectedTeam; });
-      groupEliminated = idx === 3 && WC.standings.groupFinished(t.group, WC.state.tables);
+      groupEliminated = WC.standings.groupStageEliminated(selectedTeam, WC.state);
       scenario = idx >= 0 && rows[idx].pj > 0 ? Math.min(idx + 1, 3) : 1;
     }
     select.value = selectedTeam;
@@ -108,7 +108,9 @@
   });
 
   function syncScenario() {
-    if (!selectedTeam || scenarioManual) return;
+    if (!selectedTeam) return;
+    groupEliminated = WC.standings.groupStageEliminated(selectedTeam, WC.state);
+    if (scenarioManual) return;
     const t = WC.state.teams[selectedTeam];
     const rows = WC.state.tables[t.group] || [];
     const idx = rows.findIndex(function (r) { return r.teamId === selectedTeam; });
