@@ -644,3 +644,11 @@ html { scroll-padding-top: calc(84px + env(safe-area-inset-top)); }
 @media (max-width: 680px) {
   .pick-1x2 button { font-size: 12px; min-width: 72px; }
 }
+
+/* ranking compacto en móvil para que no desborde */
+@media (max-width: 680px) {
+  .rank-table { font-size: 13px; }
+  .rank-table th, .rank-table td { padding: 9px 4px; }
+  .rank-table th { font-size: 9px; letter-spacing: .3px; }
+  .rank-table td.num { font-size: 14px; }
+}
