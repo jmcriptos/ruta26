@@ -80,7 +80,7 @@
     try {
       const results = await Promise.all([
         client.from("profiles").select("id, username"),
-        client.from("predictions").select("user_id, match_id, hg, ag"),
+        client.from("predictions").select("user_id, match_id, hg, ag, pens"),
         client.from("champion_picks").select("user_id, team_id")
       ]);
       if (results.some(function (r) { return r.error; })) { loadError = true; return; }
@@ -91,7 +91,7 @@
         const uid = session.user.id;
         mine = {};
         data.predictions.forEach(function (r) {
-          if (r.user_id === uid) mine[r.match_id] = { hg: r.hg, ag: r.ag, state: "saved" };
+          if (r.user_id === uid) mine[r.match_id] = { hg: r.hg, ag: r.ag, pens: !!r.pens, state: "saved" };
         });
         const own = data.picks.find(function (r) { return r.user_id === uid; });
         myPick = own ? own.team_id : null;
@@ -106,15 +106,10 @@
     saveTimers[matchId] = setTimeout(async function () {
       const v = mine[matchId];
       if (!v || !session) return;
-      const m = matchById(matchId);
-      if (m && m.stage !== "group" && v.hg === v.ag) {
-        v.state = "err"; v.error = "En eliminatorias no vale empate";
-        paintRow(matchId); return;
-      }
       const uid = session.user.id;
       v.state = "saving"; paintRow(matchId);
       const res = await client.from("predictions").upsert({
-        user_id: uid, match_id: matchId, hg: v.hg, ag: v.ag,
+        user_id: uid, match_id: matchId, hg: v.hg, ag: v.ag, pens: !!v.pens,
         updated_at: new Date().toISOString()
       });
       if (res.error) {
@@ -123,7 +118,7 @@
       } else {
         v.state = "saved"; v.error = null;
         const idx = data.predictions.findIndex(function (r) { return r.user_id === uid && r.match_id === matchId; });
-        const row = { user_id: uid, match_id: matchId, hg: v.hg, ag: v.ag };
+        const row = { user_id: uid, match_id: matchId, hg: v.hg, ag: v.ag, pens: !!v.pens };
         if (idx >= 0) data.predictions[idx] = row; else data.predictions.push(row);
       }
       paintRow(matchId);
@@ -155,34 +150,65 @@
     return { cls: "err", text: v.error || "Error" };
   }
 
+  function predType(m) { return m.stage === "final" ? "score" : (m.stage === "group" ? "1x2" : "ko"); }
+
+  function pickLabel(m, v) {
+    if (!v) return "sin pick";
+    if (m.stage === "final") return v.hg + "–" + v.ag;
+    if (m.stage === "group") {
+      if (v.hg > v.ag) return "Gana " + esc(WC.slotName(m, "home"));
+      if (v.hg < v.ag) return "Gana " + esc(WC.slotName(m, "away"));
+      return "Empate";
+    }
+    const adv = v.hg > v.ag ? WC.slotName(m, "home") : WC.slotName(m, "away");
+    return "Avanza " + esc(adv) + (v.pens ? " (pen)" : "");
+  }
+
   function pickRowHtml(m) {
     const v = mine[m.id];
     const locked = kicked(m);
     const when = WC.fmt.dayLocal(m.date) + " · " + WC.fmt.timeLocal(m.date) + " · " + WC.stageLabel(m);
     const names = esc(WC.slotName(m, "home")) + " vs " + esc(WC.slotName(m, "away"));
     if (locked) {
-      const s = WC.scoring.scoreMatch(v ? { hg: v.hg, ag: v.ag } : null, m);
-      const real = m.status !== "scheduled" && m.hs != null ? m.hs + "–" + m.as : "—";
-      const own = v ? v.hg + "–" + v.ag : "sin pick";
+      const s = WC.scoring.scoreMatch(v ? { hg: v.hg, ag: v.ag, pens: v.pens } : null, m);
+      const real = m.status !== "scheduled" && m.hs != null
+        ? m.hs + "–" + m.as + (m.hp != null ? " (pen " + m.hp + "–" + m.ap + ")" : "")
+        : "—";
       const chip = s.kind === "none" ? '<span class="pick-points miss">sin pick</span>'
         : s.kind === "pending" ? '<span class="pick-points pending">en juego</span>'
         : '<span class="pick-points ' + s.kind + '">' + (s.points > 0 ? "+" + s.points + " pts" : "0 pts") + "</span>";
       return '<div class="pick-row locked" data-match="' + m.id + '">' +
-        '<div class="pick-info"><strong>' + names + "</strong><small>" + when + " · Tu pick: " + own + " · Real: " + real + "</small></div>" +
+        '<div class="pick-info"><strong>' + names + "</strong><small>" + when + " · Tu pick: " + pickLabel(m, v) + " · Real: " + real + "</small></div>" +
         chip + "</div>";
     }
+    const type = predType(m);
+    let controls;
+    if (type === "score") {
+      const hg = v ? v.hg : "·";
+      const ag = v ? v.ag : "·";
+      controls = '<div class="pick-controls">' +
+        '<button type="button" data-step="hg,-1" aria-label="Menos goles local">−</button><b data-val="hg">' + hg + "</b>" +
+        '<button type="button" data-step="hg,1" aria-label="Más goles local">+</button>' +
+        "<i>:</i>" +
+        '<button type="button" data-step="ag,-1" aria-label="Menos goles visitante">−</button><b data-val="ag">' + ag + "</b>" +
+        '<button type="button" data-step="ag,1" aria-label="Más goles visitante">+</button></div>';
+    } else if (type === "1x2") {
+      const sel = v ? (v.hg > v.ag ? "h" : (v.hg < v.ag ? "a" : "x")) : "";
+      controls = '<div class="pick-1x2">' +
+        '<button type="button" data-1x2="h" class="' + (sel === "h" ? "on" : "") + '">Gana ' + esc(WC.slotName(m, "home")) + "</button>" +
+        '<button type="button" data-1x2="x" class="' + (sel === "x" ? "on" : "") + '">Empate</button>' +
+        '<button type="button" data-1x2="a" class="' + (sel === "a" ? "on" : "") + '">Gana ' + esc(WC.slotName(m, "away")) + "</button></div>";
+    } else {
+      const sel = v ? (v.hg > v.ag ? "h" : "a") : "";
+      controls = '<div class="pick-1x2 ko">' +
+        '<button type="button" data-adv="h" class="' + (sel === "h" ? "on" : "") + '">Avanza ' + esc(WC.slotName(m, "home")) + "</button>" +
+        '<button type="button" data-adv="a" class="' + (sel === "a" ? "on" : "") + '">Avanza ' + esc(WC.slotName(m, "away")) + "</button>" +
+        '<button type="button" data-pens class="pens ' + (v && v.pens ? "on" : "") + '">⚽ Por penales</button></div>';
+    }
     const st = stateLabel(v);
-    const hg = v ? v.hg : "·";
-    const ag = v ? v.ag : "·";
-    return '<div class="pick-row" data-match="' + m.id + '">' +
+    return '<div class="pick-row" data-match="' + m.id + '" data-type="' + type + '">' +
       '<div class="pick-info"><strong>' + names + "</strong><small>" + when + "</small></div>" +
-      '<div class="pick-controls">' +
-      '<button type="button" data-step="hg,-1" aria-label="Menos goles local">−</button><b data-val="hg">' + hg + "</b>" +
-      '<button type="button" data-step="hg,1" aria-label="Más goles local">+</button>' +
-      "<i>:</i>" +
-      '<button type="button" data-step="ag,-1" aria-label="Menos goles visitante">−</button><b data-val="ag">' + ag + "</b>" +
-      '<button type="button" data-step="ag,1" aria-label="Más goles visitante">+</button>' +
-      "</div>" +
+      controls +
       '<span class="pick-state ' + st.cls + '">' + st.text + "</span></div>";
   }
 
@@ -193,18 +219,24 @@
     const st = stateLabel(v);
     const stateEl = row.querySelector(".pick-state");
     if (stateEl) { stateEl.className = "pick-state " + st.cls; stateEl.textContent = st.text; }
-    row.querySelectorAll("[data-val]").forEach(function (b) {
-      b.textContent = v ? v[b.dataset.val] : "·";
-    });
+    row.querySelectorAll("[data-val]").forEach(function (b) { b.textContent = v ? v[b.dataset.val] : "·"; });
+    const sel1x2 = v ? (v.hg > v.ag ? "h" : (v.hg < v.ag ? "a" : "x")) : "";
+    row.querySelectorAll("[data-1x2]").forEach(function (b) { b.classList.toggle("on", b.dataset["1x2"] === sel1x2); });
+    row.querySelectorAll("[data-adv]").forEach(function (b) { b.classList.toggle("on", v && b.dataset.adv === (v.hg > v.ag ? "h" : "a")); });
+    const pensBtn = row.querySelector("[data-pens]");
+    if (pensBtn) pensBtn.classList.toggle("on", !!(v && v.pens));
   }
 
   function rulesHtml() {
     return '<details class="game-rules game-card"><summary>Cómo se juega</summary>' +
-      "<table><tr><th>Acierto</th><th>Grupos</th><th>Eliminatorias</th></tr>" +
-      "<tr><td>Marcador exacto</td><td>3 pts</td><td>5 pts</td></tr>" +
-      "<tr><td>Resultado / quién avanza</td><td>1 pt</td><td>2 pts</td></tr>" +
-      "<tr><td>Campeón</td><td colspan=\"2\">15 pts (se elige hasta el 28 JUN)</td></tr></table>" +
-      "<p>Cada partido cierra a su hora de inicio. En eliminatorias tu marcador no puede ser empate. " +
+      "<table><tr><th>Predicción</th><th>Puntos</th></tr>" +
+      "<tr><td>Grupos: acertar gana/empata/pierde</td><td>1 pt</td></tr>" +
+      "<tr><td>Eliminatorias: acertar quién avanza</td><td>1 pt</td></tr>" +
+      "<tr><td>Eliminatorias: + acertar que fue por penales</td><td>+1 pt</td></tr>" +
+      "<tr><td>Final: marcador exacto</td><td>3 pts</td></tr>" +
+      "<tr><td>Final: solo el resultado</td><td>1 pt</td></tr>" +
+      "<tr><td>Campeón</td><td>15 pts</td></tr></table>" +
+      "<p>Cada partido cierra a su hora de inicio. El bonus de penales solo cuenta si además aciertas quién avanza. " +
       "Los picks de los demás se revelan cuando el partido empieza. ¿Olvidaste tu contraseña? Escríbele a JM.</p></details>";
   }
 
@@ -282,6 +314,37 @@
 
   /* ---------- eventos (delegación) ---------- */
   rootEl.addEventListener("click", async function (event) {
+    const b1x2 = event.target.closest("[data-1x2]");
+    if (b1x2 && session) {
+      const row = b1x2.closest("[data-match]");
+      const matchId = row.dataset.match;
+      const code = b1x2.dataset["1x2"];
+      mine[matchId] = { hg: code === "h" ? 1 : 0, ag: code === "a" ? 1 : 0, pens: false, state: "saving" };
+      paintRow(matchId);
+      savePrediction(matchId);
+      return;
+    }
+    const bAdv = event.target.closest("[data-adv]");
+    if (bAdv && session) {
+      const row = bAdv.closest("[data-match]");
+      const matchId = row.dataset.match;
+      const prev = mine[matchId] || {};
+      mine[matchId] = { hg: bAdv.dataset.adv === "h" ? 1 : 0, ag: bAdv.dataset.adv === "a" ? 1 : 0, pens: !!prev.pens, state: "saving" };
+      paintRow(matchId);
+      savePrediction(matchId);
+      return;
+    }
+    const bPens = event.target.closest("[data-pens]");
+    if (bPens && session) {
+      const row = bPens.closest("[data-match]");
+      const matchId = row.dataset.match;
+      const v = mine[matchId];
+      if (!v) return; // primero hay que elegir quién avanza
+      v.pens = !v.pens; v.state = "saving";
+      paintRow(matchId);
+      savePrediction(matchId);
+      return;
+    }
     const stepBtn = event.target.closest("[data-step]");
     if (stepBtn && session) {
       const row = stepBtn.closest("[data-match]");
