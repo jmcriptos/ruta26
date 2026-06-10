@@ -543,3 +543,18 @@ html { scroll-padding-top: calc(84px + env(safe-area-inset-top)); }
   .team-panel { padding-top: calc(24px + env(safe-area-inset-top)); }
   .team-panel .panel-close { top: calc(18px + env(safe-area-inset-top)); }
 }
+
+/* ===== Bottom nav flotante (estilo isla) ===== */
+@media (max-width: 680px) {
+  .bottom-nav {
+    left: 14px; right: 14px; bottom: calc(12px + env(safe-area-inset-bottom));
+    padding: 6px;
+    border: 1px solid rgba(255,255,255,.1); border-top: 1px solid rgba(255,255,255,.1);
+    border-radius: 999px;
+    background: rgba(8, 20, 16, .88);
+    box-shadow: 0 18px 40px rgba(0, 0, 0, .35);
+  }
+  .bottom-nav a { padding: 9px 2px 8px; border-radius: 999px; transition: background .25s ease, color .25s ease; }
+  .bottom-nav a.active { background: rgba(215, 255, 67, .14); color: var(--lime); }
+  footer { padding-bottom: calc(110px + env(safe-area-inset-bottom)); }
+}
