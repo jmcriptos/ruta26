@@ -1,33 +1,40 @@
 /* Puntos de la quiniela. Puro y dual-environment (browser + node:test). */
 (function (root) {
   const POINTS = {
-    group: { exact: 3, outcome: 1 },
-    ko: { exact: 5, outcome: 2 },
+    match: 1,        // grupos y eliminatorias: acertar resultado/quién avanza
+    pens: 1,         // eliminatorias: extra por acertar "por penales"
+    finalExact: 3,   // final: marcador exacto
+    finalOutcome: 1, // final: solo resultado
     champion: 15
   };
   const CHAMPION_LOCK = "2026-06-28T19:00:00Z";
 
-  function isKO(match) { return match.stage !== "group"; }
+  function sign(n) { return n > 0 ? 1 : (n < 0 ? -1 : 0); }
 
-  // Devuelve {points, kind}: "exact" | "outcome" | "miss" | "pending" (partido sin
-  // jugar) | "none" (sin predicción). El exacto se evalúa ANTES que la guardia de
-  // empate en eliminatorias: una pred 1-1 contra un 1-1 real (definido por penales)
-  // puntúa como exacta a propósito — la UI impide ese input, pero si llegara, acertó.
+  // pred = {hg, ag, pens}. Codificación: grupos/final marcador real o canónico
+  // (1-0 local, 0-0 empate, 0-1 visitante); eliminatorias 1-0 avanza local / 0-1 avanza visitante.
+  // kind: "exact" (solo final) | "outcome" | "miss" | "pending" | "none".
   function scoreMatch(pred, match) {
     if (!pred) return { points: 0, kind: "none" };
     if (match.status !== "played" || match.hs == null) return { points: 0, kind: "pending" };
-    const tier = isKO(match) ? POINTS.ko : POINTS.group;
-    if (pred.hg === match.hs && pred.ag === match.as) return { points: tier.exact, kind: "exact" };
-    if (!isKO(match)) {
-      if (Math.sign(pred.hg - pred.ag) === Math.sign(match.hs - match.as)) {
-        return { points: tier.outcome, kind: "outcome" };
-      }
+
+    if (match.stage === "final") {
+      if (pred.hg === match.hs && pred.ag === match.as) return { points: POINTS.finalExact, kind: "exact" };
+      if (sign(pred.hg - pred.ag) === sign(match.hs - match.as)) return { points: POINTS.finalOutcome, kind: "outcome" };
       return { points: 0, kind: "miss" };
     }
-    if (pred.hg === pred.ag) return { points: 0, kind: "miss" }; // inválida en eliminatorias
+
+    if (match.stage === "group") {
+      if (sign(pred.hg - pred.ag) === sign(match.hs - match.as)) return { points: POINTS.match, kind: "outcome" };
+      return { points: 0, kind: "miss" };
+    }
+
+    // eliminatorias: quién avanza (+ penales)
     const predWinner = pred.hg > pred.ag ? match.home : match.away;
-    if (match.winner && predWinner === match.winner) return { points: tier.outcome, kind: "outcome" };
-    return { points: 0, kind: "miss" };
+    if (!match.winner || predWinner !== match.winner) return { points: 0, kind: "miss" };
+    let points = POINTS.match;
+    if (pred.pens && match.hp != null) points += POINTS.pens; // hubo tanda de penales
+    return { points: points, kind: "outcome" };
   }
 
   function scoreChampion(pick, matches) {
@@ -51,7 +58,7 @@
       const match = matchById[pr.match_id];
       if (!row || !match) return;
       row.predicted++;
-      const s = scoreMatch({ hg: pr.hg, ag: pr.ag }, match);
+      const s = scoreMatch({ hg: pr.hg, ag: pr.ag, pens: pr.pens }, match);
       row.points += s.points;
       if (s.kind === "exact") row.exact++;
       if (s.kind === "outcome") row.outcome++;
