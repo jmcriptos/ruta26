@@ -619,3 +619,14 @@ html { scroll-padding-top: calc(84px + env(safe-area-inset-top)); }
   .pick-state { min-width: 64px; }
   .game-section { padding-top: 60px; }
 }
+
+/* ===== Quiniela móvil: fila de predicción apilada ===== */
+@media (max-width: 680px) {
+  .pick-row { flex-wrap: wrap; gap: 8px 12px; }
+  .pick-info { flex: 1 1 100%; }
+  .pick-info small { white-space: normal; }
+  .pick-controls { flex: 0 0 auto; }
+  .pick-row:not(.locked) .pick-state { flex: 1; text-align: right; min-width: 0; }
+  .pick-row.locked .pick-points { margin-left: auto; }
+  .game-card { padding: 18px 16px; }
+}

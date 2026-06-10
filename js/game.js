@@ -4,7 +4,10 @@
   if (!rootEl) return;
 
   const cfg = (window.WC && WC.CONFIG) || {};
-  const EMAIL_DOMAIN = "@ruta26.game";
+  // Email sintético invisible para el jugador. Plus-addressing sobre la cuenta
+  // del admin: pasa la validación de dominio de Supabase y cualquier correo
+  // (nunca se envían: confirmación desactivada) llegaría al admin, no a terceros.
+  function toEmail(username) { return "jm.aceleracion+" + username + "@gmail.com"; }
   const USERNAME_RE = /^[a-z0-9_]{3,20}$/;
 
   function esc(s) {
@@ -43,7 +46,7 @@
     if (!USERNAME_RE.test(username)) return "El usuario debe tener 3 a 20 caracteres: letras minúsculas, números o _";
     if (password.length < 6) return "La contraseña debe tener al menos 6 caracteres";
     const res = await client.auth.signUp({
-      email: username + EMAIL_DOMAIN,
+      email: toEmail(username),
       password: password,
       options: { data: { username: username } }
     });
@@ -56,13 +59,15 @@
 
   async function signIn(username, password) {
     username = username.trim().toLowerCase();
-    const res = await client.auth.signInWithPassword({ email: username + EMAIL_DOMAIN, password: password });
+    const res = await client.auth.signInWithPassword({ email: toEmail(username), password: password });
     if (res.error) return "Usuario o contraseña incorrectos";
     return null;
   }
 
   async function ensureProfile(user) {
-    const username = (user.user_metadata && user.user_metadata.username) || user.email.split("@")[0];
+    const local = user.email.split("@")[0];
+    const username = (user.user_metadata && user.user_metadata.username) ||
+      (local.indexOf("+") !== -1 ? local.split("+")[1] : local);
     const got = await client.from("profiles").select("id, username").eq("id", user.id);
     if (got.data && got.data.length) { profile = got.data[0]; return; }
     const ins = await client.from("profiles").insert({ id: user.id, username: username }).select().single();
