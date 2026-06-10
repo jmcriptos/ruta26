@@ -9,6 +9,10 @@
 
   function isKO(match) { return match.stage !== "group"; }
 
+  // Devuelve {points, kind}: "exact" | "outcome" | "miss" | "pending" (partido sin
+  // jugar) | "none" (sin predicción). El exacto se evalúa ANTES que la guardia de
+  // empate en eliminatorias: una pred 1-1 contra un 1-1 real (definido por penales)
+  // puntúa como exacta a propósito — la UI impide ese input, pero si llegara, acertó.
   function scoreMatch(pred, match) {
     if (!pred) return { points: 0, kind: "none" };
     if (match.status !== "played" || match.hs == null) return { points: 0, kind: "pending" };

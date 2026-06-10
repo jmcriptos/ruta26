@@ -90,3 +90,8 @@ test("buildLeaderboard: agrega, desempata y posiciona", () => {
   assert.strictEqual(rows[1].username, "ana");
   assert.strictEqual(rows[0].bonus, 15);
 });
+
+test("eliminatorias: pred empatada que coincide exacto con un KO definido por penales da 5", () => {
+  const m = played("r16", 1, 1, "X");
+  assert.deepStrictEqual(sc.scoreMatch({ hg: 1, ag: 1 }, m), { points: 5, kind: "exact" });
+});
