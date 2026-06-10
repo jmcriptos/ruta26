@@ -7,37 +7,41 @@
 
   let selectedTeam = "";
   let scenario = 1;
+  let scenarioManual = false;
+  let groupEliminated = false;
 
   function esc(s) {
     return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   }
 
+  let selectPopulated = false;
   function fillSelect() {
-    const current = select.value;
+    if (selectPopulated) return;
+    selectPopulated = true;
     const opts = Object.values(WC.state.teams)
       .sort(function (a, b) { return a.name.localeCompare(b.name, "es"); })
       .map(function (t) { return '<option value="' + t.id + '">' + t.flag + " " + t.name + "</option>"; });
     select.innerHTML = '<option value="">Todo el cuadro</option>' + opts.join("");
-    select.value = current;
+    select.value = selectedTeam;
   }
 
   function slotHtml(m, side, ctx) {
     const id = side === "home" ? m.home : m.away;
     const score = side === "home" ? m.hs : m.as;
-    const resolved = id || WC.standings.resolveSlot(side === "home" ? m.phA : m.phB, ctx).teamId;
+    const slot = WC.standings.resolveSlot(side === "home" ? m.phA : m.phB, ctx);
+    const resolved = id || slot.teamId;
     if (resolved) {
       const t = WC.state.teams[resolved];
       const winner = m.status === "played" && m.winner === resolved;
       return '<div class="b-team' + (winner ? " b-winner" : "") + '"><span>' + t.flag + "</span>" + t.name +
         (m.status !== "scheduled" && score != null ? '<span class="b-score">' + score + "</span>" : "") + "</div>";
     }
-    const slot = WC.standings.resolveSlot(side === "home" ? m.phA : m.phB, ctx);
     return '<div class="b-team b-tbd">' + esc(slot.label) + "</div>";
   }
 
   function routeClasses() {
     const classes = {};
-    if (!selectedTeam) return classes;
+    if (!selectedTeam || groupEliminated) return classes;
     const route = WC.standings.teamRoute(selectedTeam, scenario, WC.state);
     route.segments.forEach(function (seg) {
       seg.matches.forEach(function (m) {
@@ -48,7 +52,7 @@
   }
 
   function updateToggle() {
-    if (!selectedTeam) { toggle.hidden = true; return; }
+    if (!selectedTeam || groupEliminated) { toggle.hidden = true; return; }
     const route = WC.standings.teamRoute(selectedTeam, scenario, WC.state);
     toggle.hidden = route.mode === "real";
     toggle.querySelectorAll("button").forEach(function (b) {
@@ -80,11 +84,14 @@
   }
 
   function selectTeam(teamId) {
+    scenarioManual = false;
     selectedTeam = teamId || "";
+    groupEliminated = false;
     if (selectedTeam) {
       const t = WC.state.teams[selectedTeam];
       const rows = WC.state.tables[t.group] || [];
       const idx = rows.findIndex(function (r) { return r.teamId === selectedTeam; });
+      groupEliminated = idx === 3 && WC.standings.groupFinished(t.group, WC.state.tables);
       scenario = idx >= 0 && rows[idx].pj > 0 ? Math.min(idx + 1, 3) : 1;
     }
     select.value = selectedTeam;
@@ -95,12 +102,24 @@
   toggle.addEventListener("click", function (event) {
     const b = event.target.closest("[data-pos]");
     if (!b) return;
+    scenarioManual = true;
     scenario = Number(b.dataset.pos);
     render();
   });
 
+  function syncScenario() {
+    if (!selectedTeam || scenarioManual) return;
+    const t = WC.state.teams[selectedTeam];
+    const rows = WC.state.tables[t.group] || [];
+    const idx = rows.findIndex(function (r) { return r.teamId === selectedTeam; });
+    const route = WC.standings.teamRoute(selectedTeam, scenario, WC.state);
+    if (route.mode === "scenario" && idx >= 0 && rows[idx].pj > 0) {
+      scenario = Math.min(idx + 1, 3);
+    }
+  }
+
   WC.bracket = {
-    render: function () { fillSelect(); render(); },
+    render: function () { fillSelect(); syncScenario(); render(); },
     select: selectTeam
   };
 })();
