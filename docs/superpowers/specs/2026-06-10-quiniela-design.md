@@ -35,6 +35,7 @@ Que el círculo de JM (amigos, familia, colegas — decenas de jugadores) pueda:
 
 - "Resultado" en grupos = ganador o empate (signo de hs−as).
 - "Resultado" en eliminatorias = **quién avanza** (campo `winner` de la API, incluye penales).
+- En eliminatorias la predicción **no puede ser empate** (la UI lo impide y scoring lo trata como inválida): el marcador predicho implica quién avanza. Si el partido real termina empatado y se define por penales, el "exacto" compara contra `hs`/`as` y el "quién avanza" contra `winner`.
 - "Marcador exacto" en eliminatorias = `hs`/`as` al final del juego (la API no suma penales ahí; `hp`/`ap` van aparte).
 - Marcador exacto y resultado no se acumulan: exacto otorga el valor mayor, si no, se evalúa resultado.
 - El partido por el 3er puesto puntúa como eliminatoria; el campeón es el ganador del partido 104.
