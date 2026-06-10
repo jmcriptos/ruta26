@@ -278,6 +278,7 @@
     renderStatus();
     WC.bracket.render();
     if (WC.teamPanel.refresh) WC.teamPanel.refresh();
+    if (WC.game && WC.game.onDataUpdate) WC.game.onDataUpdate();
   }
   WC.renderAll = renderAll;
 

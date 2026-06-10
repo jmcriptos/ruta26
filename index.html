@@ -37,6 +37,7 @@
       <a href="#partidos">Partidos</a>
       <a href="#equipos">Equipos</a>
       <a href="#ruta">La ruta</a>
+      <a href="#quiniela">Quiniela</a>
       <a href="#proyecciones">Proyecciones</a>
     </nav>
     <div class="header-actions">
@@ -207,6 +208,18 @@
       </div>
     </section>
 
+    <section class="game-section" id="quiniela">
+      <div class="section-shell">
+        <div class="section-heading">
+          <div>
+            <span class="section-kicker">Reta a tu gente</span>
+            <h2>La quiniela</h2>
+          </div>
+        </div>
+        <div id="gameRoot"></div>
+      </div>
+    </section>
+
     <section class="teams section-shell" id="equipos">
       <div class="section-heading">
         <div>
@@ -303,6 +316,10 @@
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4h10v3a5 5 0 0 1-10 0zM17 5h3a3 3 0 0 1-3 4M7 5H4a3 3 0 0 0 3 4M12 12v4m-4 4h8m-7-4h6"></path></svg>
       La ruta
     </a>
+    <a href="#quiniela">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"></circle><circle cx="12" cy="12" r="3"></circle></svg>
+      Quiniela
+    </a>
   </nav>
 
   <script src="js/data.js"></script>
@@ -311,5 +328,9 @@
   <script src="js/team-panel.js"></script>
   <script src="js/bracket.js"></script>
   <script src="js/app.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/config.js"></script>
+  <script src="js/scoring.js"></script>
+  <script src="js/game.js"></script>
 </body>
 </html>
