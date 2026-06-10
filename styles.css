@@ -630,3 +630,17 @@ html { scroll-padding-top: calc(84px + env(safe-area-inset-top)); }
   .pick-row.locked .pick-points { margin-left: auto; }
   .game-card { padding: 18px 16px; }
 }
+
+/* ===== Quiniela 1X2 ===== */
+.pick-1x2 { display: flex; gap: 6px; flex: 1 1 100%; flex-wrap: wrap; }
+.pick-1x2 button { flex: 1; min-height: 44px; min-width: 84px; padding: 8px 10px; border: 1px solid var(--line); background: white; border-radius: 999px; font-size: 13px; font-weight: 700; color: var(--ink); cursor: pointer; }
+.pick-1x2 button:hover { border-color: #c6c8bd; }
+.pick-1x2 button.on { background: var(--lime); border-color: var(--lime); }
+.pick-1x2 .pens { flex: 1 1 100%; color: var(--muted); }
+.pick-1x2 .pens.on { background: var(--ink); border-color: var(--ink); color: var(--lime); }
+.pick-row[data-type="1x2"] .pick-state,
+.pick-row[data-type="ko"] .pick-state { flex: 1 1 100%; text-align: right; }
+
+@media (max-width: 680px) {
+  .pick-1x2 button { font-size: 12px; min-width: 72px; }
+}
