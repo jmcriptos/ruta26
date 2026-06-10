@@ -26,10 +26,16 @@
   function teamByName(name) {
     return Object.values(state.teams).find(function (t) { return t.name === name; }) || null;
   }
+  let matchesByNumCache = null;
   function matchesByNum() {
-    const map = {};
-    state.matches.forEach(function (m) { map[m.num] = m; });
-    return map;
+    if (!matchesByNumCache) {
+      matchesByNumCache = {};
+      state.matches.forEach(function (m) { matchesByNumCache[m.num] = m; });
+    }
+    return matchesByNumCache;
+  }
+  function esc(s) {
+    return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   }
   function slotCtx() { return { tables: state.tables, matchesByNum: matchesByNum(), teams: state.teams }; }
   WC.slotCtx = slotCtx;
@@ -56,6 +62,7 @@
   WC.stageLabel = stageLabel;
 
   function recompute() {
+    matchesByNumCache = null;
     state.tables = WC.standings.computeGroups(state.matches, state.teams);
     state.thirds = WC.standings.rankThirds(state.tables);
   }
@@ -80,7 +87,7 @@
       const t = team(slot.teamId);
       return '<button class="team-row" data-team-id="' + t.id + '"><em>' + t.name + "</em><span>" + t.flag + "</span></button>";
     }
-    return '<div class="team-row placeholder"><em>' + slot.label + "</em></div>";
+    return '<div class="team-row placeholder"><em>' + esc(slot.label) + "</em></div>";
   }
 
   function matchCard(m) {
@@ -89,7 +96,7 @@
     return '<article class="match-card ' + m.status + '">' +
       '<div class="match-meta"><span>' + dayLocal(m.date) + " · " + stageLabel(m) + "</span><span>" + timeLocal(m.date) + "</span></div>" +
       teamRowHtml(m, "home") + teamRowHtml(m, "away") +
-      '<div class="match-bottom"><strong>' + pens + m.city + '</strong><span class="status-' + m.status + '">' + statusTxt + "</span></div></article>";
+      '<div class="match-bottom"><strong>' + pens + esc(m.city) + '</strong><span class="status-' + m.status + '">' + statusTxt + "</span></div></article>";
   }
 
   function filteredMatches() {
@@ -118,13 +125,16 @@
       const key = dateKey(m.date);
       if (!seen.has(key)) seen.set(key, m.date);
     });
-    dateStrip.innerHTML = ['<button class="date-button active" data-date="TODOS"><span>Calendario</span><strong>Todos</strong></button>']
+    dateStrip.innerHTML = ['<button class="date-button" data-date="TODOS"><span>Calendario</span><strong>Todos</strong></button>']
       .concat(Array.from(seen.entries()).map(function (pair) {
         const parts = fmtDay.formatToParts(new Date(pair[1]));
         const wd = (parts.find(function (p) { return p.type === "weekday"; }) || { value: "" }).value.toUpperCase().replace(".", "");
         const dayNum = (parts.find(function (p) { return p.type === "day"; }) || { value: "" }).value;
         return '<button class="date-button" data-date="' + pair[0] + '"><span>' + wd + "</span><strong>" + dayNum + "</strong></button>";
       })).join("");
+    dateStrip.querySelectorAll("[data-date]").forEach(function (btn) {
+      btn.classList.toggle("active", btn.dataset.date === activeDate);
+    });
   }
 
   /* ---------- grupos ---------- */
@@ -182,7 +192,7 @@
     if (!m) return;
     document.getElementById("countdownLabel").textContent = m.status === "live" ? "En vivo ahora" : "Cuenta regresiva";
     document.getElementById("countdownTitle").textContent = slotName(m, "home") + " vs " + slotName(m, "away");
-    document.getElementById("countdownMeta").innerHTML = "<span>" + dayLocal(m.date) + " · " + timeLocal(m.date) + "</span><small>" + m.city + "</small>";
+    document.getElementById("countdownMeta").innerHTML = "<span>" + dayLocal(m.date) + " · " + timeLocal(m.date) + "</span><small>" + esc(m.city) + "</small>";
     countdownTarget = new Date(m.date).getTime();
   }
 
