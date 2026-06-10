@@ -78,8 +78,10 @@
 
   function chainFrom(match, koMatches) {
     const route = [];
+    const seen = new Set(); // datos en vivo malformados no deben colgar el walk
     let cur = match;
-    while (cur) {
+    while (cur && !seen.has(cur.num)) {
+      seen.add(cur.num);
       route.push(cur);
       cur = nextMatch(cur.num, koMatches);
     }
@@ -88,6 +90,7 @@
 
   function teamRoute(teamId, scenario, data) {
     const team = data.teams[teamId];
+    if (!team) return { mode: "scenario", eliminated: false, segments: [] };
     const ko = data.matches.filter(function (x) { return x.stage !== "group" && x.stage !== "third"; });
     const real = ko.filter(function (x) { return x.home === teamId || x.away === teamId; });
     if (real.length) {

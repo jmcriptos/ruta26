@@ -155,3 +155,11 @@ test("teamRoute: eliminado en eliminatorias", () => {
   assert.strictEqual(r.eliminated, true);
   assert.deepStrictEqual(r.segments[0].matches.map(function (m) { return m.num; }), [73]);
 });
+
+test("teamRoute: equipo desconocido y bracket con ciclo no revientan", () => {
+  const r = st.teamRoute("nadie", 1, MINI_DATA);
+  assert.deepStrictEqual(r, { mode: "scenario", eliminated: false, segments: [] });
+  const cyclic = [ko(89, "r16", "W97", "1A"), ko(97, "qf", "W89", "W90")];
+  const r2 = st.teamRoute("a1", 1, { matches: cyclic, teams: MINI_TEAMS, tables: {} });
+  assert.deepStrictEqual(r2.segments[0].matches.map(function (m) { return m.num; }), [89, 97]);
+});
