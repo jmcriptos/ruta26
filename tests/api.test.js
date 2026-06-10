@@ -32,6 +32,13 @@ test("normalize: partido de grupos", () => {
   });
 });
 
+test("normalize: descarta placeholders de la API en partidos de grupos", () => {
+  const withPh = Object.assign({}, SAMPLE, { PlaceHolderA: "A1", PlaceHolderB: "A2" });
+  const m = api.normalize(withPh);
+  assert.strictEqual(m.phA, null);
+  assert.strictEqual(m.phB, null);
+});
+
 test("normalize: eliminatoria sin equipos definidos", () => {
   const m = api.normalize(SAMPLE_KO);
   assert.strictEqual(m.stage, "r32");
