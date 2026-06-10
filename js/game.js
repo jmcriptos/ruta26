@@ -152,6 +152,7 @@
 
   function predType(m) { return m.stage === "final" ? "score" : (m.stage === "group" ? "1x2" : "ko"); }
 
+  // Produce HTML (se interpola en innerHTML): todo string de equipo debe pasar por esc().
   function pickLabel(m, v) {
     if (!v) return "sin pick";
     if (m.stage === "final") return v.hg + "–" + v.ag;
