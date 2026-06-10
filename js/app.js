@@ -192,7 +192,7 @@
     if (!m) return;
     document.getElementById("countdownLabel").textContent = m.status === "live" ? "En vivo ahora" : "Cuenta regresiva";
     document.getElementById("countdownTitle").textContent = slotName(m, "home") + " vs " + slotName(m, "away");
-    document.getElementById("countdownMeta").innerHTML = "<span>" + dayLocal(m.date) + " · " + timeLocal(m.date) + "</span><small>" + esc(m.city) + "</small>";
+    document.getElementById("countdownMeta").innerHTML = "<span>" + dayLocal(m.date) + " · " + timeLocal(m.date) + "</span><small>Tu hora · " + esc(m.city) + "</small>";
     countdownTarget = new Date(m.date).getTime();
   }
 
