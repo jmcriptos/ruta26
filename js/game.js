@@ -334,7 +334,7 @@
     rootEl.innerHTML =
       '<div class="game-userbar"><strong>Hola, ' + esc(profile ? profile.username : "jugador") + '</strong>' +
       '<button id="gLogout">Cerrar sesión</button></div>' +
-      predictionsHtml() + championHtml() + rankingHtml() + rulesHtml();
+      championHtml() + rankingHtml() + predictionsHtml() + rulesHtml();
   }
 
   /* ---------- eventos (delegación) ---------- */
