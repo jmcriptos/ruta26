@@ -90,11 +90,23 @@
     return '<div class="team-row placeholder"><em>' + esc(slot.label) + "</em></div>";
   }
 
+  function relativeToKickoff(iso) {
+    const diff = new Date(iso).getTime() - Date.now();
+    if (diff <= 0) return "POR EMPEZAR";
+    const mins = Math.floor(diff / 60000);
+    if (mins < 60) return "EN " + mins + " MIN";
+    const hours = Math.floor(mins / 60);
+    if (hours < 48) return "EN " + hours + " H " + (mins % 60) + " MIN";
+    const days = Math.floor(hours / 24);
+    return "EN " + days + " DÍAS";
+  }
+
   function matchCard(m) {
-    const statusTxt = m.status === "played" ? "FINAL" : m.status === "live" ? "● EN VIVO" : "PRÓXIMO";
+    const statusTxt = m.status === "played" ? "FINAL" : m.status === "live" ? "● EN VIVO" :
+      '<span data-kickoff="' + m.date + '">' + relativeToKickoff(m.date) + "</span>";
     const pens = m.hp != null && m.hp + m.ap > 0 ? "Penales " + m.hp + "–" + m.ap + " · " : "";
     return '<article class="match-card ' + m.status + '">' +
-      '<div class="match-meta"><span>' + dayLocal(m.date) + " · " + stageLabel(m) + "</span><span>" + timeLocal(m.date) + "</span></div>" +
+      '<div class="match-meta"><span>' + dayLocal(m.date) + " · " + stageLabel(m) + '</span><span>' + timeLocal(m.date) + " tu hora</span></div>" +
       teamRowHtml(m, "home") + teamRowHtml(m, "away") +
       '<div class="match-bottom"><strong>' + pens + esc(m.city) + '</strong><span class="status-' + m.status + '">' + statusTxt + "</span></div></article>";
   }
@@ -337,6 +349,11 @@
   renderAll();
   updateCountdown();
   setInterval(updateCountdown, 1000);
+  setInterval(function () {
+    document.querySelectorAll("[data-kickoff]").forEach(function (el) {
+      el.textContent = relativeToKickoff(el.dataset.kickoff);
+    });
+  }, 30000);
 
   WC.api.load().then(applyData);
   WC.api.startPolling(function () { return state.matches; }, applyData);
