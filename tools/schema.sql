@@ -32,6 +32,7 @@ create table public.predictions (
   match_id text not null references public.matches(id),
   hg smallint not null check (hg between 0 and 99),
   ag smallint not null check (ag between 0 and 99),
+  pens boolean not null default false,
   updated_at timestamptz not null default now(),
   primary key (user_id, match_id)
 );
