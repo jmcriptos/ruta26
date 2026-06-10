@@ -680,9 +680,9 @@ html { scroll-padding-top: calc(84px + env(safe-area-inset-top)); }
   .pick-card .pick-1x2 button { min-width: 0; }
 }
 
-/* ===== Chip de usuario en el header (móvil) ===== */
+/* ===== Chip de usuario en el header (sustituye a la lupa) ===== */
 .user-chip {
-  display: flex; align-items: center; gap: 6px; max-width: 150px;
+  display: flex; align-items: center; gap: 6px; max-width: 180px;
   padding: 8px 14px; border-radius: 999px;
   border: 1px solid rgba(215,255,67,.4); background: rgba(215,255,67,.12);
   color: var(--lime); font-size: 12px; font-weight: 700;
@@ -690,10 +690,4 @@ html { scroll-padding-top: calc(84px + env(safe-area-inset-top)); }
 }
 .user-chip::before { content: ""; flex: 0 0 auto; width: 6px; height: 6px; border-radius: 50%; background: var(--lime); }
 .user-chip[hidden] { display: none; }
-
-@media (max-width: 680px) {
-  .topbar #searchToggle { display: none; }
-}
-@media (min-width: 681px) {
-  .user-chip { display: none; }
-}
+.topbar #searchToggle { display: none; }
