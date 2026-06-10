@@ -18,6 +18,7 @@
       <a class="active" href="#inicio">Inicio</a>
       <a href="#partidos">Partidos</a>
       <a href="#equipos">Equipos</a>
+      <a href="#ruta">La ruta</a>
       <a href="#proyecciones">Proyecciones</a>
     </nav>
     <div class="header-actions">
@@ -74,8 +75,8 @@
         <div class="countdown-intro">
           <span class="live-dot"></span>
           <div>
-            <small>Cuenta regresiva</small>
-            <strong>México vs Sudáfrica</strong>
+            <small id="countdownLabel">Cuenta regresiva</small>
+            <strong id="countdownTitle">México vs Sudáfrica</strong>
           </div>
         </div>
         <div class="countdown" id="countdown">
@@ -87,8 +88,8 @@
           <i>:</i>
           <div><strong id="seconds">00</strong><span>Seg</span></div>
         </div>
-        <div class="opening-meta">
-          <span>11 JUN · 15:00 UTC−4</span>
+        <div class="opening-meta" id="countdownMeta">
+          <span>11 JUN · 15:00</span>
           <small>Ciudad de México</small>
         </div>
       </div>
@@ -118,7 +119,7 @@
     <section class="matches section-shell" id="partidos">
       <div class="section-heading">
         <div>
-          <span class="section-kicker">El torneo, partido a partido · Horarios UTC−4</span>
+          <span class="section-kicker">El torneo, partido a partido · <span id="tzLabel">Tu hora local</span></span>
           <h2>Próximos encuentros</h2>
         </div>
         <div class="match-tabs" role="tablist" aria-label="Filtrar partidos">
@@ -127,6 +128,7 @@
           <button data-match-filter="all">Todos</button>
         </div>
       </div>
+      <div class="data-status" id="dataStatus" role="status"></div>
 
       <div class="date-strip" id="dateStrip" aria-label="Filtrar por fecha"></div>
       <div class="matches-grid" id="matchesGrid"></div>
@@ -157,6 +159,32 @@
           <div class="phase"><span>05</span><strong>Semifinales</strong><small>14 – 15 JUL</small></div>
           <div class="phase final"><span>★</span><strong>La gran final</strong><small>19 JUL · NY/NJ</small></div>
         </div>
+      </div>
+    </section>
+
+    <section class="bracket-section" id="ruta">
+      <div class="section-shell">
+        <div class="section-heading light">
+          <div>
+            <span class="section-kicker">Elige un equipo y mira su camino</span>
+            <h2>La ruta al título</h2>
+          </div>
+          <div class="bracket-controls">
+            <select id="bracketTeam" aria-label="Elegir equipo">
+              <option value="">Todo el cuadro</option>
+            </select>
+            <div class="scenario-toggle" id="scenarioToggle" hidden>
+              <span>Si queda</span>
+              <button type="button" data-pos="1" class="active">1º</button>
+              <button type="button" data-pos="2">2º</button>
+              <button type="button" data-pos="3">3º</button>
+            </div>
+          </div>
+        </div>
+        <div class="bracket-scroll">
+          <div class="bracket" id="bracketGrid"></div>
+        </div>
+        <p class="bracket-note">Los cruces se definen al cerrar la fase de grupos. La ruta de un 3º es orientativa: depende de qué terceros clasifiquen.</p>
       </div>
     </section>
 
@@ -222,6 +250,10 @@
     </section>
   </main>
 
+  <div class="panel-overlay" id="teamPanelOverlay" aria-hidden="true">
+    <aside class="team-panel" id="teamPanel" role="dialog" aria-modal="true" aria-label="Detalle de selección"></aside>
+  </div>
+
   <footer>
     <a class="brand footer-brand" href="#inicio">
       <span class="brand-ball">26</span>
@@ -235,6 +267,11 @@
     </div>
   </footer>
 
-  <script src="app.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/standings.js"></script>
+  <script src="js/team-panel.js"></script>
+  <script src="js/bracket.js"></script>
+  <script src="js/app.js"></script>
 </body>
 </html>
