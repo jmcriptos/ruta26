@@ -75,7 +75,7 @@ champion_picks  user_id uuid PK FK→profiles, team_id text, updated_at timestam
 
 ### Políticas RLS (las reglas del juego viven en la base)
 
-- `profiles`: lectura pública (para el ranking); insert/update solo del propio (`auth.uid() = id`).
+- `profiles`: lectura pública (para el ranking); insert solo del propio (`auth.uid() = id`); sin update (la edición de username está fuera de alcance).
 - `matches`: lectura pública; sin escritura desde el cliente.
 - `predictions`:
   - SELECT: el dueño siempre; otros solo si el partido ya empezó —

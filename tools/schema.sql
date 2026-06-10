@@ -49,7 +49,10 @@ create policy "crear pick solo mío y antes del kickoff"
   );
 create policy "editar pick solo mío y antes del kickoff"
   on public.predictions for update
-  using (user_id = auth.uid())
+  using (
+    user_id = auth.uid()
+    and (select kickoff_at from public.matches m where m.id = match_id) > now()
+  )
   with check (
     user_id = auth.uid()
     and (select kickoff_at from public.matches m where m.id = match_id) > now()
@@ -58,7 +61,7 @@ create policy "editar pick solo mío y antes del kickoff"
 -- 4) Pick de campeón (cierra al inicio de los 16avos)
 create table public.champion_picks (
   user_id uuid primary key references public.profiles(id) on delete cascade,
-  team_id text not null,
+  team_id text not null check (team_id ~ '^[0-9]{1,12}$'),
   updated_at timestamptz not null default now()
 );
 alter table public.champion_picks enable row level security;
@@ -73,7 +76,9 @@ create policy "elegir campeón antes del cierre"
   );
 create policy "cambiar campeón antes del cierre"
   on public.champion_picks for update
-  using (user_id = auth.uid())
+  using (
+    user_id = auth.uid() and now() < timestamptz '2026-06-28T19:00:00Z'
+  )
   with check (
     user_id = auth.uid() and now() < timestamptz '2026-06-28T19:00:00Z'
   );
