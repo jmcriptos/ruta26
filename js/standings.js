@@ -34,7 +34,45 @@
     return Boolean(tables[group]) && tables[group].every(function (r) { return r.pj === 3; });
   }
 
-  const standings = { computeGroups: computeGroups, groupFinished: groupFinished };
+  function rankThirds(tables) {
+    const thirds = Object.keys(tables).sort().map(function (g) {
+      return Object.assign({ group: g }, tables[g][2]);
+    });
+    thirds.sort(function (x, y) {
+      return y.pts - x.pts || y.dg - x.dg || y.gf - x.gf || (x.group < y.group ? -1 : 1);
+    });
+    thirds.forEach(function (t, i) { t.qualifies = i < 8; });
+    return thirds;
+  }
+
+  function resolveSlot(ph, ctx) {
+    if (!ph) return { teamId: null, label: "" };
+    let m;
+    if ((m = ph.match(/^([12])([A-L])$/))) {
+      const pos = Number(m[1]), g = m[2];
+      if (groupFinished(g, ctx.tables)) return { teamId: ctx.tables[g][pos - 1].teamId, label: "" };
+      return { teamId: null, label: pos + "º grupo " + g };
+    }
+    if ((m = ph.match(/^3([A-L]+)$/))) {
+      // La asignación real de terceros la entrega la API (Home/Away del partido); aquí solo etiqueta.
+      return { teamId: null, label: "Mejor 3º " + m[1].split("").join("/") };
+    }
+    if ((m = ph.match(/^W(\d+)$/))) {
+      const prev = ctx.matchesByNum[Number(m[1])];
+      if (prev && prev.status === "played" && prev.winner) return { teamId: prev.winner, label: "" };
+      return { teamId: null, label: "Gana P" + m[1] };
+    }
+    if ((m = ph.match(/^RU(\d+)$/))) {
+      const prev = ctx.matchesByNum[Number(m[1])];
+      if (prev && prev.status === "played" && prev.winner) {
+        return { teamId: prev.winner === prev.home ? prev.away : prev.home, label: "" };
+      }
+      return { teamId: null, label: "Pierde P" + m[1] };
+    }
+    return { teamId: null, label: ph };
+  }
+
+  const standings = { computeGroups: computeGroups, groupFinished: groupFinished, rankThirds: rankThirds, resolveSlot: resolveSlot };
   root.WC = root.WC || {};
   root.WC.standings = standings;
   if (typeof module !== "undefined" && module.exports) module.exports = standings;

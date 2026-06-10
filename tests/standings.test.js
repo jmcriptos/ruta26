@@ -53,3 +53,51 @@ test("groupFinished", () => {
   ];
   assert.strictEqual(st.groupFinished("A", st.computeGroups(all, teams)), true);
 });
+
+function fullGroup(g, p) { // grupo terminado: p[0] 1º (9pts), p[1] 2º (6), p[2] 3º (3+dg variable), p[3] 4º (0)
+  return [
+    gm(p.base + 1, g, p.ids[0], p.ids[3], 3, 0), gm(p.base + 2, g, p.ids[0], p.ids[2], 2, 0),
+    gm(p.base + 3, g, p.ids[0], p.ids[1], 1, 0), gm(p.base + 4, g, p.ids[1], p.ids[2], 2, 0),
+    gm(p.base + 5, g, p.ids[1], p.ids[3], 1, 0), gm(p.base + 6, g, p.ids[2], p.ids[3], p.thirdGoals, 0)
+  ];
+}
+
+test("rankThirds: ordena terceros y marca los que clasifican", () => {
+  const teams = makeTeams({ A: ["a1", "a2", "a3", "a4"], B: ["b1", "b2", "b3", "b4"] });
+  const matches = fullGroup("A", { base: 0, ids: ["a1", "a2", "a3", "a4"], thirdGoals: 5 })
+    .concat(fullGroup("B", { base: 10, ids: ["b1", "b2", "b3", "b4"], thirdGoals: 1 }));
+  const tables = st.computeGroups(matches, teams);
+  const thirds = st.rankThirds(tables);
+  assert.strictEqual(thirds.length, 2);
+  assert.strictEqual(thirds[0].teamId, "a3"); // mejor DG que b3
+  assert.strictEqual(thirds[0].group, "A");
+  assert.strictEqual(thirds[0].qualifies, true);
+});
+
+test("resolveSlot: 1A/2A con grupo terminado devuelve equipo", () => {
+  const teams = makeTeams({ A: ["a1", "a2", "a3", "a4"] });
+  const tables = st.computeGroups(fullGroup("A", { base: 0, ids: ["a1", "a2", "a3", "a4"], thirdGoals: 1 }), teams);
+  const ctx = { tables: tables, matchesByNum: {}, teams: teams };
+  assert.strictEqual(st.resolveSlot("1A", ctx).teamId, "a1");
+  assert.strictEqual(st.resolveSlot("2A", ctx).teamId, "a2");
+});
+
+test("resolveSlot: grupo sin terminar devuelve etiqueta", () => {
+  const teams = makeTeams({ A: ["a1", "a2", "a3", "a4"] });
+  const tables = st.computeGroups([gm(1, "A", "a1", "a2", 1, 0)], teams);
+  const slot = st.resolveSlot("1A", { tables: tables, matchesByNum: {}, teams: teams });
+  assert.strictEqual(slot.teamId, null);
+  assert.strictEqual(slot.label, "1º grupo A");
+});
+
+test("resolveSlot: terceros, ganador y perdedor", () => {
+  const ctx = { tables: {}, teams: {}, matchesByNum: {
+    74: { num: 74, home: "x", away: "y", status: "played", winner: "x" },
+    101: { num: 101, home: "p", away: "q", status: "played", winner: "q" }
+  } };
+  assert.strictEqual(st.resolveSlot("3ABCDF", ctx).label, "Mejor 3º A/B/C/D/F");
+  assert.strictEqual(st.resolveSlot("W74", ctx).teamId, "x");
+  assert.strictEqual(st.resolveSlot("RU101", ctx).teamId, "p"); // perdedor de 101
+  assert.strictEqual(st.resolveSlot("W99", ctx).teamId, null);
+  assert.strictEqual(st.resolveSlot("W99", ctx).label, "Gana P99");
+});
