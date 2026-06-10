@@ -420,3 +420,36 @@ footer { display: flex; align-items: center; gap: 25px; padding: 28px 32px; colo
   .team-panel { width: 100vw; border-left: 0; }
   .bracket { min-width: 980px; }
 }
+
+/* ===== Extremadamente móvil ===== */
+html { -webkit-text-size-adjust: 100%; }
+
+/* Franja de fechas: carrusel horizontal (39 días de torneo) */
+.date-strip { display: flex; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; scroll-snap-type: x proximity; }
+.date-strip::-webkit-scrollbar { display: none; }
+.date-button { flex: 0 0 auto; min-width: 66px; min-height: 56px; scroll-snap-align: center; border-right: 1px solid var(--line); }
+.date-button.today span { color: #5a7a1e; }
+.date-button.today:not(.active) strong { text-decoration: underline; text-decoration-color: var(--lime-deep); text-decoration-thickness: 3px; }
+
+/* Tap targets cómodos (mínimo 44px) */
+.match-tabs button { min-height: 44px; }
+.team-row { min-height: 44px; }
+.outline-button { min-height: 48px; justify-content: center; }
+
+/* Scroll táctil con inercia en el bracket */
+.bracket-scroll { -webkit-overflow-scrolling: touch; }
+
+@media (max-width: 680px) {
+  .date-button:nth-child(n+5) { display: block; }
+  .outline-button { width: 100%; }
+  .bracket-controls { width: 100%; }
+  .bracket-controls select { width: 100%; min-height: 48px; }
+  .scenario-toggle { width: 100%; }
+  .scenario-toggle button { flex: 1; min-height: 44px; }
+  .bracket { min-width: 900px; }
+  .b-match { padding: 12px 14px; }
+  .b-team { font-size: 14px; padding: 5px 0; }
+  .team-panel { padding: 22px 18px calc(28px + env(safe-area-inset-bottom)); }
+  .panel-cta { min-height: 52px; }
+  .panel-match { padding: 12px 0; }
+}

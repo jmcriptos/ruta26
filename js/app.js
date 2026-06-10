@@ -132,6 +132,7 @@
   }
 
   function renderDates() {
+    const todayKey = dateKey(new Date().toISOString());
     const seen = new Map();
     state.matches.forEach(function (m) {
       const key = dateKey(m.date);
@@ -142,11 +143,17 @@
         const parts = fmtDay.formatToParts(new Date(pair[1]));
         const wd = (parts.find(function (p) { return p.type === "weekday"; }) || { value: "" }).value.toUpperCase().replace(".", "");
         const dayNum = (parts.find(function (p) { return p.type === "day"; }) || { value: "" }).value;
-        return '<button class="date-button" data-date="' + pair[0] + '"><span>' + wd + "</span><strong>" + dayNum + "</strong></button>";
+        const isToday = pair[0] === todayKey;
+        return '<button class="date-button' + (isToday ? " today" : "") + '" data-date="' + pair[0] + '"><span>' +
+          (isToday ? "HOY" : wd) + "</span><strong>" + dayNum + "</strong></button>";
       })).join("");
     dateStrip.querySelectorAll("[data-date]").forEach(function (btn) {
       btn.classList.toggle("active", btn.dataset.date === activeDate);
     });
+    const focus = activeDate !== "TODOS" ? dateStrip.querySelector(".active") : dateStrip.querySelector(".today");
+    if (focus) {
+      dateStrip.scrollLeft = Math.max(0, focus.offsetLeft - dateStrip.clientWidth / 2 + focus.offsetWidth / 2);
+    }
   }
 
   /* ---------- grupos ---------- */
