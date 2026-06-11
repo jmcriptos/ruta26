@@ -33,6 +33,31 @@ async function rest(pathq, init) {
   return txt ? JSON.parse(txt) : null;
 }
 
+function validPushEndpoint(endpoint) {
+  try {
+    const url = new URL(endpoint);
+    const host = url.hostname.toLowerCase();
+    return url.protocol === "https:" && (
+      host === "fcm.googleapis.com" ||
+      host === "android.googleapis.com" ||
+      host === "web.push.apple.com" ||
+      host === "push.services.mozilla.com" ||
+      host.endsWith(".push.services.mozilla.com") ||
+      host.endsWith(".notify.windows.com")
+    );
+  } catch (e) {
+    return false;
+  }
+}
+
+function validSubscriptions(subs) {
+  const valid = subs.filter(function (s) { return validPushEndpoint(s.endpoint); });
+  if (valid.length !== subs.length) {
+    console.error("Suscripciones omitidas por endpoint no permitido: " + (subs.length - valid.length));
+  }
+  return valid;
+}
+
 // Payload en formato Declarative Web Push (web_push: 8030): en iOS/Safari moderno
 // el sistema pinta la notificación directo del JSON (sin depender de que el service
 // worker despierte a tiempo, que era lo que mostraba el placeholder "Notificación");
@@ -61,7 +86,7 @@ function snapshot() {
     const uname = process.env.TEST_USERNAME.trim().toLowerCase();
     const prof = await rest("profiles?select=id,username&username=eq." + encodeURIComponent(uname));
     if (!prof.length) { console.error("No existe el usuario " + uname); process.exit(1); }
-    const subs = await rest("push_subscriptions?select=endpoint,p256dh,auth&user_id=eq." + prof[0].id);
+    const subs = validSubscriptions(await rest("push_subscriptions?select=endpoint,p256dh,auth&user_id=eq." + prof[0].id));
     if (!subs.length) { console.error(uname + " no tiene suscripciones push activas."); process.exit(1); }
     const payload = pushPayload("🔔 Prueba de recordatorios",
       "Así te avisaremos una hora antes si te falta un pick. ¡Todo listo! ✓");
@@ -83,7 +108,7 @@ function snapshot() {
   if (!soon.length) { console.log("Sin partidos en la próxima hora."); return; }
   console.log("Partidos próximos: " + soon.map(function (m) { return m.id; }).join(", "));
 
-  const subs = await rest("push_subscriptions?select=user_id,endpoint,p256dh,auth");
+  const subs = validSubscriptions(await rest("push_subscriptions?select=user_id,endpoint,p256dh,auth"));
   if (!subs.length) { console.log("Sin suscriptores."); return; }
   const ids = soon.map(function (m) { return m.id; }).join(",");
   const preds = await rest("predictions?select=user_id,match_id&match_id=in.(" + ids + ")");

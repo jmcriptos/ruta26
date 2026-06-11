@@ -26,7 +26,7 @@ test("normalize: partido de grupos", () => {
   const m = api.normalize(SAMPLE);
   assert.deepStrictEqual(m, {
     id: "400235455", num: 1, stage: "group", group: "A",
-    date: "2026-06-11T19:00:00Z", city: "Ciudad de México", stadium: "Estadio Ciudad de México",
+    date: "2026-06-11T19:00:00.000Z", city: "Ciudad de México", stadium: "Estadio Ciudad de México",
     home: "43911", away: "43883", phA: null, phB: null,
     hs: null, as: null, hp: null, ap: null, status: "scheduled", winner: null
   });
@@ -46,6 +46,28 @@ test("normalize: eliminatoria sin equipos definidos", () => {
   assert.strictEqual(m.home, null);
   assert.strictEqual(m.phA, "2A");
   assert.strictEqual(m.phB, "2B");
+});
+
+test("normalize: rechaza IDs, fechas, grupos, placeholders y marcadores manipulados", () => {
+  const bad = Object.assign({}, SAMPLE_KO, {
+    IdMatch: '400235527" onmouseover="alert(1)',
+    MatchNumber: "73<script>",
+    GroupName: [{ Description: "Grupo A<script>" }],
+    Date: '2026-06-28T19:00:00Z" onmouseover="alert(1)',
+    Home: { IdTeam: '43911" autofocus onfocus="alert(1)' },
+    PlaceHolderA: 'W73" onmouseover="alert(1)',
+    HomeTeamScore: "<img src=x onerror=alert(1)>",
+    Winner: "43911<script>"
+  });
+  const m = api.normalize(bad);
+  assert.strictEqual(m.id, null);
+  assert.strictEqual(m.num, null);
+  assert.strictEqual(m.date, null);
+  assert.strictEqual(m.group, null);
+  assert.strictEqual(m.home, null);
+  assert.strictEqual(m.phA, null);
+  assert.strictEqual(m.hs, null);
+  assert.strictEqual(m.winner, null);
 });
 
 test("mapStatus", () => {

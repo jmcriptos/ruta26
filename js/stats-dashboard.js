@@ -69,6 +69,24 @@
     });
   }
 
+  function rpc(name, args) {
+    return fetch(cfg.SUPABASE_URL + "/rest/v1/rpc/" + name, {
+      method: "POST",
+      headers: {
+        apikey: cfg.SUPABASE_ANON_KEY,
+        Authorization: "Bearer " + cfg.SUPABASE_ANON_KEY,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(args || {})
+    }).then(function (res) {
+      if (!res.ok) {
+        if (res.status === 404) throw new Error("falta desplegar analytics_rollup en Supabase");
+        throw new Error("HTTP " + res.status);
+      }
+      return res.json();
+    });
+  }
+
   function load() {
     if (loading) return;
     loading = true;
@@ -79,9 +97,9 @@
       q("profiles?select=id,username,created_at"),
       q("champion_picks?select=user_id,team_id"),
       q("predictions?select=user_id,match_id&limit=5000"),
-      q("page_views?select=ts,session_id,section,device,standalone&ts=gte." + since + "&order=ts.desc&limit=10000")
+      rpc("analytics_rollup", { since_at: since })
     ]).then(function (res) {
-      raw = { profiles: res[0], picks: res[1], preds: res[2], views: res[3].reverse() };
+      raw = { profiles: res[0], picks: res[1], preds: res[2], views: res[3] };
       $("updated").textContent = "al " + timeFmt.format(new Date());
       render();
     }).catch(function (e) {
@@ -101,35 +119,38 @@
   /* ── Agregación ───────────────────────────────────── */
   function aggregate() {
     var now = Date.now();
-    var dayKeys = [], prevKeys = [], i;
+    var dayKeys = [], i;
     for (i = range - 1; i >= 0; i--) dayKeys.push(dayKey(new Date(now - i * MS).toISOString()));
-    for (i = 2 * range - 1; i >= range; i--) prevKeys.push(dayKey(new Date(now - i * MS).toISOString()));
-    var inRange = {}, inPrev = {};
+    var inRange = {};
     dayKeys.forEach(function (k) { inRange[k] = true; });
-    prevKeys.forEach(function (k) { inPrev[k] = true; });
 
-    var vDay = {}, sessByDay = {}, vSec = {}, dev = { mobile: 0, desktop: 0 }, pwa = 0;
-    var curSess = {}, prevSess = {};
-    var curViews = 0, prevViews = 0;
+    var vDay = {}, sessByDay = {}, vSec = {}, dev = { mobile: 0, desktop: 0 }, pwa = 0, periods = {};
     raw.views.forEach(function (v) {
-      var d = dayKey(v.ts);
-      if (inRange[d]) {
-        curViews++;
-        curSess[v.session_id] = true;
-        vDay[d] = (vDay[d] || 0) + 1;
-        (sessByDay[d] = sessByDay[d] || {})[v.session_id] = true;
-        var s = (v.section || "#inicio").replace("#", "") || "inicio";
-        vSec[s] = (vSec[s] || 0) + 1;
-        if (v.device === "mobile" || v.device === "desktop") dev[v.device]++;
-        if (v.standalone) pwa++;
-      } else if (inPrev[d]) {
-        prevViews++;
-        prevSess[v.session_id] = true;
+      var views = Number(v.views) || 0;
+      var sessions = Number(v.sessions) || 0;
+      if (v.dimension === "period") {
+        periods[v.value] = { views: views, sessions: sessions };
+        return;
+      }
+      var d = String(v.day || "");
+      if (!inRange[d]) return;
+      if (v.dimension === "day") {
+        vDay[d] = views;
+        sessByDay[d] = sessions;
+      } else if (v.dimension === "section") {
+        var s = (v.value || "#inicio").replace("#", "") || "inicio";
+        vSec[s] = (vSec[s] || 0) + views;
+      } else if (v.dimension === "device" && (v.value === "mobile" || v.value === "desktop")) {
+        dev[v.value] += views;
+      } else if (v.dimension === "standalone" && v.value === "true") {
+        pwa += views;
       }
     });
+    var current = periods[range + "_current"] || { views: 0, sessions: 0 };
+    var previous = periods[range + "_previous"] || { views: 0, sessions: 0 };
 
     var viewsSeries = dayKeys.map(function (k) {
-      return { label: dayLabel(k), views: vDay[k] || 0, sessions: sessByDay[k] ? Object.keys(sessByDay[k]).length : 0 };
+      return { label: dayLabel(k), views: vDay[k] || 0, sessions: sessByDay[k] || 0 };
     });
 
     var regsDay = {}, regsInRange = 0;
@@ -169,13 +190,13 @@
       withChampion: raw.picks.length,
       sinChamp: sinChamp,
       viewsSeries: viewsSeries, regsSeries: regsSeries,
-      curViews: curViews,
-      curSess: Object.keys(curSess).length,
+      curViews: current.views,
+      curSess: current.sessions,
       regsInRange: regsInRange,
-      deltaViews: pctDelta(curViews, prevViews),
-      deltaSess: pctDelta(Object.keys(curSess).length, Object.keys(prevSess).length),
+      deltaViews: pctDelta(current.views, previous.views),
+      deltaSess: pctDelta(current.sessions, previous.sessions),
       viewsToday: vDay[todayK] || 0,
-      sessToday: sessByDay[todayK] ? Object.keys(sessByDay[todayK]).length : 0,
+      sessToday: sessByDay[todayK] || 0,
       sections: sections, devices: dev, pwa: pwa,
       champions: champions, matchPicks: matchPicks
     };

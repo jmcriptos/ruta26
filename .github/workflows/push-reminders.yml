@@ -26,7 +26,7 @@ jobs:
         with:
           node-version: 24
       - name: Instalar web-push
-        run: npm install --no-save web-push@3
+        run: npm install --no-save --ignore-scripts --package-lock=false web-push@3.6.7
       - name: Enviar recordatorios
         env:
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
