@@ -394,6 +394,7 @@ footer { display: flex; align-items: center; gap: 25px; padding: 28px 32px; colo
 .bracket-controls { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
 .bracket-controls select { padding: 11px 16px; border-radius: 999px; border: 1px solid rgba(255,255,255,.2); background: var(--ink-soft); color: var(--paper-bright); font-weight: 600; cursor: pointer; }
 .scenario-toggle { display: flex; align-items: center; gap: 6px; font-size: 12px; color: rgba(243,242,235,.6); }
+.scenario-toggle[hidden] { display: none; }
 .scenario-toggle button { padding: 8px 14px; border-radius: 999px; border: 1px solid rgba(255,255,255,.2); background: none; color: var(--paper-bright); font-weight: 700; font-size: 12px; cursor: pointer; }
 .scenario-toggle button.active { background: var(--lime); border-color: var(--lime); color: var(--ink); }
 
