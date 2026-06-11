@@ -1,0 +1,33 @@
+name: Recordatorios push de picks
+
+# Cada 15 min revisa si hay partidos que empiezan en la próxima hora y manda
+# un push a los suscriptores que aún no tienen predicción (tools/send-push-reminders.js).
+# Dedupe en la tabla push_sent: cada (partido, usuario) se avisa una sola vez.
+# Requiere secrets: SUPABASE_SERVICE_KEY (ya existe) y VAPID_PRIVATE_KEY.
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "1 = solo listar a quién se avisaría, sin enviar"
+        default: "1"
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Instalar web-push
+        run: npm install --no-save web-push@3
+      - name: Enviar recordatorios
+        env:
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
+          VAPID_PUBLIC_KEY: "BFovXeG7ex6_Y8NWZO9k_TRWWkXZTlgRK-nc6vaKhxfO0UBrc1G9Ov4CP23rEtIxSmVTqu-6GKVTaKBLzGt87Jg"
+          DRY_RUN: ${{ github.event.inputs.dry_run || '0' }}
+        run: node tools/send-push-reminders.js

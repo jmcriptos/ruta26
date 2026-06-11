@@ -150,6 +150,98 @@
     }
   }
 
+  /* ---------- notificaciones push (recordatorio si falta el pick) ---------- */
+  let pushStatus = null; // "on" | "off" | "denied" | "ios-install" | "unsupported" | "busy" | null (sin sesión)
+
+  function urlB64ToBytes(b64) {
+    const pad = "=".repeat((4 - (b64.length % 4)) % 4);
+    const raw = atob((b64 + pad).replace(/-/g, "+").replace(/_/g, "/"));
+    const arr = new Uint8Array(raw.length);
+    for (let i = 0; i < raw.length; i++) arr[i] = raw.charCodeAt(i);
+    return arr;
+  }
+
+  function pushSupported() {
+    return "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
+  }
+
+  function iosSinInstalar() {
+    const ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    const instalada = window.navigator.standalone === true ||
+      (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches);
+    return ios && !instalada;
+  }
+
+  async function checkPush() {
+    if (!session) { pushStatus = null; return; }
+    if (!pushSupported()) { pushStatus = iosSinInstalar() ? "ios-install" : "unsupported"; return; }
+    if (Notification.permission === "denied") { pushStatus = "denied"; return; }
+    try {
+      const reg = await navigator.serviceWorker.getRegistration("sw.js");
+      const sub = reg ? await reg.pushManager.getSubscription() : null;
+      if (!sub) { pushStatus = "off"; return; }
+      const got = await client.from("push_subscriptions").select("endpoint")
+        .eq("user_id", session.user.id).eq("endpoint", sub.endpoint);
+      pushStatus = got.data && got.data.length ? "on" : "off";
+    } catch (e) { pushStatus = "off"; }
+  }
+
+  async function enablePush() {
+    pushStatus = "busy"; render();
+    try {
+      const reg = await navigator.serviceWorker.register("sw.js");
+      const perm = await Notification.requestPermission();
+      if (perm !== "granted") { pushStatus = perm === "denied" ? "denied" : "off"; render(); return; }
+      const sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlB64ToBytes(cfg.VAPID_PUBLIC_KEY)
+      });
+      const j = sub.toJSON();
+      const res = await client.from("push_subscriptions").upsert({
+        user_id: session.user.id, endpoint: sub.endpoint, p256dh: j.keys.p256dh, auth: j.keys.auth
+      });
+      pushStatus = res.error ? "off" : "on";
+    } catch (e) { pushStatus = "off"; }
+    render();
+  }
+
+  async function disablePush() {
+    pushStatus = "busy"; render();
+    try {
+      const reg = await navigator.serviceWorker.getRegistration("sw.js");
+      const sub = reg ? await reg.pushManager.getSubscription() : null;
+      if (sub) {
+        await client.from("push_subscriptions").delete()
+          .eq("user_id", session.user.id).eq("endpoint", sub.endpoint);
+        await sub.unsubscribe();
+      }
+    } catch (e) {}
+    pushStatus = "off";
+    render();
+  }
+
+  function remindersHtml() {
+    if (!pushStatus) return "";
+    let inner;
+    if (pushStatus === "on") {
+      inner = "<p>Te avisaremos una hora antes de cada partido al que le falte tu predicción. ✓</p>" +
+        '<div class="game-actions"><button class="game-btn secondary" id="pushOff">Desactivar avisos</button></div>';
+    } else if (pushStatus === "busy") {
+      inner = "<p>Un momento…</p>";
+    } else if (pushStatus === "ios-install") {
+      inner = "<p>En iPhone los avisos solo llegan con la app instalada: toca <b>Compartir</b> → " +
+        "<b>Añadir a pantalla de inicio</b>, abre <b>Ruta 26</b> desde ahí y activa los avisos en esta sección.</p>";
+    } else if (pushStatus === "unsupported") {
+      inner = "<p>Tu navegador no soporta notificaciones push.</p>";
+    } else if (pushStatus === "denied") {
+      inner = "<p>Las notificaciones están bloqueadas para este sitio. Actívalas en la configuración de tu navegador y recarga.</p>";
+    } else {
+      inner = "<p>Recibe un aviso una hora antes de cada partido si aún no pusiste tu predicción.</p>" +
+        '<div class="game-actions"><button class="game-btn" id="pushOn">Activar avisos 🔔</button></div>';
+    }
+    return '<div class="game-card"><h3>Recordatorios 🔔</h3>' + inner + "</div>";
+  }
+
   /* ---------- render ---------- */
   function stateLabel(v) {
     if (!v || !v.state || v.state === "saved") return { cls: "ok", text: v ? "Guardado ✓" : "" };
@@ -470,7 +562,7 @@
       return;
     }
     rootEl.innerHTML =
-      championHtml() + liveRankingHtml() + rankingHtml() + predictionsHtml() + rulesHtml();
+      championHtml() + liveRankingHtml() + rankingHtml() + predictionsHtml() + remindersHtml() + rulesHtml();
     animateLiveRows(prevLiveRows);
     const strip = document.getElementById("gDates");
     const active = strip && strip.querySelector(".active");
@@ -537,6 +629,8 @@
       else if (navigator.clipboard) { navigator.clipboard.writeText(text + " " + url); event.target.textContent = "Enlace copiado ✓"; }
       return;
     }
+    if (event.target.id === "pushOn") { enablePush(); return; }
+    if (event.target.id === "pushOff") { disablePush(); return; }
     if (event.target.id === "gLogin" || event.target.id === "gSignup") {
       const user = document.getElementById("gUser").value;
       const pass = document.getElementById("gPass").value;
@@ -572,6 +666,7 @@
       if (session) await ensureProfile(session.user);
       else { profile = null; mine = {}; myPick = null; }
       await loadAll();
+      await checkPush();
       render();
     })();
   });
@@ -594,6 +689,7 @@
     lastAuthUserId = session && session.user ? session.user.id : null;
     if (session) await ensureProfile(session.user);
     await loadAll();
+    await checkPush();
     render();
   })();
 })();
