@@ -29,7 +29,7 @@
   let data = { profiles: [], predictions: [], picks: [] };
   let mine = {};            // match_id → {hg, ag, state, error}
   let myPick = null;        // team_id
-  let predFilter = "open";  // open | done
+  let predDate = null;      // jornada activa: clave YYYY-MM-DD
   let loadError = false;
   const saveTimers = {};
 
@@ -276,16 +276,46 @@
       '<p class="game-error" id="gError" hidden></p></div>';
   }
 
-  function predictionsHtml() {
-    const shown = matches().filter(function (m) {
-      return predFilter === "open" ? !kicked(m) : kicked(m);
+  function dateKey(iso) {
+    const d = new Date(iso);
+    return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  }
+
+  // días únicos del torneo, en orden cronológico: [{key, iso}]
+  function tournamentDays() {
+    const seen = new Map();
+    matches().slice().sort(function (a, b) { return new Date(a.date) - new Date(b.date); })
+      .forEach(function (m) { const k = dateKey(m.date); if (!seen.has(k)) seen.set(k, m.date); });
+    return Array.from(seen.entries()).map(function (e) { return { key: e[0], iso: e[1] }; });
+  }
+
+  // primer día con un partido por jugar; si todos jugados, el último día
+  function defaultPredDate() {
+    const days = tournamentDays();
+    const pend = days.find(function (d) {
+      return matches().some(function (m) { return dateKey(m.date) === d.key && !kicked(m); });
     });
+    return pend ? pend.key : (days.length ? days[days.length - 1].key : null);
+  }
+
+  function predictionsHtml() {
+    if (!predDate) predDate = defaultPredDate();
+    const days = tournamentDays();
+    const todayKey = dateKey(new Date().toISOString());
+    const strip = days.map(function (d) {
+      const parts = new Intl.DateTimeFormat("es", { weekday: "short", day: "numeric" }).formatToParts(new Date(d.iso));
+      const wd = (parts.find(function (p) { return p.type === "weekday"; }) || { value: "" }).value.toUpperCase().replace(/\./g, "");
+      const dn = (parts.find(function (p) { return p.type === "day"; }) || { value: "" }).value;
+      const isToday = d.key === todayKey;
+      return '<button type="button" class="game-date' + (d.key === predDate ? " active" : "") + (isToday ? " today" : "") +
+        '" data-gdate="' + d.key + '"><span>' + (isToday ? "HOY" : wd) + "</span><strong>" + dn + "</strong></button>";
+    }).join("");
+    const shown = matches().filter(function (m) { return dateKey(m.date) === predDate; })
+      .sort(function (a, b) { return new Date(a.date) - new Date(b.date); });
     return '<div class="game-card"><h3>Mis predicciones</h3>' +
-      '<div class="match-tabs" id="gFilter">' +
-      '<button data-pf="open" class="' + (predFilter === "open" ? "active" : "") + '">Por jugar</button>' +
-      '<button data-pf="done" class="' + (predFilter === "done" ? "active" : "") + '">Jugados</button>' +
-      "</div><div id=\"gPicks\">" +
-      (shown.length ? shown.map(pickRowHtml).join("") : '<p class="rank-empty">Nada por aquí todavía.</p>') +
+      '<div class="game-dates" id="gDates">' + strip + "</div>" +
+      '<div id="gPicks">' +
+      (shown.length ? shown.map(pickRowHtml).join("") : '<p class="rank-empty">Sin partidos este día.</p>') +
       "</div></div>";
   }
 
@@ -342,6 +372,9 @@
     rootEl.innerHTML =
       '<div class="game-userbar"><button id="gLogout">Cerrar sesión</button></div>' +
       championHtml() + rankingHtml() + predictionsHtml() + rulesHtml();
+    const strip = document.getElementById("gDates");
+    const active = strip && strip.querySelector(".active");
+    if (strip && active) strip.scrollLeft = Math.max(0, active.offsetLeft - strip.clientWidth / 2 + active.offsetWidth / 2);
   }
 
   /* ---------- eventos (delegación) ---------- */
@@ -391,8 +424,8 @@
       savePrediction(matchId);
       return;
     }
-    const pf = event.target.closest("[data-pf]");
-    if (pf) { predFilter = pf.dataset.pf; render(); return; }
+    const gd = event.target.closest("[data-gdate]");
+    if (gd) { predDate = gd.dataset.gdate; render(); return; }
     if (event.target.id === "gLogout") { await client.auth.signOut(); return; }
     if (event.target.id === "gShare") {
       const rows = WC.scoring.buildLeaderboard(data.profiles, data.predictions, data.picks, matches());

@@ -699,3 +699,13 @@ html { scroll-padding-top: calc(84px + env(safe-area-inset-top)); }
 .user-chip::before { content: ""; flex: 0 0 auto; width: 6px; height: 6px; border-radius: 50%; background: var(--lime); }
 .user-chip[hidden] { display: none; }
 .topbar #searchToggle { display: none; }
+
+/* ===== Quiniela: carrusel de jornadas ===== */
+.game-dates { display: flex; gap: 6px; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; margin: 0 0 16px; padding-bottom: 2px; }
+.game-dates::-webkit-scrollbar { display: none; }
+.game-date { flex: 0 0 auto; min-width: 56px; min-height: 52px; padding: 8px 10px; border: 1px solid var(--line); background: var(--paper-bright); border-radius: 10px; cursor: pointer; text-align: center; }
+.game-date span { display: block; font-size: 9px; font-weight: 800; letter-spacing: .6px; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+.game-date strong { display: block; font: 800 17px/1 "League Spartan", sans-serif; color: var(--ink); }
+.game-date.today span { color: #5a7a1e; }
+.game-date.active { background: var(--lime); border-color: var(--lime); }
+.game-date.active span { color: #3e5314; }
