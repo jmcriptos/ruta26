@@ -756,3 +756,21 @@ footer { color: var(--white); }
 .bracket-note { color: var(--white); }
 .bottom-nav a { color: rgba(255,255,255,.85); }
 .bottom-nav a.active { color: var(--lime); }
+
+/* ===== Hero móvil más liviano: menos bloques, todo más compacto ===== */
+@media (max-width: 680px) {
+  .hero { padding-bottom: 22px; }
+  h1 { margin: 14px 0 12px; font-size: 48px; letter-spacing: -3px; }
+  .hero-lede { margin-bottom: 18px; font-size: 14px; line-height: 1.55; }
+  .primary-button { padding: 13px 16px; }
+  /* "Explorar 48 equipos" ya vive en la barra inferior: fuera del hero */
+  .hero-actions .text-button { display: none; }
+
+  /* contador como franja compacta, no tarjeta protagonista */
+  .countdown-panel { margin-top: 20px; gap: 10px; padding: 14px 16px 12px; }
+  .countdown strong { font-size: 26px; }
+  .countdown span { font-size: 9px; }
+  .countdown div:not(:first-child)::before { top: 4px; bottom: 8px; }
+  .opening-meta { padding-top: 10px; }
+  .opening-meta span { font-size: 12px; }
+}
