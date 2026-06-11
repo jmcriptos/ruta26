@@ -784,18 +784,9 @@ footer { color: var(--white); }
   .opening-meta span { font-size: 12px; }
 }
 
-/* ===== Header sólido y en flujo en móvil: el hero nunca pasa por debajo =====
-   La navegación vive en la bottom nav; el header solo lleva marca y usuario,
-   así que se desplaza con la página en vez de quedar fijo encima del hero. */
+/* ===== Header sticky y sólido en móvil: nada se transparenta debajo ===== */
 @media (max-width: 680px) {
-  .topbar { position: absolute; background: rgba(8, 20, 16, .97); }
-  html { scroll-padding-top: calc(10px + env(safe-area-inset-top)); }
-  /* respaldo oscuro permanente para el status bar en modo app (black-translucent) */
-  body::before {
-    content: ""; position: fixed; z-index: 40; top: 0; left: 0; right: 0;
-    height: env(safe-area-inset-top);
-    background: rgba(8, 20, 16, .97);
-  }
+  .topbar { background: rgba(8, 20, 16, .97); }
 }
 
 /* ===== Empalme hero → estadísticas en móvil: lo que asoma bajo el menú se ve continuo ===== */
