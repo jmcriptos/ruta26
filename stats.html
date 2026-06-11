@@ -2,187 +2,208 @@
 <html lang="es">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#0a1512">
   <title>Ruta 26 · Estadísticas</title>
   <link rel="icon" href="favicon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=League+Spartan:wght@600;800&family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
+  <link href="https://fonts.googleapis.com/css2?family=League+Spartan:wght@600;700;800&amp;family=DM+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
   <style>
-    :root { --ink:#0a1512; --lime:#d7ff43; --paper:#f3f2eb; --paper-bright:#fbfaf5; --line:#d9d9cf; --muted:#6e7772; --orange:#ff7c42; }
-    * { margin:0; padding:0; box-sizing:border-box; }
-    body { font-family:"Outfit",sans-serif; background:var(--paper); color:var(--ink); }
-    header { background:var(--ink); color:#fff; padding:calc(14px + env(safe-area-inset-top)) 18px 14px; display:flex; align-items:center; gap:10px; }
-    header .logo { width:30px; height:30px; border-radius:50%; background:var(--lime); color:var(--ink); display:grid; place-items:center; font:800 13px "League Spartan"; }
-    header h1 { font:800 18px "League Spartan"; text-transform:uppercase; letter-spacing:-.5px; }
-    header small { margin-left:auto; color:rgba(255,255,255,.6); font-size:11px; }
-    main { max-width:760px; margin:0 auto; padding:18px 14px calc(30px + env(safe-area-inset-bottom)); }
-    .cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; margin-bottom:14px; }
-    .stat-box { background:var(--paper-bright); border:1px solid var(--line); padding:14px 16px; }
-    .stat-box small { display:block; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.8px; color:var(--muted); margin-bottom:4px; }
-    .stat-box strong { font:800 26px "League Spartan"; }
-    .stat-box span { font-size:12px; color:var(--muted); }
-    .card { background:var(--paper-bright); border:1px solid var(--line); padding:16px; margin-bottom:14px; }
-    .card h2 { font:800 16px "League Spartan"; text-transform:uppercase; letter-spacing:-.3px; margin-bottom:10px; }
-    .bar-row { display:flex; align-items:center; gap:8px; padding:3px 0; font-size:13px; }
-    .bar-row .lbl { flex:0 0 120px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .bar-row .bar { flex:1; height:16px; background:var(--paper); border-radius:3px; overflow:hidden; }
-    .bar-row .bar i { display:block; height:100%; background:var(--lime); border-radius:3px; }
-    .bar-row .bar i.alt { background:var(--orange); }
-    .bar-row .val { flex:0 0 44px; text-align:right; font-weight:700; font-size:12px; }
-    .cols { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:14px; }
-    .muted { color:var(--muted); font-size:12px; margin-top:8px; }
-    #refresh { margin-left:12px; border:1px solid rgba(255,255,255,.3); background:none; color:#fff; border-radius:999px; padding:4px 12px; font-size:11px; cursor:pointer; font-family:inherit; }
-    .err { background:#fceeee; border:1px solid #e8b5b5; padding:14px; color:#7a2020; font-size:14px; }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      font-family: "DM Sans", Arial, sans-serif;
+      background: var(--bg); color: var(--txt);
+      -webkit-font-smoothing: antialiased;
+      --ink: #0a1512; --lime: #d7ff43; --orange: #ff7c42; --blue: #68a7ff;
+      --accent: #68a7ff; --up: #2da45f; --down: #d4593f;
+      --pad: 18px; --gap: 14px;
+    }
+    body[data-theme="claro"] {
+      --bg: #f3f2eb; --card: #fbfaf5; --line: #ddddd2; --txt: #0a1512; --muted: #6e7772;
+      --track: #ecebe1; --grid: #e4e3d8; --chip: #eeede3;
+    }
+    body[data-theme="oscuro"] {
+      --bg: #0a1512; --card: #122019; --line: #22352c; --txt: #f3f2eb; --muted: #8da399;
+      --track: #0e1a15; --grid: #1b2c24; --chip: #182a22; --up: #5fd692; --down: #ff9579;
+    }
+    .noise {
+      position: fixed; inset: 0; z-index: 40; opacity: .025; pointer-events: none;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.8'/%3E%3C/svg%3E");
+    }
+    .dz-top {
+      position: sticky; top: 0; z-index: 30;
+      display: flex; align-items: center; gap: 12px;
+      padding: calc(12px + env(safe-area-inset-top)) 20px 12px;
+      color: #fff; background: rgba(8, 20, 16, .92);
+      border-bottom: 1px solid rgba(255, 255, 255, .09);
+      backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+    }
+    .dz-brand { display: flex; align-items: center; gap: 11px; }
+    .dz-ball {
+      flex: none; width: 34px; height: 34px; display: grid; place-items: center;
+      color: var(--ink); background: var(--lime);
+      border-radius: 50% 45% 50% 42%; transform: rotate(-8deg);
+      font: 800 13px/1 "League Spartan", sans-serif;
+    }
+    .dz-brand-txt { font: 800 15px/1 "League Spartan", sans-serif; letter-spacing: -.5px; text-transform: uppercase; }
+    .dz-brand-txt span { display: block; color: var(--lime); font-size: 8px; letter-spacing: 3px; margin-top: 2px; }
+    .dz-top-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+    .dz-updated { font-size: 11px; color: rgba(255,255,255,.55); white-space: nowrap; }
+    .dz-iconbtn {
+      width: 34px; height: 34px; display: grid; place-items: center;
+      border: 1px solid rgba(255,255,255,.18); border-radius: 50%;
+      background: transparent; color: #fff; cursor: pointer; transition: .2s ease; padding: 0;
+    }
+    .dz-iconbtn:hover { border-color: var(--lime); color: var(--lime); }
+    .dz-iconbtn svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
+    .dz-iconbtn.spin svg { animation: dz-rot 1s linear infinite; }
+    @keyframes dz-rot { to { transform: rotate(360deg); } }
+    .dz-theme-toggle { display: flex; border: 1px solid rgba(255,255,255,.18); border-radius: 999px; padding: 2px; }
+    .dz-theme-toggle button {
+      width: 30px; height: 28px; display: grid; place-items: center;
+      border: 0; border-radius: 999px; background: transparent;
+      color: rgba(255,255,255,.5); cursor: pointer; font-size: 13px; line-height: 1; padding: 0;
+    }
+    .dz-theme-toggle button.active { background: var(--lime); color: var(--ink); }
+
+    .dz-main { max-width: 1180px; margin: 0 auto; padding: 20px 20px calc(20px + env(safe-area-inset-bottom)); }
+    .dz-controls { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: var(--gap); }
+    .dz-kicker { font-size: 11px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); }
+    .dz-tabs { display: flex; gap: 4px; padding: 3px; background: var(--card); border: 1px solid var(--line); border-radius: 999px; }
+    .dz-tabs button {
+      border: 0; background: transparent; color: var(--muted);
+      font: 700 12px "DM Sans", sans-serif; padding: 6px 14px; border-radius: 999px;
+      cursor: pointer; transition: .15s ease;
+    }
+    .dz-tabs button:hover { color: var(--txt); }
+    .dz-tabs button.active { background: var(--accent); color: var(--ink); }
+    .dz-status {
+      display: inline-flex; align-items: center; gap: 7px;
+      font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+      color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px;
+      background: var(--card);
+    }
+    .dz-status .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--up); animation: dz-pulse 1.6s ease infinite; }
+    @keyframes dz-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+
+    .dz-kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--gap); margin-bottom: var(--gap); }
+    .dz-kpi {
+      background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+      padding: var(--pad); display: flex; flex-direction: column; gap: 6px; min-width: 0;
+    }
+    .dz-kpi small { font-size: 10px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: var(--muted); }
+    .dz-kpi-row { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+    .dz-kpi-row strong { font: 800 30px/1 "League Spartan", sans-serif; letter-spacing: -.5px; }
+    .dz-kpi-row .of { font-size: 13px; color: var(--muted); font-weight: 500; }
+    .dz-delta { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--chip); white-space: nowrap; }
+    .dz-delta.up { color: var(--up); }
+    .dz-delta.down { color: var(--down); }
+    .dz-delta.flat { color: var(--muted); }
+    .dz-kpi-spark { margin-top: auto; width: 100%; height: 30px; display: block; }
+    .dz-progress { height: 7px; border-radius: 99px; background: var(--track); overflow: hidden; margin-top: auto; }
+    .dz-progress i { display: block; height: 100%; background: var(--accent); border-radius: 99px; transition: width .6s ease; }
+    .dz-kpi .sub { font-size: 11px; color: var(--muted); }
+
+    .dz-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--gap); }
+    .dz-card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: var(--pad); min-width: 0; }
+    .dz-card.span2 { grid-column: span 2; }
+    .dz-card-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+    .dz-card-head h2 { margin: 0; font: 800 15px/1.1 "League Spartan", sans-serif; text-transform: uppercase; letter-spacing: -.3px; }
+    .dz-card-head .aside { font-size: 11px; color: var(--muted); font-weight: 500; white-space: nowrap; }
+    .dz-note { font-size: 11.5px; color: var(--muted); margin: 10px 0 0; line-height: 1.5; }
+    .dz-empty { font-size: 13px; color: var(--muted); padding: 18px 0; text-align: center; margin: 0; }
+
+    .dz-bar-row { display: flex; align-items: center; gap: 10px; padding: 4px 0; font-size: 13px; }
+    .dz-bar-row .lbl { flex: 0 0 124px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 500; }
+    .dz-bar-row .bar { flex: 1; height: 15px; background: var(--track); border-radius: 4px; overflow: hidden; }
+    .dz-bar-row .bar i { display: block; height: 100%; border-radius: 4px; transition: width .6s ease; }
+    .dz-bar-row .val { flex: 0 0 52px; text-align: right; font-weight: 700; font-size: 12px; font-variant-numeric: tabular-nums; }
+
+    .dz-chart-wrap { position: relative; }
+    .dz-chart-wrap svg { display: block; width: 100%; height: auto; }
+    .dz-tip {
+      position: absolute; top: 0; transform: translate(-50%, -4px);
+      background: var(--ink); color: #fff; border-radius: 8px;
+      padding: 7px 10px; font-size: 11.5px; line-height: 1.5; white-space: nowrap;
+      pointer-events: none; z-index: 5; box-shadow: 0 8px 24px rgba(0,0,0,.25); display: none;
+    }
+    body[data-theme="oscuro"] .dz-tip { background: #f3f2eb; color: var(--ink); }
+    .dz-legend { display: flex; gap: 16px; margin-top: 8px; font-size: 11.5px; color: var(--muted); flex-wrap: wrap; }
+    .dz-legend span { display: inline-flex; align-items: center; gap: 6px; }
+    .dz-legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+
+    .dz-donut-wrap { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+    .dz-donut-legend { display: flex; flex-direction: column; gap: 8px; font-size: 13px; min-width: 130px; flex: 1; }
+    .dz-donut-legend .row { display: flex; align-items: center; gap: 8px; }
+    .dz-donut-legend i { width: 10px; height: 10px; border-radius: 3px; flex: none; }
+    .dz-donut-legend .n { margin-left: auto; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .dz-donut-legend .pct { color: var(--muted); font-size: 11px; width: 34px; text-align: right; }
+
+    .dz-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; align-items: center; }
+    .dz-chips .pre { font-size: 11.5px; font-weight: 600; color: var(--muted); }
+    .dz-chip { font-size: 11.5px; font-weight: 600; color: var(--muted); background: var(--chip); border-radius: 999px; padding: 4px 10px; }
+
+    .dz-foot { max-width: 1180px; margin: 0 auto; padding: 0 20px calc(30px + env(safe-area-inset-bottom)); font-size: 11.5px; color: var(--muted); }
+    .dz-loading { display: grid; place-items: center; padding: 90px 20px; gap: 14px; }
+    .dz-loading .dz-ball { width: 46px; height: 46px; font-size: 17px; animation: dz-bounce 1s ease infinite; }
+    @keyframes dz-bounce { 0%, 100% { transform: rotate(-8deg) translateY(0); } 50% { transform: rotate(-8deg) translateY(-9px); } }
+    .dz-loading p { color: var(--muted); font-size: 13px; margin: 0; }
+    .dz-err {
+      background: rgba(212, 89, 63, .1); border: 1px solid rgba(212, 89, 63, .4);
+      color: var(--down); border-radius: 12px; padding: 12px 16px; font-size: 13px; margin-bottom: var(--gap);
+    }
+
+    @media (max-width: 940px) {
+      .dz-kpis { grid-template-columns: repeat(2, 1fr); }
+      .dz-grid { grid-template-columns: 1fr 1fr; }
+      .dz-card.span2 { grid-column: span 2; }
+    }
+    @media (max-width: 640px) {
+      .dz-main { padding-left: 14px; padding-right: 14px; }
+      .dz-grid { grid-template-columns: 1fr; }
+      .dz-card.span2 { grid-column: span 1; }
+      .dz-kpi-row strong { font-size: 26px; }
+      .dz-updated { display: none; }
+      .dz-bar-row .lbl { flex-basis: 104px; font-size: 12px; }
+    }
   </style>
 </head>
-<body>
-  <header>
-    <div class="logo">26</div>
-    <h1>Stats de la quiniela</h1>
-    <small id="updated">cargando…</small>
-    <button id="refresh" type="button">↻</button>
+<body data-theme="claro">
+  <div class="noise"></div>
+
+  <header class="dz-top">
+    <div class="dz-brand">
+      <span class="dz-ball">26</span>
+      <div class="dz-brand-txt">Stats<span>RUTA 26</span>quiniela</div>
+    </div>
+    <div class="dz-top-right">
+      <span class="dz-updated" id="updated">cargando…</span>
+      <button class="dz-iconbtn" id="refreshBtn" type="button" aria-label="Actualizar datos" title="Actualizar">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66M20 4v4h-4"></path></svg>
+      </button>
+      <div class="dz-theme-toggle" role="group" aria-label="Tema">
+        <button type="button" id="thClaro" aria-label="Tema claro" title="Tema claro">☀</button>
+        <button type="button" id="thOscuro" aria-label="Tema oscuro" title="Tema oscuro">☾</button>
+      </div>
+    </div>
   </header>
-  <main id="main"><p class="muted">Cargando datos en vivo…</p></main>
 
-  <script src="js/config.js?v=20260611j"></script>
-  <script src="js/data.js?v=20260611j"></script>
-  <script>
-  (function () {
-    const cfg = WC.CONFIG;
-    const teams = WC.SNAPSHOT.teams;
-    const matches = WC.SNAPSHOT.matches;
-    const mainEl = document.getElementById("main");
+  <div id="content">
+    <div class="dz-loading">
+      <span class="dz-ball">26</span>
+      <p>Cargando datos en vivo…</p>
+    </div>
+  </div>
 
-    function esc(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
-    async function q(path) {
-      const res = await fetch(cfg.SUPABASE_URL + "/rest/v1/" + path, {
-        headers: { apikey: cfg.SUPABASE_ANON_KEY, Authorization: "Bearer " + cfg.SUPABASE_ANON_KEY }
-      });
-      if (!res.ok) throw new Error("HTTP " + res.status);
-      return res.json();
-    }
-    function dayKey(iso) {
-      const d = new Date(iso);
-      return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
-    }
-    function dayLabel(key) {
-      return new Intl.DateTimeFormat("es", { day: "numeric", month: "short" }).format(new Date(key + "T12:00:00"));
-    }
-    function bars(rows, alt) {
-      const max = Math.max.apply(null, rows.map(function (r) { return r.n; }).concat([1]));
-      return rows.map(function (r) {
-        return '<div class="bar-row"><span class="lbl">' + r.label + '</span><div class="bar"><i' + (alt ? ' class="alt"' : "") + ' style="width:' + Math.round(100 * r.n / max) + '%"></i></div><span class="val">' + r.val + "</span></div>";
-      }).join("");
-    }
+  <footer class="dz-foot">
+    <span>Medición activa desde el 11 JUN 2026 · Analytics propio, sin cookies, respeta Do Not Track.</span>
+  </footer>
 
-    async function load() {
-      document.getElementById("updated").textContent = "cargando…";
-      try {
-        const since = new Date(Date.now() - 14 * 86400e3).toISOString();
-        const r = await Promise.all([
-          q("profiles?select=id,username,created_at"),
-          q("champion_picks?select=user_id,team_id"),
-          q("predictions?select=user_id,match_id"),
-          q("page_views?select=ts,session_id,section,device,standalone&ts=gte." + since + "&order=ts.asc&limit=10000")
-        ]);
-        render(r[0], r[1], r[2], r[3]);
-        document.getElementById("updated").textContent = "al " + new Intl.DateTimeFormat("es", { hour: "numeric", minute: "2-digit" }).format(new Date());
-      } catch (e) {
-        mainEl.innerHTML = '<div class="err">No se pudieron cargar los datos (' + esc(e.message) + "). Revisa tu conexión e intenta de nuevo.</div>";
-        document.getElementById("updated").textContent = "error";
-      }
-    }
-
-    function render(profiles, picks, preds, views) {
-      const today = dayKey(new Date().toISOString());
-      const viewsToday = views.filter(function (v) { return dayKey(v.ts) === today; });
-      const sessToday = new Set(viewsToday.map(function (v) { return v.session_id; })).size;
-
-      const regs = {};
-      profiles.forEach(function (p) { const d = dayKey(p.created_at); regs[d] = (regs[d] || 0) + 1; });
-
-      const champ = {};
-      picks.forEach(function (pk) {
-        const t = teams[pk.team_id];
-        const k = t ? t.flag + " " + t.name : pk.team_id;
-        champ[k] = (champ[k] || 0) + 1;
-      });
-
-      const vDay = {}, vSec = {}, dev = { mobile: 0, desktop: 0 }, pwa = { si: 0, no: 0 };
-      const sessByDay = {};
-      views.forEach(function (v) {
-        const d = dayKey(v.ts);
-        vDay[d] = (vDay[d] || 0) + 1;
-        (sessByDay[d] = sessByDay[d] || new Set()).add(v.session_id);
-        const s = v.section || "#inicio";
-        vSec[s] = (vSec[s] || 0) + 1;
-        if (v.device) dev[v.device]++;
-        pwa[v.standalone ? "si" : "no"]++;
-      });
-
-      const kicked = matches.filter(function (m) { return new Date(m.date) <= new Date(); });
-      const tname = function (id) { const t = teams[id]; return t ? t.flag + " " + t.name.split(" ")[0] : "—"; };
-      const part = kicked.slice(-8).map(function (m) {
-        const n = preds.filter(function (p) { return p.match_id === m.id; }).length;
-        return { label: tname(m.home) + "–" + tname(m.away), n: n, val: n + "/" + profiles.length };
-      });
-
-      const sinChamp = profiles.filter(function (p) {
-        return !picks.some(function (pk) { return pk.user_id === p.id; });
-      }).map(function (p) { return esc(p.username); });
-
-      mainEl.innerHTML =
-        '<div class="cards">' +
-        '<div class="stat-box"><small>Jugadores</small><strong>' + profiles.length + "</strong></div>" +
-        '<div class="stat-box"><small>Con campeón</small><strong>' + picks.length + '</strong> <span>/ ' + profiles.length + "</span></div>" +
-        '<div class="stat-box"><small>Visitas hoy</small><strong>' + viewsToday.length + "</strong></div>" +
-        '<div class="stat-box"><small>Sesiones hoy</small><strong>' + sessToday + "</strong></div>" +
-        "</div>" +
-
-        '<div class="card"><h2>Visitas por día</h2>' +
-        bars(Object.keys(vDay).sort().map(function (d) {
-          return { label: dayLabel(d), n: vDay[d], val: vDay[d] + " · " + sessByDay[d].size + "👤" };
-        }), true) +
-        '<p class="muted">Barras = secciones vistas; el número de la derecha incluye sesiones únicas. Desde el 11 JUN (cuando se activó la medición).</p></div>' +
-
-        '<div class="cols">' +
-        '<div class="card"><h2>Secciones más vistas</h2>' +
-        bars(Object.keys(vSec).sort(function (a, b) { return vSec[b] - vSec[a]; }).slice(0, 8).map(function (s) {
-          return { label: esc(s.replace("#", "") || "inicio"), n: vSec[s], val: vSec[s] };
-        }), true) + "</div>" +
-
-        '<div class="card"><h2>Dispositivos</h2>' +
-        bars([
-          { label: "📱 Celular", n: dev.mobile, val: dev.mobile },
-          { label: "💻 Computadora", n: dev.desktop, val: dev.desktop },
-          { label: "⬇️ App instalada", n: pwa.si, val: pwa.si }
-        ], true) +
-        '<p class="muted">"App instalada" = vistas desde la PWA en pantalla de inicio.</p></div>' +
-        "</div>" +
-
-        '<div class="cols">' +
-        '<div class="card"><h2>Campeón elegido</h2>' +
-        bars(Object.keys(champ).sort(function (a, b) { return champ[b] - champ[a]; }).map(function (k) {
-          return { label: k, n: champ[k], val: champ[k] };
-        })) +
-        (sinChamp.length ? '<p class="muted">Sin campeón: ' + sinChamp.join(", ") + "</p>" : "") + "</div>" +
-
-        '<div class="card"><h2>Picks por partido</h2>' +
-        (part.length ? bars(part) : '<p class="muted">Aún no inicia ningún partido.</p>') +
-        '<p class="muted">Solo partidos ya iniciados (antes del kickoff los picks son privados).</p></div>' +
-        "</div>" +
-
-        '<div class="card"><h2>Registros por día</h2>' +
-        bars(Object.keys(regs).sort().map(function (d) {
-          return { label: dayLabel(d), n: regs[d], val: regs[d] };
-        })) + "</div>";
-    }
-
-    document.getElementById("refresh").addEventListener("click", load);
-    load();
-  })();
-  </script>
+  <script src="js/config.js?v=20260611k"></script>
+  <script src="js/data.js?v=20260611k"></script>
+  <script src="js/stats-dashboard.js?v=20260611k"></script>
 </body>
 </html>

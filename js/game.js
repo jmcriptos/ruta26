@@ -87,7 +87,9 @@
     try {
       const results = await Promise.all([
         client.from("profiles").select("id, username"),
-        client.from("predictions").select("user_id, match_id, hg, ag, pens"),
+        // limit explícito: el default de Supabase son 1000 filas y el torneo
+        // completo supera eso (jugadores × 104 partidos) — el ranking quedaría corto
+        client.from("predictions").select("user_id, match_id, hg, ag, pens").limit(20000),
         client.from("champion_picks").select("user_id, team_id")
       ]);
       if (results.some(function (r) { return r.error; })) { loadError = true; return; }
