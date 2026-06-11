@@ -187,6 +187,12 @@ test("bracketSide: sigue la cadena W## hasta la semi 101 (izq) o 102 (der)", () 
   assert.strictEqual(st.bracketSide(999, byNum), null);   // desconocido
 });
 
+test("bracketSide: datos en vivo con ciclo no cuelgan (devuelve null)", () => {
+  const cyc = {};
+  [ko(89, "r16", "W97", "1A"), ko(97, "qf", "W89", "W90")].forEach(function (m) { cyc[m.num] = m; });
+  assert.strictEqual(st.bracketSide(89, cyc), null);
+});
+
 test("groupStageEliminated: 4º con grupo cerrado, 3º no clasificado, y casos no eliminados", () => {
   const teams = makeTeams({ A: ["a1", "a2", "a3", "a4"], B: ["b1", "b2", "b3", "b4"] });
   const matches = fullGroup("A", { base: 0, ids: ["a1", "a2", "a3", "a4"], thirdGoals: 5 })
