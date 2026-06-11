@@ -784,6 +784,15 @@ footer { color: var(--white); }
   .opening-meta span { font-size: 12px; }
 }
 
+/* ===== Empalme hero → estadísticas en móvil: lo que asoma bajo el menú se ve continuo ===== */
+@media (max-width: 680px) {
+  .snapshot { width: 100%; margin-top: 0; box-shadow: none; }
+  .stat-card.featured {
+    background: linear-gradient(115deg, #0c1e16, #10291e);
+    border-bottom: 1px solid rgba(255, 255, 255, .07);
+  }
+}
+
 /* ===== Estadísticas en móvil: la tarjeta oscura es solo título y el 48 baja al listado ===== */
 .stat-only-mobile { display: none; }
 @media (max-width: 680px) {
