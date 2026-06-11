@@ -335,6 +335,69 @@
       "</div>";
   }
 
+  /* ---------- ranking en vivo (provisional) ---------- */
+  let lastLivePoints = {}; // userId → livePoints del render anterior (para el "bump")
+
+  function liveRankingHtml() {
+    const liveMs = matches().filter(function (m) { return m.status === "live"; });
+    if (!liveMs.length) return "";
+    const rows = WC.scoring.buildLiveLeaderboard(data.profiles, data.predictions, data.picks, matches());
+    if (!rows.length) return "";
+    const uid = session ? session.user.id : null;
+    const table = rows.map(function (r) {
+      const mov = r.delta > 0 ? '<span class="lr-up">▲' + r.delta + "</span>"
+        : r.delta < 0 ? '<span class="lr-down">▼' + (-r.delta) + "</span>"
+        : '<span class="lr-eq">–</span>';
+      const bump = r.livePoints > (lastLivePoints[r.userId] || 0) ? " bump" : "";
+      const plus = r.livePoints > 0 ? ' <span class="lr-plus' + bump + '">+' + r.livePoints + "</span>" : "";
+      return "<tr" + (r.userId === uid ? ' class="me"' : "") + ' data-user="' + r.userId + '">' +
+        '<td class="pos"><span class="num">' + r.pos + '</span></td><td class="lr-mov">' + mov +
+        '</td><td class="flag">' + champFlagFor(r.userId) + "</td><td>" + esc(r.username) + plus +
+        '</td><td class="pts">' + r.points + "</td></tr>";
+    }).join("");
+    lastLivePoints = {};
+    rows.forEach(function (r) { lastLivePoints[r.userId] = r.livePoints; });
+    const detail = liveMs.map(function (m) {
+      const frozen = WC.scoring.freezeLive(m);
+      const gainers = data.profiles.map(function (p) {
+        const pr = data.predictions.find(function (r) { return r.user_id === p.id && r.match_id === m.id; });
+        const s = WC.scoring.scoreMatch(pr ? { hg: pr.hg, ag: pr.ag, pens: pr.pens } : null, frozen);
+        return s.points > 0 ? '<span class="lr-chip">' + esc(p.username) + " +" + s.points + "</span>" : "";
+      }).filter(Boolean);
+      const score = m.hs + "–" + m.as + (m.hp != null ? " (pen " + m.hp + "–" + m.ap + ")" : "");
+      return '<div class="lr-match"><span class="lr-score">' + teamFlag(m.home) + " " + score + " " + teamFlag(m.away) + "</span>" +
+        (gainers.length ? gainers.join("") : '<span class="lr-none">nadie suma todavía</span>') + "</div>";
+    }).join("");
+    return '<div class="game-card live-rank" id="liveRank"><h3><span class="lr-dot"></span> Ranking en vivo</h3>' +
+      "<p>Así quedaría si los partidos terminan como van. Se actualiza solo; el oficial suma al final.</p>" +
+      '<table class="rank-table"><tr><th>#</th><th></th><th></th><th>Jugador</th><th>Pts</th></tr>' + table + "</table>" +
+      '<div class="lr-detail">' + detail + "</div></div>";
+  }
+
+  // FLIP: las filas del ranking en vivo se deslizan a su nueva posición tras cada re-render
+  function captureLiveRows() {
+    const map = {};
+    rootEl.querySelectorAll("#liveRank tr[data-user]").forEach(function (tr) {
+      map[tr.dataset.user] = tr.getBoundingClientRect().top;
+    });
+    return map;
+  }
+
+  function animateLiveRows(prev) {
+    rootEl.querySelectorAll("#liveRank tr[data-user]").forEach(function (tr) {
+      const old = prev[tr.dataset.user];
+      if (old == null) return;
+      const dy = old - tr.getBoundingClientRect().top;
+      if (!dy) return;
+      tr.style.transition = "none";
+      tr.style.transform = "translateY(" + dy + "px)";
+      requestAnimationFrame(function () {
+        tr.style.transition = "transform .6s cubic-bezier(.22,1,.36,1)";
+        tr.style.transform = "";
+      });
+    });
+  }
+
   function rankingHtml() {
     const rows = WC.scoring.buildLeaderboard(data.profiles, data.predictions, data.picks, matches());
     const uid = session ? session.user.id : null;
@@ -400,12 +463,15 @@
       rootEl.innerHTML = '<div class="game-card game-off"><h3>El juego no está disponible ahora</h3><p>Revisa tu conexión e intenta de nuevo en un momento.</p></div>';
       return;
     }
+    const prevLiveRows = captureLiveRows();
     if (!session) {
-      rootEl.innerHTML = authHtml() + rankingHtml() + rulesHtml();
+      rootEl.innerHTML = authHtml() + liveRankingHtml() + rankingHtml() + rulesHtml();
+      animateLiveRows(prevLiveRows);
       return;
     }
     rootEl.innerHTML =
-      championHtml() + rankingHtml() + predictionsHtml() + rulesHtml();
+      championHtml() + liveRankingHtml() + rankingHtml() + predictionsHtml() + rulesHtml();
+    animateLiveRows(prevLiveRows);
     const strip = document.getElementById("gDates");
     const active = strip && strip.querySelector(".active");
     if (strip && active) strip.scrollLeft = Math.max(0, active.offsetLeft - strip.clientWidth / 2 + active.offsetWidth / 2);

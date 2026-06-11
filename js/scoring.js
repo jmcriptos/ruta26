@@ -81,7 +81,35 @@
     return rows;
   }
 
-  const scoring = { POINTS: POINTS, CHAMPION_LOCK: CHAMPION_LOCK, scoreMatch: scoreMatch, scoreChampion: scoreChampion, buildLeaderboard: buildLeaderboard };
+  // Partido en vivo "congelado" como si el marcador actual fuera el final.
+  // Eliminatorias empatadas sin tanda definida no tienen ganador provisional (nadie suma).
+  function freezeLive(m) {
+    if (m.status !== "live" || m.hs == null) return m;
+    let winner = m.winner;
+    if (!winner && m.stage !== "group") {
+      if (m.hs > m.as) winner = m.home;
+      else if (m.hs < m.as) winner = m.away;
+      else if (m.hp != null && m.ap != null && m.hp !== m.ap) winner = m.hp > m.ap ? m.home : m.away;
+    }
+    return Object.assign({}, m, { status: "played", winner: winner });
+  }
+
+  // Ranking provisional: igual que el oficial pero con los partidos en vivo congelados.
+  // Cada fila trae además livePoints (puntos que ganaría hoy) y delta (posiciones que sube/baja).
+  function buildLiveLeaderboard(profiles, predictions, picks, matches) {
+    const official = buildLeaderboard(profiles, predictions, picks, matches);
+    const rows = buildLeaderboard(profiles, predictions, picks, matches.map(freezeLive));
+    const offByUser = {};
+    official.forEach(function (r) { offByUser[r.userId] = r; });
+    rows.forEach(function (r) {
+      const o = offByUser[r.userId];
+      r.livePoints = o ? r.points - o.points : 0;
+      r.delta = o ? o.pos - r.pos : 0;
+    });
+    return rows;
+  }
+
+  const scoring = { POINTS: POINTS, CHAMPION_LOCK: CHAMPION_LOCK, scoreMatch: scoreMatch, scoreChampion: scoreChampion, buildLeaderboard: buildLeaderboard, freezeLive: freezeLive, buildLiveLeaderboard: buildLiveLeaderboard };
   root.WC = root.WC || {};
   root.WC.scoring = scoring;
   if (typeof module !== "undefined" && module.exports) module.exports = scoring;

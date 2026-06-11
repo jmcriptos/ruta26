@@ -104,3 +104,78 @@ test("3er puesto puntúa como eliminatoria; pred con goles null no puntúa", () 
   assert.deepStrictEqual(sc.scoreMatch({ hg: 1, ag: 0 }, played("third", 1, 0, "H")), { points: 1, kind: "outcome" });
   assert.deepStrictEqual(sc.scoreMatch({ hg: null, ag: 0 }, played("group", 1, 1)), { points: 0, kind: "none" });
 });
+
+/* ---------- ranking en vivo (provisional) ---------- */
+
+function live(stage, hs, as, extra) {
+  return Object.assign({ id: "m1", stage: stage, status: "live", hs: hs, as: as, winner: null, home: "H", away: "A" }, extra || {});
+}
+
+test("freezeLive: grupos en vivo se congela como jugado con el marcador actual", () => {
+  const f = sc.freezeLive(live("group", 2, 1));
+  assert.strictEqual(f.status, "played");
+  assert.strictEqual(f.hs, 2);
+});
+
+test("freezeLive: eliminatoria en vivo con líder → ganador provisional", () => {
+  assert.strictEqual(sc.freezeLive(live("r16", 1, 0)).winner, "H");
+  assert.strictEqual(sc.freezeLive(live("qf", 0, 2)).winner, "A");
+});
+
+test("freezeLive: eliminatoria empatada sin penales → sin ganador provisional", () => {
+  assert.strictEqual(sc.freezeLive(live("r16", 1, 1)).winner, null);
+});
+
+test("freezeLive: empate con penales en curso → gana quien va arriba en la tanda", () => {
+  assert.strictEqual(sc.freezeLive(live("sf", 1, 1, { hp: 3, ap: 2 })).winner, "H");
+  assert.strictEqual(sc.freezeLive(live("sf", 1, 1, { hp: 2, ap: 2 })).winner, null);
+});
+
+test("freezeLive: no toca partidos programados ni jugados", () => {
+  const sched = { id: "x", stage: "group", status: "scheduled", hs: null, as: null, winner: null, home: "H", away: "A" };
+  assert.strictEqual(sc.freezeLive(sched), sched);
+  const done = played("group", 1, 0);
+  assert.strictEqual(sc.freezeLive(done), done);
+});
+
+test("buildLiveLeaderboard: suma provisional y delta de posición vs oficial", () => {
+  const matches = [
+    played("group", 2, 1, null, { id: "g1" }),   // ya jugado: gana local
+    live("group", 0, 1, { id: "g2" })            // en vivo: va ganando visitante
+  ];
+  const profiles = [{ id: "u1", username: "ana" }, { id: "u2", username: "beto" }];
+  const predictions = [
+    { user_id: "u1", match_id: "g1", hg: 1, ag: 0, pens: false }, // 1 pt oficial
+    { user_id: "u2", match_id: "g2", hg: 0, ag: 1, pens: false }  // +1 provisional
+  ];
+  const rows = sc.buildLiveLeaderboard(profiles, predictions, [], matches);
+  const ana = rows.find(function (r) { return r.username === "ana"; });
+  const beto = rows.find(function (r) { return r.username === "beto"; });
+  assert.strictEqual(ana.points, 1);
+  assert.strictEqual(ana.livePoints, 0);
+  assert.strictEqual(beto.points, 1);
+  assert.strictEqual(beto.livePoints, 1);
+  // oficial: ana pos 1 (1 pt), beto pos 2 (0). En vivo empatan a 1 → ambos pos 1.
+  assert.strictEqual(beto.delta, 1);   // sube
+  assert.strictEqual(ana.delta, 0);    // se queda
+});
+
+test("buildLiveLeaderboard: sin partidos en vivo replica el oficial (livePoints 0, delta 0)", () => {
+  const matches = [played("group", 2, 1, null, { id: "g1" })];
+  const profiles = [{ id: "u1", username: "ana" }];
+  const predictions = [{ user_id: "u1", match_id: "g1", hg: 1, ag: 0, pens: false }];
+  const rows = sc.buildLiveLeaderboard(profiles, predictions, [], matches);
+  assert.strictEqual(rows[0].livePoints, 0);
+  assert.strictEqual(rows[0].delta, 0);
+});
+
+test("buildLiveLeaderboard: final en vivo reparte campeón provisional", () => {
+  const matches = [Object.assign(live("final", 1, 0), { id: "104", home: "ARG", away: "FRA" })];
+  const profiles = [{ id: "u1", username: "ana" }, { id: "u2", username: "beto" }];
+  const picks = [{ user_id: "u1", team_id: "ARG" }, { user_id: "u2", team_id: "FRA" }];
+  const rows = sc.buildLiveLeaderboard(profiles, [], picks, matches);
+  const ana = rows.find(function (r) { return r.username === "ana"; });
+  const beto = rows.find(function (r) { return r.username === "beto"; });
+  assert.strictEqual(ana.livePoints, 15);
+  assert.strictEqual(beto.livePoints, 0);
+});

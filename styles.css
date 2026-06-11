@@ -827,3 +827,38 @@ footer { color: var(--white); }
     font: 800 19px/1.2 "League Spartan", sans-serif; letter-spacing: -.3px;
   }
 }
+
+/* ---------- ranking en vivo ---------- */
+.live-rank { border-left: 4px solid var(--orange); }
+.live-rank h3 .lr-dot {
+  display: inline-block; width: 11px; height: 11px; border-radius: 50%;
+  background: var(--orange); margin-right: 2px; vertical-align: 2px;
+  animation: lr-pulse 1.4s ease-in-out infinite;
+}
+@keyframes lr-pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.35); opacity: .45; }
+}
+.live-rank tr[data-user] { will-change: transform; }
+.rank-table td.lr-mov { width: 34px; font-size: 12px; font-weight: 800; text-align: center; }
+.lr-up { color: #2e9e5b; }
+.lr-down { color: #d64545; }
+.lr-eq { color: var(--muted); }
+.lr-plus {
+  display: inline-block; margin-left: 4px; padding: 1px 7px; border-radius: 999px;
+  background: var(--orange); color: var(--white); font-size: 12px; font-weight: 800;
+}
+.lr-plus.bump { animation: lr-bump .7s cubic-bezier(.22,1,.36,1); }
+@keyframes lr-bump {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.45); }
+  100% { transform: scale(1); }
+}
+.lr-detail { margin-top: 12px; border-top: 1px dashed var(--line); padding-top: 10px; }
+.lr-match { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 5px 0; font-size: 14px; }
+.lr-score { font: 800 16px "League Spartan", sans-serif; margin-right: 6px; white-space: nowrap; }
+.lr-chip {
+  padding: 2px 9px; border-radius: 999px; border: 1px solid var(--line);
+  background: var(--paper); font-size: 12.5px; font-weight: 700;
+}
+.lr-none { color: var(--muted); font-size: 13px; }
