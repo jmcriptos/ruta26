@@ -165,6 +165,16 @@
     return "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
   }
 
+  // venimos de tocar una notificación con la app ya abierta: ir a la quiniela
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.addEventListener("message", function (event) {
+      if (event.data && event.data.type === "open-quiniela") {
+        const sec = document.getElementById("quiniela");
+        if (sec) sec.scrollIntoView({ behavior: "smooth" });
+      }
+    });
+  }
+
   function iosSinInstalar() {
     const ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
     const instalada = window.navigator.standalone === true ||
@@ -178,6 +188,7 @@
     if (Notification.permission === "denied") { pushStatus = "denied"; return; }
     try {
       const reg = await navigator.serviceWorker.getRegistration("sw.js");
+      if (reg) reg.update().catch(function () {}); // recoger cambios de sw.js al abrir
       const sub = reg ? await reg.pushManager.getSubscription() : null;
       if (!sub) { pushStatus = "off"; return; }
       const got = await client.from("push_subscriptions").select("endpoint")

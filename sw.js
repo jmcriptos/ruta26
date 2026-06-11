@@ -21,7 +21,12 @@ self.addEventListener("notificationclick", function (event) {
   const url = (event.notification.data && event.notification.data.url) || "./#quiniela";
   event.waitUntil(self.clients.matchAll({ type: "window", includeUncontrolled: true }).then(function (list) {
     for (let i = 0; i < list.length; i++) {
-      if ("focus" in list[i]) { list[i].navigate(url); return list[i].focus(); }
+      if ("focus" in list[i]) {
+        // app ya abierta: avisarle a la página para que se desplace a la quiniela
+        // (navigate() desde el SW no es confiable en iOS standalone)
+        list[i].postMessage({ type: "open-quiniela" });
+        return list[i].focus();
+      }
     }
     return self.clients.openWindow(url);
   }));
