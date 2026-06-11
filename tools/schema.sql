@@ -67,10 +67,8 @@ create table public.champion_picks (
 );
 alter table public.champion_picks enable row level security;
 
-create policy "ver mi campeón siempre, los ajenos tras el cierre"
-  on public.champion_picks for select using (
-    user_id = auth.uid() or now() >= timestamptz '2026-06-28T19:00:00Z'
-  );
+create policy "campeones visibles para todos en el ranking"
+  on public.champion_picks for select using (true);
 create policy "elegir campeón antes del cierre"
   on public.champion_picks for insert with check (
     user_id = auth.uid() and now() < timestamptz '2026-06-28T19:00:00Z'

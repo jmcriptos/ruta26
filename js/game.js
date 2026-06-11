@@ -40,8 +40,8 @@
   function championOpen() { return Date.now() < new Date(WC.scoring.CHAMPION_LOCK).getTime(); }
   function teamName(id) { const t = WC.state.teams[id]; return t ? t.flag + " " + esc(t.name) : "—"; }
   function teamFlag(id) { const t = WC.state.teams[id]; return t && t.flag ? t.flag : "🏳️"; }
-  // bandera del campeón de un usuario, respetando lo que el RLS dejó ver (champion_picks ajenos
-  // solo llegan tras el cierre; antes, solo el propio). Si no hay pick visible → escudo.
+  // bandera del campeón de un usuario; los picks son públicos desde que se eligen
+  // (RLS de lectura abierto). Si aún no eligió → escudo.
   function champFlagFor(userId) {
     const pk = data.picks.find(function (r) { return r.user_id === userId; });
     return pk ? teamFlag(pk.team_id) : "🛡️";
