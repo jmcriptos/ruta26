@@ -340,8 +340,7 @@
       return;
     }
     rootEl.innerHTML =
-      '<div class="game-userbar"><strong>Hola, ' + esc(profile ? profile.username : "jugador") + '</strong>' +
-      '<button id="gLogout">Cerrar sesión</button></div>' +
+      '<div class="game-userbar"><button id="gLogout">Cerrar sesión</button></div>' +
       championHtml() + rankingHtml() + predictionsHtml() + rulesHtml();
   }
 
