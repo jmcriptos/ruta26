@@ -396,4 +396,15 @@
     if (!document.hidden) checkVersion();
   });
   checkVersion();
+
+  /* iOS standalone: al reanudar la app (p. ej. tocando una notificación push)
+     el viewport visual queda desincronizado y los elementos fixed —la bottom
+     nav— se mueven con el scroll. Un nudge de 1px fuerza el recálculo. */
+  document.addEventListener("visibilitychange", function () {
+    if (document.hidden) return;
+    requestAnimationFrame(function () {
+      window.scrollTo(window.scrollX, window.scrollY + 1);
+      window.scrollTo(window.scrollX, window.scrollY - 1);
+    });
+  });
 })();

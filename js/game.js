@@ -169,8 +169,10 @@
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker.addEventListener("message", function (event) {
       if (event.data && event.data.type === "open-quiniela") {
+        // salto directo (sin smooth): el scroll animado durante la reanudación
+        // de la app agrava la desincronización del viewport en iOS
         const sec = document.getElementById("quiniela");
-        if (sec) sec.scrollIntoView({ behavior: "smooth" });
+        if (sec) sec.scrollIntoView();
       }
     });
   }
