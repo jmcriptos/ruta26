@@ -76,7 +76,7 @@
     }).sort(function (a, b) { return a.num - b.num; });
     return '<div class="b-col" data-stage="' + stage + '" data-side="' + side + '">' +
       '<p class="b-col-title">' + ROUND_LABEL[stage] + "</p>" +
-      ms.map(function (m) { return matchBox(m, ctx, classes, ""); }).join("") + "</div>";
+      '<div class="b-col-body">' + ms.map(function (m) { return matchBox(m, ctx, classes, ""); }).join("") + "</div></div>";
   }
 
   function finalColumnHtml(ctx, classes) {

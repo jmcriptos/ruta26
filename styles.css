@@ -405,7 +405,8 @@ footer { display: flex; align-items: center; gap: 25px; padding: 28px 32px; colo
 .bracket { display: flex; align-items: stretch; justify-content: center; gap: 10px; min-width: 1000px; }
 .b-side { display: flex; gap: 10px; }
 .b-side-right { flex-direction: row-reverse; }
-.b-col { display: flex; flex-direction: column; justify-content: space-around; gap: 8px; min-width: 116px; }
+.b-col { display: flex; flex-direction: column; min-width: 116px; }
+.b-col-body { flex: 1; display: flex; flex-direction: column; justify-content: space-around; gap: 8px; }
 .b-col-title { font-size: 10px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: rgba(243,242,235,.55); text-align: center; margin: 0 0 6px; }
 .b-col-title.final { color: var(--lime); }
 
