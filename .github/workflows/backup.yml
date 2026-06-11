@@ -1,0 +1,58 @@
+name: Respaldo de la quiniela
+
+# Respalda las tablas del juego (profiles, predictions, champion_picks) y la lista
+# de usuarios de Auth a un artifact privado descargable. No commitea nada al repo.
+# Requiere el secret SUPABASE_SERVICE_KEY (Settings → Secrets and variables → Actions).
+
+on:
+  schedule:
+    - cron: "0 9 * * *"   # todos los días a las 09:00 UTC (05:00 Curaçao)
+  workflow_dispatch: {}    # botón para correrlo a mano
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Exportar tablas y usuarios
+        env:
+          SUPABASE_URL: https://wwzgpifvfmogjttwstxy.supabase.co
+          SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SERVICE_KEY:-}" ]; then
+            echo "ERROR: falta el secret SUPABASE_SERVICE_KEY"; exit 1
+          fi
+          mkdir -p backup
+          stamp=$(date -u +%Y-%m-%dT%H-%M-%SZ)
+          echo "Respaldo $stamp" > backup/INFO.txt
+
+          rest() {
+            # $1 = tabla
+            curl -fsS "$SUPABASE_URL/rest/v1/$1?select=*" \
+              -H "apikey: $SERVICE_KEY" \
+              -H "Authorization: Bearer $SERVICE_KEY" \
+              -o "backup/$1.json"
+            echo "  $1: $(grep -o '"' "backup/$1.json" | wc -l) comillas (filas exportadas)"
+          }
+
+          echo "Exportando tablas del juego…"
+          rest profiles
+          rest predictions
+          rest champion_picks
+          rest matches
+
+          echo "Exportando usuarios de Auth (admin API)…"
+          curl -fsS "$SUPABASE_URL/auth/v1/admin/users?per_page=1000" \
+            -H "apikey: $SERVICE_KEY" \
+            -H "Authorization: Bearer $SERVICE_KEY" \
+            -o "backup/auth_users.json"
+
+          echo "Contenido del respaldo:"
+          ls -la backup/
+
+      - name: Subir artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: quiniela-backup
+          path: backup/
+          retention-days: 90
