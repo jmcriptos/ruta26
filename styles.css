@@ -770,7 +770,7 @@ footer { color: var(--white); }
   .hero-copy { margin-top: auto; margin-bottom: auto; }
   h1 { margin: 20px 0 0; font-size: 48px; letter-spacing: -3px; }
   .hero-lede { display: none; }
-  .hero-actions { margin-top: 38px; }
+  .hero-actions { margin-top: 56px; }
   .primary-button { padding: 15px 18px; }
   /* "Explorar 48 equipos" ya vive en la barra inferior: fuera del hero */
   .hero-actions .text-button { display: none; }
