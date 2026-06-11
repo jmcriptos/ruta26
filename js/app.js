@@ -379,4 +379,21 @@
 
   WC.api.load().then(applyData);
   WC.api.startPolling(function () { return state.matches; }, applyData);
+
+  /* PWA: iOS restaura la app congelada con assets viejos al reabrirla desde la
+     pantalla de inicio. Al volver a primer plano, comparamos el ETag del CSS
+     publicado y, si hay versión nueva, recargamos. */
+  let assetTag = null;
+  async function checkVersion() {
+    try {
+      const res = await fetch("styles.css", { method: "HEAD", cache: "no-store" });
+      const tag = res.headers.get("etag") || res.headers.get("last-modified");
+      if (assetTag && tag && tag !== assetTag) { location.reload(); return; }
+      if (tag) assetTag = tag;
+    } catch (e) { /* sin red: se queda como está */ }
+  }
+  document.addEventListener("visibilitychange", function () {
+    if (!document.hidden) checkVersion();
+  });
+  checkVersion();
 })();
