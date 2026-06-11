@@ -757,17 +757,26 @@ footer { color: var(--white); }
 .bottom-nav a { color: rgba(255,255,255,.85); }
 .bottom-nav a.active { color: var(--lime); }
 
-/* ===== Hero móvil más liviano: menos bloques, todo más compacto ===== */
+/* ===== Hero móvil = la primera pantalla completa =====
+   Termina en la franja del contador (justo sobre la bottom nav) y el
+   contenido se reparte verticalmente: título centrado, contador al fondo. */
 @media (max-width: 680px) {
-  .hero { padding-bottom: 24px; }
-  h1 { margin: 16px 0 26px; font-size: 48px; letter-spacing: -3px; }
+  .hero {
+    min-height: 100vh;
+    min-height: 100svh;
+    display: flex; flex-direction: column;
+    padding-bottom: calc(96px + env(safe-area-inset-bottom)); /* despeja la bottom nav */
+  }
+  .hero-copy { margin-top: auto; margin-bottom: auto; }
+  h1 { margin: 20px 0 0; font-size: 48px; letter-spacing: -3px; }
   .hero-lede { display: none; }
-  .primary-button { padding: 14px 18px; }
+  .hero-actions { margin-top: 38px; }
+  .primary-button { padding: 15px 18px; }
   /* "Explorar 48 equipos" ya vive en la barra inferior: fuera del hero */
   .hero-actions .text-button { display: none; }
 
-  /* contador como franja compacta, no tarjeta protagonista */
-  .countdown-panel { margin-top: 30px; gap: 12px; padding: 16px 16px 14px; }
+  /* contador como franja compacta anclada al final de la pantalla */
+  .countdown-panel { margin-top: auto; gap: 12px; padding: 16px 16px 14px; }
   .countdown strong { font-size: 26px; }
   .countdown span { font-size: 9px; }
   .countdown div:not(:first-child)::before { top: 4px; bottom: 8px; }
