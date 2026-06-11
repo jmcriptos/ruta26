@@ -20,7 +20,7 @@ Rediseñar "La ruta al título" como el bracket clásico tipo llave (estilo Qata
 | Escritorio | Bracket simétrico completo: izquierda → Final+🏆 ← derecha |
 | Móvil | Una mitad a la vez; al elegir equipo se muestra SU mitad con su camino |
 | Grupos | Fuera del bracket (las tablas ya están en la sección Equipos) |
-| Líneas conectoras | Sí, estilo llave (lo que da el look clásico) |
+| Líneas conectoras | El layout columnar simétrico + final central da el look; conectores CSS exactos quedan como pulido posterior (frágiles en bracket responsive) |
 | Lógica de rutas/escenarios/cruces | Se reutiliza intacta |
 
 ## Estructura del cuadro (árbol real FIFA)
