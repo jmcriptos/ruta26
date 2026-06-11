@@ -44,7 +44,8 @@ function pushPayload(title, body) {
       title: title,
       body: body,
       navigate: SITE + "#quiniela",
-      lang: "es"
+      lang: "es",
+      silent: false // sonido estándar del sistema (iOS no permite sonidos personalizados en web push)
     }
   });
 }
