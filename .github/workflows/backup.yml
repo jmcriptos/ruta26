@@ -6,7 +6,12 @@ name: Respaldo de la quiniela
 
 on:
   schedule:
-    - cron: "0 9 * * *"   # todos los días a las 09:00 UTC (05:00 Curaçao)
+    # cada 6 horas: 05:00, 11:00, 17:00 y 23:00 en Curaçao (UTC-4) —
+    # cubre la mañana, la tanda de picks antes de los partidos y el cierre del día
+    - cron: "0 3 * * *"
+    - cron: "0 9 * * *"
+    - cron: "0 15 * * *"
+    - cron: "0 21 * * *"
   workflow_dispatch: {}    # botón para correrlo a mano
 
 jobs:
