@@ -111,3 +111,22 @@ create table public.push_sent (
   primary key (match_id, user_id)
 );
 alter table public.push_sent enable row level security;
+
+-- 7) Analytics de visitas propio (sin cookies ni PII; sección vista por sesión anónima)
+create table public.page_views (
+  id bigint generated always as identity primary key,
+  ts timestamptz not null default now(),
+  session_id text not null check (char_length(session_id) <= 40),
+  section text check (char_length(section) <= 40),
+  device text check (device in ('mobile', 'desktop')),
+  standalone boolean not null default false,
+  ref text check (char_length(ref) <= 80)
+);
+alter table public.page_views enable row level security;
+
+create policy "cualquiera registra una vista"
+  on public.page_views for insert with check (true);
+create policy "las métricas agregadas son públicas"
+  on public.page_views for select using (true);
+
+create index page_views_ts_idx on public.page_views (ts);
