@@ -71,3 +71,5 @@ as $function$
   left join bounded b on b.day between p.start_day and p.end_day
   group by p.days, p.kind;
 $function$;
+
+alter function public.analytics_rollup(timestamptz) set statement_timeout = '2000ms';

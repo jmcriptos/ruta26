@@ -17,9 +17,17 @@ on:
         description: "Mandar un push de prueba a este usuario (ignora partidos y dry_run)"
         default: ""
 
+permissions:
+  contents: read
+
+concurrency:
+  group: push-reminders
+  cancel-in-progress: false
+
 jobs:
   send:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5

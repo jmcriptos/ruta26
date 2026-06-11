@@ -1,6 +1,6 @@
-/* Analytics propio, mínimo y sin cookies: registra "sección vista" en Supabase
-   (tabla page_views). Sin identidad: session_id aleatorio por pestaña, sin IP
-   ni user agent completo. Respeta Do Not Track. Depende de config.js. */
+/* Analytics propio, mínimo y sin cookies: registra "sección vista" mediante
+   un RPC validado y limitado. Sin identidad: session_id aleatorio por pestaña,
+   sin IP ni user agent completo. Respeta Do Not Track. Depende de config.js. */
 (function () {
   const cfg = (window.WC && WC.CONFIG) || {};
   if (!cfg.SUPABASE_URL || String(cfg.SUPABASE_URL).indexOf("http") !== 0) return;
@@ -13,7 +13,7 @@
       sid = (crypto.randomUUID ? crypto.randomUUID() : String(Math.random()).slice(2));
       sessionStorage.setItem("wc26-sid", sid);
     }
-  } catch (e) { sid = "anon"; }
+  } catch (e) { sid = "fallback-" + String(Math.random()).slice(2, 24); }
 
   const device = window.matchMedia && window.matchMedia("(pointer: coarse)").matches ? "mobile" : "desktop";
   const standalone = window.navigator.standalone === true ||
@@ -32,7 +32,7 @@
     if (section === lastSection) return;
     lastSection = section;
     try {
-      fetch(cfg.SUPABASE_URL + "/rest/v1/page_views", {
+      fetch(cfg.SUPABASE_URL + "/rest/v1/rpc/record_page_view", {
         method: "POST",
         keepalive: true,
         headers: {
@@ -41,7 +41,13 @@
           "Content-Type": "application/json",
           Prefer: "return=minimal"
         },
-        body: JSON.stringify({ session_id: sid, section: section, device: device, standalone: standalone, ref: ref })
+        body: JSON.stringify({
+          p_session_id: sid,
+          p_section: section,
+          p_device: device,
+          p_standalone: standalone,
+          p_ref: ref
+        })
       }).catch(function () {});
     } catch (e) {}
   }

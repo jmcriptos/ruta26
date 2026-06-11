@@ -14,9 +14,17 @@ on:
     - cron: "0 21 * * *"
   workflow_dispatch: {}    # botón para correrlo a mano
 
+permissions:
+  contents: read
+
+concurrency:
+  group: quiniela-backup
+  cancel-in-progress: false
+
 jobs:
   backup:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Exportar tablas y usuarios
         env:

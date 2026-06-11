@@ -14,10 +14,49 @@ create table public.page_views (
 );
 alter table public.page_views enable row level security;
 
-create policy "cualquiera registra una vista"
-  on public.page_views for insert with check (true);
-
 create index page_views_ts_idx on public.page_views (ts);
+
+-- La escritura anónima pasa por un RPC validado y limitado. Los 16 buckets
+-- reducen contención y limitan el máximo total a 32.000 vistas por día.
+create table public.page_view_daily_quota (
+  day date not null,
+  bucket smallint not null check (bucket between 0 and 15),
+  accepted integer not null check (accepted between 0 and 2000),
+  primary key (day, bucket)
+);
+alter table public.page_view_daily_quota enable row level security;
+revoke all on table public.page_view_daily_quota from public, anon, authenticated;
+
+create or replace function public.record_page_view(
+  p_session_id text, p_section text, p_device text, p_standalone boolean, p_ref text default ''
+)
+returns boolean language plpgsql security definer set search_path = public, pg_temp
+set statement_timeout = '1500ms'
+as $function$
+declare v_bucket smallint; v_accepted integer;
+begin
+  if p_session_id is null or p_session_id !~ '^[A-Za-z0-9-]{8,40}$'
+    or p_section is null or p_section not in ('#inicio', '#partidos', '#equipos', '#ruta', '#quiniela', '#proyecciones')
+    or p_device is null or p_device not in ('mobile', 'desktop')
+    or p_ref is null or char_length(p_ref) > 80 or p_ref !~ '^[A-Za-z0-9.-]*$' then
+    return false;
+  end if;
+  v_bucket := (hashtextextended(p_session_id, 0) & 15)::smallint;
+  insert into public.page_view_daily_quota (day, bucket, accepted)
+  values ((now() at time zone 'America/Curacao')::date, v_bucket, 1)
+  on conflict (day, bucket) do update
+    set accepted = public.page_view_daily_quota.accepted + 1
+    where public.page_view_daily_quota.accepted < 2000
+  returning accepted into v_accepted;
+  if v_accepted is null then return false; end if;
+  insert into public.page_views (session_id, section, device, standalone, ref)
+  values (p_session_id, p_section, p_device, coalesce(p_standalone, false), p_ref);
+  return true;
+end;
+$function$;
+revoke insert on table public.page_views from public, anon, authenticated;
+revoke all on function public.record_page_view(text, text, text, boolean, text) from public;
+grant execute on function public.record_page_view(text, text, text, boolean, text) to anon, authenticated;
 
 -- Métricas públicas agregadas; nunca devuelve session_id ni filas individuales.
 create or replace function public.analytics_rollup(since_at timestamptz default (now() - interval '62 days'))
@@ -54,3 +93,4 @@ $function$;
 revoke select on table public.page_views from anon, authenticated;
 revoke all on function public.analytics_rollup(timestamptz) from public;
 grant execute on function public.analytics_rollup(timestamptz) to anon, authenticated;
+alter function public.analytics_rollup(timestamptz) set statement_timeout = '2000ms';

@@ -14,6 +14,7 @@ const SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
 const DRY = process.env.DRY_RUN === "1";
 const SITE = "https://jmcriptos.github.io/ruta26/";
 const WINDOW_MS = 60 * 60 * 1000; // 1 hora antes del kickoff
+const MAX_SUBSCRIPTIONS_PER_USER = 5;
 
 if (!SERVICE_KEY) { console.error("ERROR: falta SUPABASE_SERVICE_KEY"); process.exit(1); }
 webpush.setVapidDetails("mailto:jm.aceleracion@gmail.com",
@@ -86,7 +87,8 @@ function snapshot() {
     const uname = process.env.TEST_USERNAME.trim().toLowerCase();
     const prof = await rest("profiles?select=id,username&username=eq." + encodeURIComponent(uname));
     if (!prof.length) { console.error("No existe el usuario " + uname); process.exit(1); }
-    const subs = validSubscriptions(await rest("push_subscriptions?select=endpoint,p256dh,auth&user_id=eq." + prof[0].id));
+    const subs = validSubscriptions(await rest("push_subscriptions?select=endpoint,p256dh,auth&user_id=eq." + prof[0].id))
+      .slice(0, MAX_SUBSCRIPTIONS_PER_USER);
     if (!subs.length) { console.error(uname + " no tiene suscripciones push activas."); process.exit(1); }
     const payload = pushPayload("🔔 Prueba de recordatorios",
       "Así te avisaremos una hora antes si te falta un pick. ¡Todo listo! ✓");
@@ -128,7 +130,8 @@ function snapshot() {
   // agrupar suscripciones por usuario; un aviso por usuario aunque falten varios partidos
   const byUser = {};
   subs.forEach(function (s) {
-    (byUser[s.user_id] = byUser[s.user_id] || []).push(s);
+    const userSubs = byUser[s.user_id] = byUser[s.user_id] || [];
+    if (userSubs.length < MAX_SUBSCRIPTIONS_PER_USER) userSubs.push(s);
   });
 
   let avisados = 0;

@@ -23,6 +23,29 @@ create policy "cada quien actualiza su suscripción"
 create policy "cada quien borra su suscripción"
   on public.push_subscriptions for delete using (user_id = auth.uid());
 
+-- Impide que una cuenta llene la tabla con endpoints ilimitados.
+create or replace function public.enforce_push_subscription_limit()
+returns trigger language plpgsql security definer set search_path = public, pg_temp
+as $function$
+begin
+  perform pg_advisory_xact_lock(hashtextextended(new.user_id::text, 0));
+  if not exists (
+    select 1 from public.push_subscriptions
+    where user_id = new.user_id and endpoint = new.endpoint
+  ) and (
+    select count(*) from public.push_subscriptions where user_id = new.user_id
+  ) >= 5 then
+    raise exception 'máximo de 5 suscripciones push por usuario'
+      using errcode = 'check_violation';
+  end if;
+  return new;
+end;
+$function$;
+create trigger enforce_push_subscription_limit
+before insert on public.push_subscriptions
+for each row execute function public.enforce_push_subscription_limit();
+revoke all on function public.enforce_push_subscription_limit() from public, anon, authenticated;
+
 -- Registro de recordatorios ya enviados (dedupe del GitHub Action).
 -- Sin políticas: solo la service key del Action lee/escribe.
 create table public.push_sent (
