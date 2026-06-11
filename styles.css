@@ -774,3 +774,16 @@ footer { color: var(--white); }
   .opening-meta { padding-top: 10px; }
   .opening-meta span { font-size: 12px; }
 }
+
+/* ===== Estadísticas en móvil: la tarjeta oscura es solo título y el 48 baja al listado ===== */
+.stat-only-mobile { display: none; }
+@media (max-width: 680px) {
+  .stat-only-mobile { display: flex; }
+  .stat-card.featured strong, .stat-card.featured small { display: none; }
+  .stat-card.featured { align-items: center; }
+  .stat-card.featured .stat-icon { align-self: center; }
+  .stat-card.featured p {
+    max-width: none; color: var(--white);
+    font: 800 19px/1.2 "League Spartan", sans-serif; letter-spacing: -.3px;
+  }
+}
