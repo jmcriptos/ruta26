@@ -233,13 +233,18 @@
     render();
   }
 
-  function remindersHtml() {
+  // La tarjeta vive arriba (CTA con acento) mientras haya una acción pendiente;
+  // ya activados los avisos, baja al fondo como línea compacta.
+  function remindersHtml(place) {
     if (!pushStatus) return "";
-    let inner;
+    if (place === "top" && pushStatus === "on") return "";
+    if (place === "bottom" && pushStatus !== "on") return "";
     if (pushStatus === "on") {
-      inner = "<p>Te avisaremos una hora antes de cada partido al que le falte tu predicción. ✓</p>" +
-        '<div class="game-actions"><button class="game-btn secondary" id="pushOff">Desactivar avisos</button></div>';
-    } else if (pushStatus === "busy") {
+      return '<div class="game-card push-mini"><span>🔔 Avisos activados <b class="pm-ok">✓</b></span>' +
+        '<button class="game-btn secondary" id="pushOff">Desactivar</button></div>';
+    }
+    let inner;
+    if (pushStatus === "busy") {
       inner = "<p>Un momento…</p>";
     } else if (pushStatus === "ios-install") {
       inner = "<p>En iPhone los avisos solo llegan con la app instalada: toca <b>Compartir</b> → " +
@@ -252,7 +257,7 @@
       inner = "<p>Recibe un aviso una hora antes de cada partido si aún no pusiste tu predicción.</p>" +
         '<div class="game-actions"><button class="game-btn" id="pushOn">Activar avisos 🔔</button></div>';
     }
-    return '<div class="game-card"><h3>Recordatorios 🔔</h3>' + inner + "</div>";
+    return '<div class="game-card push-cta"><h3>Recordatorios 🔔</h3>' + inner + "</div>";
   }
 
   /* ---------- render ---------- */
@@ -575,7 +580,7 @@
       return;
     }
     rootEl.innerHTML =
-      championHtml() + liveRankingHtml() + rankingHtml() + predictionsHtml() + remindersHtml() + rulesHtml();
+      championHtml() + remindersHtml("top") + liveRankingHtml() + rankingHtml() + predictionsHtml() + remindersHtml("bottom") + rulesHtml();
     animateLiveRows(prevLiveRows);
     const strip = document.getElementById("gDates");
     const active = strip && strip.querySelector(".active");
