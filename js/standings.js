@@ -133,7 +133,24 @@
     return false;
   }
 
-  const standings = { computeGroups: computeGroups, groupFinished: groupFinished, rankThirds: rankThirds, resolveSlot: resolveSlot, teamRoute: teamRoute, groupStageEliminated: groupStageEliminated };
+  // Lado del cuadro al que pertenece un partido KO: sigue la cadena de ganadores
+  // (W##) hasta la semifinal 101 (izquierda) o 102 (derecha). La final y los
+  // partidos desconocidos devuelven null.
+  function bracketSide(matchNum, matchesByNum) {
+    let cur = matchesByNum[matchNum];
+    const seen = {};
+    while (cur && !seen[cur.num]) {
+      if (cur.num === 101) return "left";
+      if (cur.num === 102) return "right";
+      seen[cur.num] = true;
+      const next = Object.keys(matchesByNum).map(function (k) { return matchesByNum[k]; })
+        .find(function (x) { return x.phA === "W" + cur.num || x.phB === "W" + cur.num; });
+      cur = next || null;
+    }
+    return null;
+  }
+
+  const standings = { computeGroups: computeGroups, groupFinished: groupFinished, rankThirds: rankThirds, resolveSlot: resolveSlot, teamRoute: teamRoute, groupStageEliminated: groupStageEliminated, bracketSide: bracketSide };
   root.WC = root.WC || {};
   root.WC.standings = standings;
   if (typeof module !== "undefined" && module.exports) module.exports = standings;

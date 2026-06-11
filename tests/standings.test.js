@@ -164,6 +164,29 @@ test("teamRoute: equipo desconocido y bracket con ciclo no revientan", () => {
   assert.deepStrictEqual(r2.segments[0].matches.map(function (m) { return m.num; }), [89, 97]);
 });
 
+test("bracketSide: sigue la cadena W## hasta la semi 101 (izq) o 102 (der)", () => {
+  // mini-árbol fiel a la estructura real
+  const bsMatches = [
+    ko(73, "r32", "1A", "2B"), ko(74, "r32", "1E", "3X"),
+    ko(89, "r16", "W74", "W77"), ko(90, "r16", "W73", "W75"),
+    ko(97, "qf", "W89", "W90"), ko(101, "sf", "W97", "W98"),
+    ko(76, "r32", "1F", "2C"), ko(91, "r16", "W76", "W78"),
+    ko(99, "qf", "W91", "W92"), ko(102, "sf", "W99", "W100"),
+    ko(104, "final", "W101", "W102")
+  ];
+  const byNum = {};
+  bsMatches.forEach(function (m) { byNum[m.num] = m; });
+  assert.strictEqual(st.bracketSide(73, byNum), "left");
+  assert.strictEqual(st.bracketSide(89, byNum), "left");
+  assert.strictEqual(st.bracketSide(97, byNum), "left");
+  assert.strictEqual(st.bracketSide(101, byNum), "left");
+  assert.strictEqual(st.bracketSide(76, byNum), "right");
+  assert.strictEqual(st.bracketSide(91, byNum), "right");
+  assert.strictEqual(st.bracketSide(102, byNum), "right");
+  assert.strictEqual(st.bracketSide(104, byNum), null);   // la final no tiene lado
+  assert.strictEqual(st.bracketSide(999, byNum), null);   // desconocido
+});
+
 test("groupStageEliminated: 4º con grupo cerrado, 3º no clasificado, y casos no eliminados", () => {
   const teams = makeTeams({ A: ["a1", "a2", "a3", "a4"], B: ["b1", "b2", "b3", "b4"] });
   const matches = fullGroup("A", { base: 0, ids: ["a1", "a2", "a3", "a4"], thirdGoals: 5 })
