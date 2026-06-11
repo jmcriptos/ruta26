@@ -347,17 +347,46 @@
               r.exact + '</td><td class="col-x">' + r.outcome + '</td><td class="col-x">' + (r.bonus || 0) + '</td><td class="pts">' + r.points + "</td></tr>";
           }).join("") + "</table>") +
       (uid && rows.some(function (r) { return r.userId === uid; })
-        ? '<div class="game-actions" style="margin-top:14px"><button class="game-btn secondary" id="gShare">Compartir mi posición</button></div>'
+        ? '<div class="game-actions game-share" style="margin-top:14px"><button class="game-btn secondary" id="gShare">Compartir mi posición</button></div>'
         : "") +
       "</div>";
   }
 
-  function updateUserChip() {
+  function closeUserMenu() {
+    const drop = document.getElementById("userDropdown");
     const chip = document.getElementById("userChip");
-    if (!chip) return;
-    if (session && profile) { chip.textContent = profile.username; chip.hidden = false; }
-    else { chip.textContent = ""; chip.hidden = true; }
+    if (drop) drop.hidden = true;
+    if (chip) chip.setAttribute("aria-expanded", "false");
   }
+
+  function updateUserChip() {
+    const menu = document.getElementById("userMenu");
+    const chip = document.getElementById("userChip");
+    if (!menu || !chip) return;
+    if (session && profile) { chip.textContent = profile.username; menu.hidden = false; }
+    else { chip.textContent = ""; menu.hidden = true; closeUserMenu(); }
+  }
+
+  /* menú del usuario en el header: el chip abre/cierra, fuera se cierra, logout adentro */
+  (function wireUserMenu() {
+    const menu = document.getElementById("userMenu");
+    const chip = document.getElementById("userChip");
+    const drop = document.getElementById("userDropdown");
+    const out = document.getElementById("userLogout");
+    if (!menu || !chip || !drop || !out) return;
+    chip.addEventListener("click", function () {
+      const willOpen = drop.hidden;
+      drop.hidden = !willOpen;
+      chip.setAttribute("aria-expanded", String(willOpen));
+    });
+    document.addEventListener("click", function (event) {
+      if (!menu.contains(event.target)) closeUserMenu();
+    });
+    drop.addEventListener("click", async function (event) {
+      if (event.target.id === "userLogout") { closeUserMenu(); await client.auth.signOut(); }
+      else if (event.target.id === "userGoQuiniela") closeUserMenu();
+    });
+  })();
 
   function render() {
     updateUserChip();
@@ -370,7 +399,6 @@
       return;
     }
     rootEl.innerHTML =
-      '<div class="game-userbar"><button id="gLogout">Cerrar sesión</button></div>' +
       championHtml() + rankingHtml() + predictionsHtml() + rulesHtml();
     const strip = document.getElementById("gDates");
     const active = strip && strip.querySelector(".active");
@@ -426,7 +454,6 @@
     }
     const gd = event.target.closest("[data-gdate]");
     if (gd) { predDate = gd.dataset.gdate; render(); return; }
-    if (event.target.id === "gLogout") { await client.auth.signOut(); return; }
     if (event.target.id === "gShare") {
       const rows = WC.scoring.buildLeaderboard(data.profiles, data.predictions, data.picks, matches());
       const me = rows.find(function (r) { return session && r.userId === session.user.id; });

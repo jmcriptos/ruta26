@@ -581,9 +581,6 @@ html { scroll-padding-top: calc(84px + env(safe-area-inset-top)); }
 .game-btn:hover { background: var(--lime-deep); }
 .game-btn.secondary { background: transparent; border: 1px solid #c6c8bd; }
 .game-error { margin: 8px 0 0; color: #a83a22; font-size: 13px; font-weight: 600; }
-.game-userbar { display: flex; align-items: center; justify-content: flex-end; gap: 10px; margin-bottom: 16px; }
-.game-userbar strong { font: 800 16px "League Spartan"; text-transform: uppercase; }
-.game-userbar button { border: 1px solid var(--line); background: none; padding: 8px 14px; border-radius: 999px; font-size: 12px; font-weight: 700; cursor: pointer; color: var(--muted); }
 
 .pick-row { display: flex; align-items: center; gap: 12px; padding: 13px 0; border-bottom: 1px solid var(--line); }
 .pick-row:last-child { border-bottom: 0; }
@@ -689,15 +686,29 @@ html { scroll-padding-top: calc(84px + env(safe-area-inset-top)); }
 }
 
 /* ===== Chip de usuario en el header (sustituye a la lupa) ===== */
+.user-menu { position: relative; }
+.user-menu[hidden] { display: none; }
 .user-chip {
   display: flex; align-items: center; gap: 6px; max-width: 180px;
   padding: 8px 14px; border-radius: 999px;
   border: 1px solid rgba(215,255,67,.4); background: rgba(215,255,67,.12);
-  color: var(--lime); font-size: 12px; font-weight: 700;
+  color: var(--lime); font-size: 12px; font-weight: 700; cursor: pointer;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .user-chip::before { content: ""; flex: 0 0 auto; width: 6px; height: 6px; border-radius: 50%; background: var(--lime); }
 .user-chip[hidden] { display: none; }
+.user-dropdown {
+  position: absolute; right: 0; top: calc(100% + 10px); z-index: 16; min-width: 175px;
+  display: grid; gap: 2px; padding: 6px;
+  background: rgba(8, 20, 16, .97); border: 1px solid rgba(255,255,255,.16); border-radius: 12px;
+  box-shadow: 0 18px 40px rgba(0,0,0,.45);
+}
+.user-dropdown[hidden] { display: none; }
+.user-dropdown a, .user-dropdown button {
+  display: block; width: 100%; padding: 11px 12px; border: 0; background: none; text-align: left;
+  color: var(--white); font-size: 13px; font-weight: 700; border-radius: 8px; cursor: pointer;
+}
+.user-dropdown a:hover, .user-dropdown button:hover { background: rgba(255,255,255,.1); }
 .topbar #searchToggle { display: none; }
 
 /* ===== Quiniela: carrusel de jornadas ===== */
@@ -709,3 +720,39 @@ html { scroll-padding-top: calc(84px + env(safe-area-inset-top)); }
 .game-date.today span { color: #5a7a1e; }
 .game-date.active { background: var(--lime); border-color: var(--lime); }
 .game-date.active span { color: #3e5314; }
+
+/* ===== Quiniela en desktop: controles a su ancho natural, no de borde a borde ===== */
+@media (min-width: 681px) {
+  .champ-pick select { flex: 0 1 360px; }
+  .game-share { justify-content: center; }
+  .game-share .game-btn { flex: 0 1 320px; padding: 0 32px; }
+}
+
+/* ===== Contraste: textos informativos sobre fondo oscuro en blanco ===== */
+.main-nav a { opacity: .85; }
+.hero-lede { color: var(--white); }
+.text-button { color: var(--white); }
+.location-tag { color: var(--white); }
+.countdown-intro small, .opening-meta small { color: var(--white); }
+.countdown span { color: var(--white); }
+.stat-card.featured p { color: var(--white); }
+.stat-card.featured small { color: var(--white); }
+.search-result small { color: rgba(255,255,255,.8); }
+.search-field input::placeholder { color: rgba(255,255,255,.55); }
+.section-heading.light p { color: var(--white); }
+.phase small { color: var(--white); }
+.projection-heading p { color: var(--white); }
+.update-pill { color: var(--white); }
+.ranking-row small { color: var(--white); }
+.ranking-row .num { color: rgba(255,255,255,.75); }
+.projection-note { color: var(--white); }
+.city-card p { color: var(--white); }
+footer { color: var(--white); }
+.scenario-toggle { color: var(--white); }
+.b-col-title { color: var(--white); }
+.b-team.b-tbd { color: rgba(243,242,235,.75); }
+.b-final-meta { color: var(--white); }
+.b-third-note { color: rgba(243,242,235,.75); }
+.bracket-note { color: var(--white); }
+.bottom-nav a { color: rgba(255,255,255,.85); }
+.bottom-nav a.active { color: var(--lime); }
