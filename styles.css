@@ -798,6 +798,14 @@ footer { color: var(--white); }
   }
 }
 
+/* ===== PWA (pantalla de inicio): el hero llena la pantalla completa =====
+   En standalone, 100svh se queda corto por el área del Dynamic Island y la
+   siguiente sección asomaba bajo el bottom nav. Sin barras de navegador,
+   100vh sí es el alto real de la pantalla. */
+@media (max-width: 680px) and (display-mode: standalone) {
+  .hero { min-height: 100vh; }
+}
+
 /* ===== Empalme hero → estadísticas en móvil: lo que asoma bajo el menú se ve continuo ===== */
 @media (max-width: 680px) {
   .snapshot { width: 100%; margin-top: 0; box-shadow: none; }
