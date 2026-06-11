@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Ruta 26 · Estadísticas</title>
+  <link rel="icon" href="favicon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=League+Spartan:wght@600;800&family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root { --ink:#0a1512; --lime:#d7ff43; --paper:#f3f2eb; --paper-bright:#fbfaf5; --line:#d9d9cf; --muted:#6e7772; --orange:#ff7c42; }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:"Outfit",sans-serif; background:var(--paper); color:var(--ink); }
+    header { background:var(--ink); color:#fff; padding:calc(14px + env(safe-area-inset-top)) 18px 14px; display:flex; align-items:center; gap:10px; }
+    header .logo { width:30px; height:30px; border-radius:50%; background:var(--lime); color:var(--ink); display:grid; place-items:center; font:800 13px "League Spartan"; }
+    header h1 { font:800 18px "League Spartan"; text-transform:uppercase; letter-spacing:-.5px; }
+    header small { margin-left:auto; color:rgba(255,255,255,.6); font-size:11px; }
+    main { max-width:760px; margin:0 auto; padding:18px 14px calc(30px + env(safe-area-inset-bottom)); }
+    .cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; margin-bottom:14px; }
+    .stat-box { background:var(--paper-bright); border:1px solid var(--line); padding:14px 16px; }
+    .stat-box small { display:block; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.8px; color:var(--muted); margin-bottom:4px; }
+    .stat-box strong { font:800 26px "League Spartan"; }
+    .stat-box span { font-size:12px; color:var(--muted); }
+    .card { background:var(--paper-bright); border:1px solid var(--line); padding:16px; margin-bottom:14px; }
+    .card h2 { font:800 16px "League Spartan"; text-transform:uppercase; letter-spacing:-.3px; margin-bottom:10px; }
+    .bar-row { display:flex; align-items:center; gap:8px; padding:3px 0; font-size:13px; }
+    .bar-row .lbl { flex:0 0 120px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .bar-row .bar { flex:1; height:16px; background:var(--paper); border-radius:3px; overflow:hidden; }
+    .bar-row .bar i { display:block; height:100%; background:var(--lime); border-radius:3px; }
+    .bar-row .bar i.alt { background:var(--orange); }
+    .bar-row .val { flex:0 0 44px; text-align:right; font-weight:700; font-size:12px; }
+    .cols { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:14px; }
+    .muted { color:var(--muted); font-size:12px; margin-top:8px; }
+    #refresh { margin-left:12px; border:1px solid rgba(255,255,255,.3); background:none; color:#fff; border-radius:999px; padding:4px 12px; font-size:11px; cursor:pointer; font-family:inherit; }
+    .err { background:#fceeee; border:1px solid #e8b5b5; padding:14px; color:#7a2020; font-size:14px; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo">26</div>
+    <h1>Stats de la quiniela</h1>
+    <small id="updated">cargando…</small>
+    <button id="refresh" type="button">↻</button>
+  </header>
+  <main id="main"><p class="muted">Cargando datos en vivo…</p></main>
+
+  <script src="js/config.js?v=20260611j"></script>
+  <script src="js/data.js?v=20260611j"></script>
+  <script>
+  (function () {
+    const cfg = WC.CONFIG;
+    const teams = WC.SNAPSHOT.teams;
+    const matches = WC.SNAPSHOT.matches;
+    const mainEl = document.getElementById("main");
+
+    function esc(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+    async function q(path) {
+      const res = await fetch(cfg.SUPABASE_URL + "/rest/v1/" + path, {
+        headers: { apikey: cfg.SUPABASE_ANON_KEY, Authorization: "Bearer " + cfg.SUPABASE_ANON_KEY }
+      });
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      return res.json();
+    }
+    function dayKey(iso) {
+      const d = new Date(iso);
+      return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+    }
+    function dayLabel(key) {
+      return new Intl.DateTimeFormat("es", { day: "numeric", month: "short" }).format(new Date(key + "T12:00:00"));
+    }
+    function bars(rows, alt) {
+      const max = Math.max.apply(null, rows.map(function (r) { return r.n; }).concat([1]));
+      return rows.map(function (r) {
+        return '<div class="bar-row"><span class="lbl">' + r.label + '</span><div class="bar"><i' + (alt ? ' class="alt"' : "") + ' style="width:' + Math.round(100 * r.n / max) + '%"></i></div><span class="val">' + r.val + "</span></div>";
+      }).join("");
+    }
+
+    async function load() {
+      document.getElementById("updated").textContent = "cargando…";
+      try {
+        const since = new Date(Date.now() - 14 * 86400e3).toISOString();
+        const r = await Promise.all([
+          q("profiles?select=id,username,created_at"),
+          q("champion_picks?select=user_id,team_id"),
+          q("predictions?select=user_id,match_id"),
+          q("page_views?select=ts,session_id,section,device,standalone&ts=gte." + since + "&order=ts.asc&limit=10000")
+        ]);
+        render(r[0], r[1], r[2], r[3]);
+        document.getElementById("updated").textContent = "al " + new Intl.DateTimeFormat("es", { hour: "numeric", minute: "2-digit" }).format(new Date());
+      } catch (e) {
+        mainEl.innerHTML = '<div class="err">No se pudieron cargar los datos (' + esc(e.message) + "). Revisa tu conexión e intenta de nuevo.</div>";
+        document.getElementById("updated").textContent = "error";
+      }
+    }
+
+    function render(profiles, picks, preds, views) {
+      const today = dayKey(new Date().toISOString());
+      const viewsToday = views.filter(function (v) { return dayKey(v.ts) === today; });
+      const sessToday = new Set(viewsToday.map(function (v) { return v.session_id; })).size;
+
+      const regs = {};
+      profiles.forEach(function (p) { const d = dayKey(p.created_at); regs[d] = (regs[d] || 0) + 1; });
+
+      const champ = {};
+      picks.forEach(function (pk) {
+        const t = teams[pk.team_id];
+        const k = t ? t.flag + " " + t.name : pk.team_id;
+        champ[k] = (champ[k] || 0) + 1;
+      });
+
+      const vDay = {}, vSec = {}, dev = { mobile: 0, desktop: 0 }, pwa = { si: 0, no: 0 };
+      const sessByDay = {};
+      views.forEach(function (v) {
+        const d = dayKey(v.ts);
+        vDay[d] = (vDay[d] || 0) + 1;
+        (sessByDay[d] = sessByDay[d] || new Set()).add(v.session_id);
+        const s = v.section || "#inicio";
+        vSec[s] = (vSec[s] || 0) + 1;
+        if (v.device) dev[v.device]++;
+        pwa[v.standalone ? "si" : "no"]++;
+      });
+
+      const kicked = matches.filter(function (m) { return new Date(m.date) <= new Date(); });
+      const tname = function (id) { const t = teams[id]; return t ? t.flag + " " + t.name.split(" ")[0] : "—"; };
+      const part = kicked.slice(-8).map(function (m) {
+        const n = preds.filter(function (p) { return p.match_id === m.id; }).length;
+        return { label: tname(m.home) + "–" + tname(m.away), n: n, val: n + "/" + profiles.length };
+      });
+
+      const sinChamp = profiles.filter(function (p) {
+        return !picks.some(function (pk) { return pk.user_id === p.id; });
+      }).map(function (p) { return esc(p.username); });
+
+      mainEl.innerHTML =
+        '<div class="cards">' +
+        '<div class="stat-box"><small>Jugadores</small><strong>' + profiles.length + "</strong></div>" +
+        '<div class="stat-box"><small>Con campeón</small><strong>' + picks.length + '</strong> <span>/ ' + profiles.length + "</span></div>" +
+        '<div class="stat-box"><small>Visitas hoy</small><strong>' + viewsToday.length + "</strong></div>" +
+        '<div class="stat-box"><small>Sesiones hoy</small><strong>' + sessToday + "</strong></div>" +
+        "</div>" +
+
+        '<div class="card"><h2>Visitas por día</h2>' +
+        bars(Object.keys(vDay).sort().map(function (d) {
+          return { label: dayLabel(d), n: vDay[d], val: vDay[d] + " · " + sessByDay[d].size + "👤" };
+        }), true) +
+        '<p class="muted">Barras = secciones vistas; el número de la derecha incluye sesiones únicas. Desde el 11 JUN (cuando se activó la medición).</p></div>' +
+
+        '<div class="cols">' +
+        '<div class="card"><h2>Secciones más vistas</h2>' +
+        bars(Object.keys(vSec).sort(function (a, b) { return vSec[b] - vSec[a]; }).slice(0, 8).map(function (s) {
+          return { label: esc(s.replace("#", "") || "inicio"), n: vSec[s], val: vSec[s] };
+        }), true) + "</div>" +
+
+        '<div class="card"><h2>Dispositivos</h2>' +
+        bars([
+          { label: "📱 Celular", n: dev.mobile, val: dev.mobile },
+          { label: "💻 Computadora", n: dev.desktop, val: dev.desktop },
+          { label: "⬇️ App instalada", n: pwa.si, val: pwa.si }
+        ], true) +
+        '<p class="muted">"App instalada" = vistas desde la PWA en pantalla de inicio.</p></div>' +
+        "</div>" +
+
+        '<div class="cols">' +
+        '<div class="card"><h2>Campeón elegido</h2>' +
+        bars(Object.keys(champ).sort(function (a, b) { return champ[b] - champ[a]; }).map(function (k) {
+          return { label: k, n: champ[k], val: champ[k] };
+        })) +
+        (sinChamp.length ? '<p class="muted">Sin campeón: ' + sinChamp.join(", ") + "</p>" : "") + "</div>" +
+
+        '<div class="card"><h2>Picks por partido</h2>' +
+        (part.length ? bars(part) : '<p class="muted">Aún no inicia ningún partido.</p>') +
+        '<p class="muted">Solo partidos ya iniciados (antes del kickoff los picks son privados).</p></div>' +
+        "</div>" +
+
+        '<div class="card"><h2>Registros por día</h2>' +
+        bars(Object.keys(regs).sort().map(function (d) {
+          return { label: dayLabel(d), n: regs[d], val: regs[d] };
+        })) + "</div>";
+    }
+
+    document.getElementById("refresh").addEventListener("click", load);
+    load();
+  })();
+  </script>
+</body>
+</html>
