@@ -7,12 +7,14 @@ self.addEventListener("activate", function (event) { event.waitUntil(self.client
 self.addEventListener("push", function (event) {
   let data = {};
   try { data = event.data ? event.data.json() : {}; } catch (e) {}
-  event.waitUntil(self.registration.showNotification(data.title || "Quiniela Ruta 26", {
-    body: data.body || "",
+  // payload declarativo ({web_push, notification}) o plano ({title, body, url})
+  const n = data.notification || data;
+  event.waitUntil(self.registration.showNotification(n.title || "Quiniela Ruta 26", {
+    body: n.body || "",
     icon: "favicon.png",
     badge: "favicon.png",
     lang: "es",
-    data: { url: data.url || "./#quiniela" }
+    data: { url: n.navigate || n.url || "./#quiniela" }
   }));
 });
 

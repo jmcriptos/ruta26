@@ -33,6 +33,22 @@ async function rest(pathq, init) {
   return txt ? JSON.parse(txt) : null;
 }
 
+// Payload en formato Declarative Web Push (web_push: 8030): en iOS/Safari moderno
+// el sistema pinta la notificación directo del JSON (sin depender de que el service
+// worker despierte a tiempo, que era lo que mostraba el placeholder "Notificación");
+// en Chrome/Android el push handler del sw lee el mismo JSON y la muestra él.
+function pushPayload(title, body) {
+  return JSON.stringify({
+    web_push: 8030,
+    notification: {
+      title: title,
+      body: body,
+      navigate: SITE + "#quiniela",
+      lang: "es"
+    }
+  });
+}
+
 function snapshot() {
   const txt = fs.readFileSync(path.join(__dirname, "..", "js", "data.js"), "utf8");
   return JSON.parse(txt.slice(txt.indexOf("WC.SNAPSHOT = ") + 14, txt.lastIndexOf(";")));
@@ -46,11 +62,8 @@ function snapshot() {
     if (!prof.length) { console.error("No existe el usuario " + uname); process.exit(1); }
     const subs = await rest("push_subscriptions?select=endpoint,p256dh,auth&user_id=eq." + prof[0].id);
     if (!subs.length) { console.error(uname + " no tiene suscripciones push activas."); process.exit(1); }
-    const payload = JSON.stringify({
-      title: "⚽ Quiniela Ruta 26",
-      body: "Prueba de recordatorios: así te avisaremos una hora antes si te falta un pick. ¡Todo listo! ✓",
-      url: "https://jmcriptos.github.io/ruta26/#quiniela"
-    });
+    const payload = pushPayload("⚽ Quiniela Ruta 26",
+      "Prueba de recordatorios: así te avisaremos una hora antes si te falta un pick. ¡Todo listo! ✓");
     for (const s of subs) {
       try {
         await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload);
@@ -105,7 +118,7 @@ function snapshot() {
     const body = missing.length === 1
       ? vs + " empieza a las " + horaTxt(first.date) + " y aún no pones tu predicción."
       : "Te faltan picks para " + missing.length + " partidos que empiezan pronto. El primero a las " + horaTxt(first.date) + ".";
-    const payload = JSON.stringify({ title: "⚽ Quiniela Ruta 26", body: body, url: SITE + "#quiniela" });
+    const payload = pushPayload("⚽ Quiniela Ruta 26", body);
     console.log((DRY ? "[dry-run] " : "") + uid.slice(0, 8) + "… ← " + body);
     if (DRY) { avisados++; continue; }
 
