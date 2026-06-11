@@ -362,9 +362,15 @@
   function updateUserChip() {
     const menu = document.getElementById("userMenu");
     const chip = document.getElementById("userChip");
+    const login = document.getElementById("loginChip");
     if (!menu || !chip) return;
-    if (session && profile) { chip.textContent = profile.username; menu.hidden = false; }
-    else { chip.textContent = ""; menu.hidden = true; closeUserMenu(); }
+    if (session && profile) {
+      chip.textContent = profile.username; menu.hidden = false;
+      if (login) login.hidden = true;
+    } else {
+      chip.textContent = ""; menu.hidden = true; closeUserMenu();
+      if (login) login.hidden = false;
+    }
   }
 
   /* menú del usuario en el header: el chip abre/cierra, fuera se cierra, logout adentro */

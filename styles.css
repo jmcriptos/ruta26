@@ -709,6 +709,11 @@ html { scroll-padding-top: calc(84px + env(safe-area-inset-top)); }
   color: var(--white); font-size: 13px; font-weight: 700; border-radius: 8px; cursor: pointer;
 }
 .user-dropdown a:hover, .user-dropdown button:hover { background: rgba(255,255,255,.1); }
+.login-chip { color: var(--white); border-color: rgba(255,255,255,.3); background: rgba(255,255,255,.06); }
+.login-chip::before { display: none; }
+.login-chip svg { width: 15px; flex: 0 0 auto; fill: none; stroke: currentColor; stroke-width: 1.8; }
+.login-chip:hover { border-color: var(--lime); color: var(--lime); }
+.login-chip[hidden] { display: none; }
 .topbar #searchToggle { display: none; }
 
 /* ===== Quiniela: carrusel de jornadas ===== */
