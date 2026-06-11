@@ -789,9 +789,13 @@ footer { color: var(--white); }
   .opening-meta span { font-size: 12px; }
 }
 
-/* ===== Header sticky y sólido en móvil: nada se transparenta debajo ===== */
+/* ===== Header sticky y 100% sólido en móvil: nada se transparenta debajo ===== */
 @media (max-width: 680px) {
-  .topbar { background: rgba(8, 20, 16, .97); }
+  .topbar {
+    background: #081410;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
 }
 
 /* ===== Empalme hero → estadísticas en móvil: lo que asoma bajo el menú se ve continuo ===== */
