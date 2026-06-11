@@ -784,6 +784,11 @@ footer { color: var(--white); }
   .opening-meta span { font-size: 12px; }
 }
 
+/* ===== Header sólido en móvil: el hero no se transparenta debajo ===== */
+@media (max-width: 680px) {
+  .topbar { background: rgba(8, 20, 16, .97); }
+}
+
 /* ===== Empalme hero → estadísticas en móvil: lo que asoma bajo el menú se ve continuo ===== */
 @media (max-width: 680px) {
   .snapshot { width: 100%; margin-top: 0; box-shadow: none; }
