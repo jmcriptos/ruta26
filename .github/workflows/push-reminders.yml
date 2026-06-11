@@ -13,6 +13,9 @@ on:
       dry_run:
         description: "1 = solo listar a quién se avisaría, sin enviar"
         default: "1"
+      test_username:
+        description: "Mandar un push de prueba a este usuario (ignora partidos y dry_run)"
+        default: ""
 
 jobs:
   send:
@@ -30,4 +33,5 @@ jobs:
           VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
           VAPID_PUBLIC_KEY: "BFovXeG7ex6_Y8NWZO9k_TRWWkXZTlgRK-nc6vaKhxfO0UBrc1G9Ov4CP23rEtIxSmVTqu-6GKVTaKBLzGt87Jg"
           DRY_RUN: ${{ github.event.inputs.dry_run || '0' }}
+          TEST_USERNAME: ${{ github.event.inputs.test_username || '' }}
         run: node tools/send-push-reminders.js

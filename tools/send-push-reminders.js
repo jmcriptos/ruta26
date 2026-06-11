@@ -39,6 +39,27 @@ function snapshot() {
 }
 
 (async function main() {
+  // Modo prueba: TEST_USERNAME=<usuario> manda un push de prueba a ese usuario y termina.
+  if (process.env.TEST_USERNAME) {
+    const uname = process.env.TEST_USERNAME.trim().toLowerCase();
+    const prof = await rest("profiles?select=id,username&username=eq." + encodeURIComponent(uname));
+    if (!prof.length) { console.error("No existe el usuario " + uname); process.exit(1); }
+    const subs = await rest("push_subscriptions?select=endpoint,p256dh,auth&user_id=eq." + prof[0].id);
+    if (!subs.length) { console.error(uname + " no tiene suscripciones push activas."); process.exit(1); }
+    const payload = JSON.stringify({
+      title: "⚽ Quiniela Ruta 26",
+      body: "Prueba de recordatorios: así te avisaremos una hora antes si te falta un pick. ¡Todo listo! ✓",
+      url: "https://jmcriptos.github.io/ruta26/#quiniela"
+    });
+    for (const s of subs) {
+      try {
+        await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload);
+        console.log("Prueba enviada a " + uname + " (" + s.endpoint.slice(0, 40) + "…)");
+      } catch (e) { console.error("Error " + (e.statusCode || "") + ": " + (e.body || e.message)); }
+    }
+    return;
+  }
+
   const snap = snapshot();
   const now = Date.now();
   const soon = snap.matches.filter(function (m) {
