@@ -224,14 +224,14 @@
     try { localStorage.setItem(CACHE_PREFIX + matchId, JSON.stringify(model)); } catch (e) { /* Safari privado */ }
   }
 
-  // Descarga el summary de ESPN para el espnId dado; aborta tras 10 s.
-  async function fetchDetail(espnId) {
+  // Descarga el summary de ESPN (JSON crudo); aborta tras 10 s.
+  async function fetchSummary(espnId) {
     const ctrl = new AbortController();
     const t = setTimeout(function () { ctrl.abort(); }, 10000);
     try {
       const res = await fetch(SUMMARY_URL + encodeURIComponent(espnId), { signal: ctrl.signal });
       if (!res.ok) throw new Error("HTTP " + res.status);
-      return parseSummary(await res.json());
+      return await res.json();
     } finally { clearTimeout(t); }
   }
 
@@ -243,7 +243,7 @@
     if (cached) { panel.innerHTML = renderDetail(cached); return; }
     panel.innerHTML = '<p class="detail-empty">Cargando…</p>';
     try {
-      const model = await fetchDetail(espnId);
+      const model = parseSummary(await fetchSummary(espnId));
       // No cachear modelos vacíos: ESPN puede tardar en publicar el detalle
       // tras el final y un vacío cacheado quedaría "sin detalle" para siempre.
       if (model.events.home.length || model.events.away.length || model.stats.length) {
@@ -256,15 +256,77 @@
     }
   }
 
-  // btn: el botón "Ver más" dentro de la tarjeta; el panel es su hermano siguiente.
+  const LIVE_REFRESH_MS = 60000;
+
+  function onLiveClick(event) {
+    const panel = event.currentTarget;
+    const session = panel._live;
+    if (!session) return;
+    const tabBtn = event.target.closest("[data-live-tab]");
+    if (tabBtn) { session.tab = tabBtn.dataset.liveTab; panel.innerHTML = renderLive(session); return; }
+    if (event.target.closest("[data-live-more]")) { session.showAll = true; panel.innerHTML = renderLive(session); }
+  }
+
+  async function refreshLive(matchId, panel) {
+    const session = panel._live;
+    const espnId = (root.WC.ESPN_MAP || {})[matchId];
+    if (!session || !espnId) return;
+    try {
+      const json = await fetchSummary(espnId);
+      if (panel._live !== session) return; // se cerró durante el fetch
+      session.model = parseSummary(json);
+      session.commentary = parseCommentary(json);
+      session.updatedAt = Date.now();
+      panel.innerHTML = renderLive(session);
+    } catch (e) {
+      if (panel._live === session && !session.updatedAt) {
+        panel.innerHTML = '<p class="detail-empty">No se pudo cargar la narración. Se reintentará en 1 min.</p>';
+      }
+    }
+  }
+
+  // Abre el panel vivo: fetch inmediato + refresco cada 60 s + contador "hace X s".
+  function startLive(matchId, panel) {
+    stopLive(panel);
+    const session = { tab: "narracion", showAll: false, model: { events: { home: [], away: [] }, stats: [] }, commentary: [], updatedAt: null, timer: null, tick: null };
+    panel._live = session;
+    panel.addEventListener("click", onLiveClick);
+    panel.innerHTML = '<p class="detail-empty">Cargando…</p>';
+    refreshLive(matchId, panel);
+    session.timer = setInterval(function () {
+      if (!panel.isConnected || panel.hidden) { stopLive(panel); return; }
+      refreshLive(matchId, panel);
+    }, LIVE_REFRESH_MS);
+    session.tick = setInterval(function () {
+      if (!panel.isConnected) { stopLive(panel); return; }
+      const el = panel.querySelector("[data-live-updated]");
+      if (el && session.updatedAt) {
+        el.textContent = "Actualizado hace " + Math.max(0, Math.round((Date.now() - session.updatedAt) / 1000)) + " s";
+      }
+    }, 1000);
+  }
+
+  // Detiene los intervalos y limpia la sesión del panel.
+  function stopLive(panel) {
+    const session = panel._live;
+    if (!session) return;
+    clearInterval(session.timer);
+    clearInterval(session.tick);
+    panel.removeEventListener("click", onLiveClick);
+    delete panel._live;
+  }
+
+  // btn: el botón dentro de la tarjeta; el panel es su hermano siguiente.
   function toggle(matchId, btn) {
     const panel = btn.nextElementSibling;
     if (!panel || !panel.classList.contains("match-detail")) return;
+    const live = btn.dataset.live === "1";
     const open = !panel.hidden;
     panel.hidden = open;
-    btn.textContent = open ? "Ver más" : "Ver menos";
+    btn.textContent = open ? (live ? "Ver narración" : "Ver más") : "Ver menos";
     btn.setAttribute("aria-expanded", open ? "false" : "true");
-    if (!open) loadInto(matchId, panel);
+    if (open) { if (live) stopLive(panel); return; }
+    if (live) startLive(matchId, panel); else loadInto(matchId, panel);
   }
 
   // Reintenta la carga después de un error; retryBtn vive dentro del panel.

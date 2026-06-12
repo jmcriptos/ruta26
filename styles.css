@@ -211,6 +211,16 @@ h1 em { color: var(--lime); font-style: normal; }
 .poss-bar i { display: block; height: 100%; background: var(--lime-deep); }
 .detail-empty { color: var(--muted); margin: 0; }
 .detail-retry { border: 0; background: none; color: var(--ink); font: inherit; font-weight: 800; text-decoration: underline; cursor: pointer; }
+.live-tabs { display: flex; gap: 8px; margin-bottom: 12px; }
+.live-tab { flex: 1; border: 1px solid var(--line); background: var(--paper-bright); color: var(--muted); font: inherit; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .7px; padding: 8px 0; border-radius: 8px; cursor: pointer; }
+.live-tab.active { background: var(--lime); border-color: var(--ink); color: var(--ink); }
+.live-feed { list-style: none; margin: 0; padding: 0; }
+.live-feed li { display: flex; gap: 10px; padding: 7px 10px; border-top: 1px solid var(--line); font-size: 12.5px; line-height: 1.5; }
+.live-feed li:first-child { border-top: 0; }
+.live-feed .ev-min { min-width: 30px; }
+.live-feed li.live-goal { background: #f1f8d8; border: 1px solid var(--lime-deep); border-radius: 8px; margin-bottom: 6px; }
+.live-more { margin-top: 10px; }
+.live-foot { display: flex; justify-content: space-between; margin-top: 10px; font-size: 10px; color: var(--muted); }
 .outline-button { display: flex; align-items: center; gap: 12px; margin: 24px auto 0; padding: 12px 18px; color: var(--ink); background: transparent; border: 1px solid #c6c8bd; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .7px; cursor: pointer; }
 .results-empty { min-height: 250px; display: flex; align-items: center; justify-content: center; gap: 25px; background: var(--paper-bright); border: 1px dashed #c9cbbf; }
 .empty-ball { width: 74px; height: 74px; display: grid; place-items: center; border-radius: 50%; color: var(--muted); border: 1px solid var(--line); font: 700 18px "League Spartan"; }

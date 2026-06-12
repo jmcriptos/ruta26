@@ -105,9 +105,12 @@
     const statusTxt = m.status === "played" ? "FINAL" : m.status === "live" ? "● EN VIVO" :
       '<span data-kickoff="' + m.date + '">' + relativeToKickoff(m.date) + "</span>";
     const pens = m.hp != null && m.hp + m.ap > 0 ? "Penales " + m.hp + "–" + m.ap + " · " : "";
-    const hasDetail = m.status === "played" && WC.ESPN_MAP && WC.ESPN_MAP[m.id];
-    const detailHtml = hasDetail
-      ? '<button type="button" class="detail-toggle" aria-expanded="false" data-detail="' + esc(m.id) + '">Ver más</button><div class="match-detail" hidden></div>'
+    const canDetail = (m.status === "played" || m.status === "live") && WC.ESPN_MAP && WC.ESPN_MAP[m.id];
+    const isLive = m.status === "live";
+    const detailHtml = canDetail
+      ? '<button type="button" class="detail-toggle" aria-expanded="false" data-detail="' + esc(m.id) + '"' +
+        (isLive ? ' data-live="1"' : "") + ">" + (isLive ? "Ver narración" : "Ver más") +
+        '</button><div class="match-detail" hidden></div>'
       : "";
     return '<article class="match-card ' + m.status + '">' +
       '<div class="match-meta"><span>' + dayLocal(m.date) + " · " + stageLabel(m) + '</span><span>' + timeLocal(m.date) + " tu hora</span></div>" +
