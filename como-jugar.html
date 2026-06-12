@@ -111,6 +111,30 @@ document.addEventListener('DOMContentLoaded', async function() {
     setStatus('Rendering...');
     for (const uuid of uuids) template = template.split(uuid).join(blobUrls[uuid]);
 
+    // Keep the scaled tutorial centered even when its 430px source width
+    // overflows a mobile viewport, and provide a persistent way back home.
+    template = template
+      .replace(
+        '#fit { width: 430px;',
+        '#fit { position: absolute; left: 50%; top: 50%; width: 430px;'
+      )
+      .replace(
+        '"scale(" + s + ")"',
+        '"translate(-50%, -50%) scale(" + s + ")"'
+      )
+      .replace(
+        '</head>',
+        '<style>' +
+          '#tutorial-back{position:fixed;z-index:1000;top:max(12px,env(safe-area-inset-top));left:max(12px,env(safe-area-inset-left));display:inline-flex;align-items:center;gap:8px;padding:10px 13px;border:1px solid rgba(255,255,255,.2);border-radius:999px;color:#f3f2eb;background:rgba(10,21,18,.82);box-shadow:0 8px 24px rgba(0,0,0,.25);backdrop-filter:blur(12px);font:700 12px/1 "DM Sans",Arial,sans-serif;text-decoration:none}' +
+          '#tutorial-back:focus-visible{outline:2px solid #d7ff43;outline-offset:3px}' +
+          '@media(max-width:600px){#tutorial-back{left:auto;right:max(12px,env(safe-area-inset-right));width:44px;height:44px;box-sizing:border-box;justify-content:center;padding:0;font-size:20px}#tutorial-back span{display:none}}' +
+        '</style></head>'
+      )
+      .replace(
+        '<body>',
+        '<body><a id="tutorial-back" href="index.html" aria-label="Volver a la app" title="Volver a la app">← <span>Volver a la app</span></a>'
+      );
+
     // Strip integrity + crossorigin — blob URLs from a file:// document inherit
     // a null origin, so crossorigin forces a CORS fetch that SRI then rejects.
     // The manifest bytes are ours; SRI protects against CDN compromise, not this.
