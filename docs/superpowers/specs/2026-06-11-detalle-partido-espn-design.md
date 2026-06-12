@@ -96,7 +96,10 @@ Regenerar si ESPN cambia IDs: `node tools/generate-espn-map.js`.
   visitante), estilo de la captura.
 - **Stats:** filas `valor local — etiqueta centrada — valor visitante`.
 - **Toggle:** "Ver más" expande, "Ver menos" colapsa.
-- Estilos en `styles.css` siguiendo el tema oscuro existente.
+- Estilos en `styles.css` siguiendo el tema existente de la app (claro,
+  papel/lima) — la captura de referencia define el contenido y layout, no la
+  paleta.
+- El CSP de `index.html` debe sumar `https://site.api.espn.com` a `connect-src`.
 
 ## Manejo de errores
 
