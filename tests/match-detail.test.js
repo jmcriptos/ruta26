@@ -114,7 +114,7 @@ test("parseSummary: omite stat si falta en un lado", () => {
 test("parseSummary: sanitiza minutos y nombres maliciosos, descarta inválidos", () => {
   const f = fixture();
   f.keyEvents[1].clock.displayValue = "9' onmouseover=alert(1)";
-  f.keyEvents[2].participants[0].athlete.displayName = "Mokoena  <script>";
+  f.keyEvents[2].participants[0].athlete.displayName = "Mokoena \u0000<script>";
   const m = detail.parseSummary(f);
   assert.strictEqual(m.events.home.length, 1); // gol con minuto inválido descartado
   assert.strictEqual(m.events.away[0].name, "Mokoena <script>"); // solo quita control chars; el escape HTML es del render
