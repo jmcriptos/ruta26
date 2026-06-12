@@ -1,5 +1,5 @@
 /* Push pre-partido de la quiniela. Corre en GitHub Actions cada 15 min:
-   ~75 min antes del primer partido de cada ventana manda un push a TODOS los
+   hasta ~3h antes del kickoff manda (una sola vez, dedupe) un push a TODOS los
    suscriptores con el % del resultado más votado; añade línea extra si al
    usuario aún le falta el pick. Dedupe vía tabla push_sent (PK match+user).
 
@@ -16,7 +16,7 @@ const SUPABASE_URL = process.env.SUPABASE_URL || "https://wwzgpifvfmogjttwstxy.s
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
 const DRY = process.env.DRY_RUN === "1";
 const SITE = "https://jmcriptos.github.io/ruta26/";
-const WINDOW_MS = (Number(process.env.WINDOW_MIN) > 0 ? Number(process.env.WINDOW_MIN) : 75) * 60 * 1000; // ~1h antes; WINDOW_MIN lo amplía (envíos manuales)
+const WINDOW_MS = (Number(process.env.WINDOW_MIN) > 0 ? Number(process.env.WINDOW_MIN) : 180) * 60 * 1000; // ventana amplia: los cron de Actions se saltan corridas (12 JUN se perdió un push con 75 min); el dedupe garantiza un solo push por partido
 const MAX_SUBSCRIPTIONS_PER_USER = 5;
 
 if (!SERVICE_KEY) { console.error("ERROR: falta SUPABASE_SERVICE_KEY"); process.exit(1); }
@@ -101,7 +101,7 @@ function snapshot() {
     const subs = await rest("push_subscriptions?select=endpoint,p256dh,auth&user_id=eq." + uid);
     const valid = validSubscriptions(subs);
     console.log("Diagnóstico " + uname + ": suscripciones=" + subs.length + ", válidas=" + valid.length);
-    if (!soon.length) { console.log("Sin partidos en los próximos 75 min."); return; }
+    if (!soon.length) { console.log("Sin partidos en la ventana."); return; }
     const ids = soon.map(function (m) { return m.id; }).join(",");
     const preds = await rest("predictions?select=match_id&user_id=eq." + uid + "&match_id=in.(" + ids + ")");
     const sent = await rest("push_sent?select=match_id&user_id=eq." + uid + "&match_id=in.(" + ids + ")");
@@ -147,7 +147,7 @@ function snapshot() {
     return;
   }
 
-  if (!soon.length) { console.log("Sin partidos en los próximos 75 min."); return; }
+  if (!soon.length) { console.log("Sin partidos en la ventana."); return; }
   console.log("Partidos próximos: " + soon.map(function (m) { return m.id; }).join(", "));
 
   const subs = validSubscriptions(await rest("push_subscriptions?select=user_id,endpoint,p256dh,auth"));

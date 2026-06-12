@@ -1,6 +1,6 @@
 name: Push pre-partido de la quiniela
 
-# Cada 15 min revisa si hay partidos que empiezan en los próximos 75 min y manda
+# Cada 15 min revisa si hay partidos próximos (ventana 180 min, dedupe a un push) y manda
 # un push a TODOS los suscriptores con el % de la quiniela (tools/send-push-reminders.js).
 # Dedupe en la tabla push_sent: cada (partido, usuario) se avisa una sola vez.
 # Requiere secrets: SUPABASE_SERVICE_KEY (ya existe) y VAPID_PRIVATE_KEY.
