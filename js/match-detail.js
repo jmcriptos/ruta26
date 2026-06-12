@@ -117,9 +117,11 @@
   const SUFFIX = { pen: " (P)", og: " (AG)" };
 
   // Genera el HTML de una línea de evento (gol, tarjeta).
-  // ev.minute ya fue validado por safeMinute (solo dígitos y apóstrofe), no necesita esc.
+  // El minuto se re-valida aquí porque el modelo puede venir de una caché
+  // manipulada; esc() no sirve para esto (convertiría el apóstrofe en &#39;).
   function eventLine(ev) {
-    return '<li><span class="ev-min">' + ev.minute + "</span> " + ICONS[ev.kind] + " " +
+    const minute = safeMinute(ev.minute) || "";
+    return '<li><span class="ev-min">' + minute + "</span> " + (ICONS[ev.kind] || "") + " " +
       esc(ev.name) + (SUFFIX[ev.kind] || "") + "</li>";
   }
 
@@ -137,9 +139,11 @@
         "</div>";
     }
     const poss = model.stats.find(function (s) { return s.key === "possessionPct"; });
-    if (poss) {
-      html += '<div class="detail-row poss"><b>' + esc(poss.home) + '%</b><span>Posesión</span><b>' + esc(poss.away) + "%</b></div>" +
-        '<div class="poss-bar"><i style="width:' + esc(poss.home) + '%"></i></div>';
+    // safeNum re-valida los porcentajes: van a un atributo style y el modelo
+    // puede venir de una caché manipulada.
+    if (poss && safeNum(poss.home) != null && safeNum(poss.away) != null) {
+      html += '<div class="detail-row poss"><b>' + safeNum(poss.home) + '%</b><span>Posesión</span><b>' + safeNum(poss.away) + "%</b></div>" +
+        '<div class="poss-bar"><i style="width:' + safeNum(poss.home) + '%"></i></div>';
     }
     html += model.stats.filter(function (s) { return s.key !== "possessionPct"; }).map(function (s) {
       return '<div class="detail-row"><b>' + esc(s.home) + "</b><span>" + esc(s.label) + "</span><b>" + esc(s.away) + "</b></div>";

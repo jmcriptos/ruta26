@@ -176,3 +176,12 @@ test("renderDetail: modelo vacío produce mensaje de sin datos", () => {
   const html = detail.renderDetail({ events: { home: [], away: [] }, stats: [] });
   assert.ok(html.includes("Sin detalle disponible"));
 });
+
+test("renderDetail: caché manipulada no inyecta HTML por minute ni por posesión", () => {
+  const html = detail.renderDetail({
+    events: { home: [{ minute: "9'<img src=x onerror=alert(1)>", name: "A", kind: "goal" }], away: [] },
+    stats: [{ key: "possessionPct", label: "Posesión", home: '60"><script>alert(1)</script>', away: 39.5 }]
+  });
+  assert.ok(!html.includes("<img"));
+  assert.ok(!html.includes("<script"));
+});
