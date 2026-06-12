@@ -3,6 +3,7 @@
 // (mapeo id partido FIFA -> id evento ESPN, para el detalle de finalizados).
 const fs = require("fs");
 const path = require("path");
+const https = require("https");
 
 const SCOREBOARD = "https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260611-20260719&limit=200";
 
@@ -53,14 +54,29 @@ function buildEspnMap(matches, teams, events) {
   return map;
 }
 
+function fetchUrl(url) {
+  return new Promise(function(resolve, reject) {
+    https.get(url, function(res) {
+      let data = '';
+      res.on('data', function(chunk) { data += chunk; });
+      res.on('end', function() {
+        if (res.statusCode >= 400) {
+          reject(new Error("HTTP " + res.statusCode));
+        } else {
+          resolve(JSON.parse(data));
+        }
+      });
+    }).on('error', reject);
+  });
+}
+
 async function main() {
   // js/data.js es un script de navegador; extraer el JSON del snapshot.
   const dataJs = fs.readFileSync(path.join(__dirname, "..", "js", "data.js"), "utf8");
   const snap = JSON.parse(dataJs.match(/WC\.SNAPSHOT = (.*);\n$/s)[1]);
 
-  const res = await fetch(SCOREBOARD);
-  if (!res.ok) throw new Error("HTTP " + res.status);
-  const events = (await res.json()).events || [];
+  const json = await fetchUrl(SCOREBOARD);
+  const events = json.events || [];
 
   const map = buildEspnMap(snap.matches, snap.teams, events);
   const n = Object.keys(map).length;
