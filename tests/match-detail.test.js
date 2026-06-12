@@ -129,3 +129,50 @@ test("parseSummary: JSON vacío o malformado no lanza", () => {
   assert.deepStrictEqual(m.events, { home: [], away: [] });
   assert.strictEqual(m.stats.length, 5);
 });
+
+test("renderDetail: eventos con icono, posesión como barra y filas de stats", () => {
+  const html = detail.renderDetail({
+    events: {
+      home: [{ minute: "9'", name: "Julián Quiñones", kind: "goal" }],
+      away: [{ minute: "49'", name: "Sphephelo Sithole", kind: "red" }]
+    },
+    stats: [
+      { key: "possessionPct", label: "Posesión", home: 60.5, away: 39.5 },
+      { key: "totalShots", label: "Tiros", home: 16, away: 3 }
+    ]
+  });
+  assert.ok(html.includes("9'"));
+  assert.ok(html.includes("Julián Quiñones"));
+  assert.ok(html.includes("⚽"));
+  assert.ok(html.includes("🟥"));
+  assert.ok(html.includes("60.5%"));
+  assert.ok(html.includes('width:60.5%'));
+  assert.ok(html.includes("Tiros"));
+  assert.ok(!html.includes("possessionPct")); // la posesión va como barra, no como fila
+});
+
+test("renderDetail: escapa HTML en nombres", () => {
+  const html = detail.renderDetail({
+    events: { home: [{ minute: "9'", name: '<img src=x onerror=alert(1)>', kind: "goal" }], away: [] },
+    stats: []
+  });
+  assert.ok(!html.includes("<img"));
+  assert.ok(html.includes("&lt;img"));
+});
+
+test("renderDetail: goles de penal y autogol llevan sufijo", () => {
+  const html = detail.renderDetail({
+    events: {
+      home: [{ minute: "10'", name: "A", kind: "pen" }],
+      away: [{ minute: "20'", name: "B", kind: "og" }]
+    },
+    stats: []
+  });
+  assert.ok(html.includes("(P)"));
+  assert.ok(html.includes("(AG)"));
+});
+
+test("renderDetail: modelo vacío produce mensaje de sin datos", () => {
+  const html = detail.renderDetail({ events: { home: [], away: [] }, stats: [] });
+  assert.ok(html.includes("Sin detalle disponible"));
+});

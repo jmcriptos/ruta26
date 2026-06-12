@@ -106,7 +106,104 @@
     return { events: parseEvents(json, sideByTeamId(json)), stats: parseStats(json) };
   }
 
-  const api = { parseSummary: parseSummary, STATS: STATS };
+  // Escapa caracteres especiales de HTML para evitar inyección.
+  function esc(value) {
+    return String(value == null ? "" : value).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+
+  const ICONS = { goal: "⚽", pen: "⚽", og: "⚽", yellow: "🟨", red: "🟥" };
+  const SUFFIX = { pen: " (P)", og: " (AG)" };
+
+  // Genera el HTML de una línea de evento (gol, tarjeta).
+  // ev.minute ya fue validado por safeMinute (solo dígitos y apóstrofe), no necesita esc.
+  function eventLine(ev) {
+    return '<li><span class="ev-min">' + ev.minute + "</span> " + ICONS[ev.kind] + " " +
+      esc(ev.name) + (SUFFIX[ev.kind] || "") + "</li>";
+  }
+
+  // Renderiza el modelo {events, stats} a HTML listo para innerHTML.
+  function renderDetail(model) {
+    const hasEvents = model.events.home.length || model.events.away.length;
+    if (!hasEvents && !model.stats.length) {
+      return '<p class="detail-empty">Sin detalle disponible para este partido.</p>';
+    }
+    let html = "";
+    if (hasEvents) {
+      html += '<div class="detail-events">' +
+        '<ul class="detail-col">' + model.events.home.map(eventLine).join("") + "</ul>" +
+        '<ul class="detail-col away">' + model.events.away.map(eventLine).join("") + "</ul>" +
+        "</div>";
+    }
+    const poss = model.stats.find(function (s) { return s.key === "possessionPct"; });
+    if (poss) {
+      html += '<div class="detail-row poss"><b>' + esc(poss.home) + '%</b><span>Posesión</span><b>' + esc(poss.away) + "%</b></div>" +
+        '<div class="poss-bar"><i style="width:' + esc(poss.home) + '%"></i></div>';
+    }
+    html += model.stats.filter(function (s) { return s.key !== "possessionPct"; }).map(function (s) {
+      return '<div class="detail-row"><b>' + esc(s.home) + "</b><span>" + esc(s.label) + "</span><b>" + esc(s.away) + "</b></div>";
+    }).join("");
+    return html;
+  }
+
+  // Lee el modelo cacheado de localStorage; devuelve null si no existe o es inválido.
+  function readCache(matchId) {
+    try {
+      const model = JSON.parse(localStorage.getItem(CACHE_PREFIX + matchId));
+      return model && model.events && Array.isArray(model.stats) ? model : null;
+    } catch (e) { return null; }
+  }
+
+  // Guarda el modelo en localStorage; silencioso en Safari privado.
+  function writeCache(matchId, model) {
+    try { localStorage.setItem(CACHE_PREFIX + matchId, JSON.stringify(model)); } catch (e) { /* Safari privado */ }
+  }
+
+  // Descarga el summary de ESPN para el espnId dado; aborta tras 10 s.
+  async function fetchDetail(espnId) {
+    const ctrl = new AbortController();
+    const t = setTimeout(function () { ctrl.abort(); }, 10000);
+    try {
+      const res = await fetch(SUMMARY_URL + encodeURIComponent(espnId), { signal: ctrl.signal });
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      return parseSummary(await res.json());
+    } finally { clearTimeout(t); }
+  }
+
+  // Carga el detalle de un partido en el panel dado; usa caché si hay.
+  async function loadInto(matchId, panel) {
+    const espnId = (root.WC.ESPN_MAP || {})[matchId];
+    if (!espnId) { panel.innerHTML = '<p class="detail-empty">Sin detalle disponible para este partido.</p>'; return; }
+    const cached = readCache(matchId);
+    if (cached) { panel.innerHTML = renderDetail(cached); return; }
+    panel.innerHTML = '<p class="detail-empty">Cargando…</p>';
+    try {
+      const model = await fetchDetail(espnId);
+      writeCache(matchId, model);
+      panel.innerHTML = renderDetail(model);
+    } catch (e) {
+      panel.innerHTML = '<p class="detail-empty">No se pudo cargar el detalle. ' +
+        '<button type="button" class="detail-retry" data-detail-retry="' + esc(matchId) + '">Reintentar</button></p>';
+    }
+  }
+
+  // btn: el botón "Ver más" dentro de la tarjeta; el panel es su hermano siguiente.
+  function toggle(matchId, btn) {
+    const panel = btn.nextElementSibling;
+    if (!panel || !panel.classList.contains("match-detail")) return;
+    const open = !panel.hidden;
+    panel.hidden = open;
+    btn.textContent = open ? "Ver más" : "Ver menos";
+    if (!open) loadInto(matchId, panel);
+  }
+
+  // Reintenta la carga después de un error; retryBtn vive dentro del panel.
+  function retry(matchId, retryBtn) {
+    loadInto(matchId, retryBtn.closest(".match-detail"));
+  }
+
+  const api = { parseSummary: parseSummary, renderDetail: renderDetail, toggle: toggle, retry: retry, STATS: STATS };
   root.WC = root.WC || {};
   root.WC.matchDetail = api;
   if (typeof module !== "undefined" && module.exports) module.exports = api;
