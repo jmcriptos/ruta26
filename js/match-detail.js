@@ -153,12 +153,19 @@
     return html;
   }
 
+  function isObj(value) { return value != null && typeof value === "object"; }
+
   // Lee el modelo cacheado de localStorage; devuelve null si no existe o es inválido.
   function readCache(matchId) {
     try {
       const model = JSON.parse(localStorage.getItem(CACHE_PREFIX + matchId));
-      return model && model.events && Array.isArray(model.events.home) &&
-        Array.isArray(model.events.away) && Array.isArray(model.stats) ? model : null;
+      if (!(model && model.events && Array.isArray(model.events.home) &&
+        Array.isArray(model.events.away) && Array.isArray(model.stats))) return null;
+      // Filtra items no-objeto: una caché manipulada no debe romper el render.
+      model.events.home = model.events.home.filter(isObj);
+      model.events.away = model.events.away.filter(isObj);
+      model.stats = model.stats.filter(isObj);
+      return model;
     } catch (e) { return null; }
   }
 
