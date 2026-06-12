@@ -37,16 +37,6 @@ async function rest(pathq, init) {
   return txt ? JSON.parse(txt) : null;
 }
 
-async function pushSubscriptions(fields, filter) {
-  const suffix = filter || "";
-  try {
-    return await rest("push_subscriptions?select=" + fields + ",timezone" + suffix);
-  } catch (e) {
-    console.error("Zona horaria aún no disponible; se enviará sin mostrar hora local.");
-    return rest("push_subscriptions?select=" + fields + suffix);
-  }
-}
-
 function validPushEndpoint(endpoint) {
   try {
     const url = new URL(endpoint);
@@ -108,11 +98,9 @@ function snapshot() {
     const prof = await rest("profiles?select=id,username&username=eq." + encodeURIComponent(uname));
     if (!prof.length) { console.error("No existe el usuario " + uname); process.exit(1); }
     const uid = prof[0].id;
-    const subs = await pushSubscriptions("endpoint,p256dh,auth", "&user_id=eq." + uid);
+    const subs = await rest("push_subscriptions?select=endpoint,p256dh,auth&user_id=eq." + uid);
     const valid = validSubscriptions(subs);
-    const zones = Array.from(new Set(valid.map(function (s) { return s.timezone; }).filter(Boolean)));
-    console.log("Diagnóstico " + uname + ": suscripciones=" + subs.length + ", válidas=" + valid.length +
-      ", zonas=" + (zones.length ? zones.join(",") : "sin registrar"));
+    console.log("Diagnóstico " + uname + ": suscripciones=" + subs.length + ", válidas=" + valid.length);
     if (!soon.length) { console.log("Sin partidos en las próximas dos horas."); return; }
     const ids = soon.map(function (m) { return m.id; }).join(",");
     const preds = await rest("predictions?select=match_id&user_id=eq." + uid + "&match_id=in.(" + ids + ")");
@@ -131,7 +119,7 @@ function snapshot() {
     const uname = process.env.TEST_USERNAME.trim().toLowerCase();
     const prof = await rest("profiles?select=id,username&username=eq." + encodeURIComponent(uname));
     if (!prof.length) { console.error("No existe el usuario " + uname); process.exit(1); }
-    const subs = validSubscriptions(await pushSubscriptions("endpoint,p256dh,auth", "&user_id=eq." + prof[0].id))
+    const subs = validSubscriptions(await rest("push_subscriptions?select=endpoint,p256dh,auth&user_id=eq." + prof[0].id))
       .slice(0, MAX_SUBSCRIPTIONS_PER_USER);
     if (!subs.length) { console.error(uname + " no tiene suscripciones push activas."); process.exit(1); }
     const payload = pushPayload("🔔 Prueba de avisos", "Así te avisaremos ~1 hora antes de cada partido con el pulso de la quiniela. ¡Todo listo! ✓");
