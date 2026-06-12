@@ -1,6 +1,7 @@
-/* Recordatorios push de la quiniela. Corre en GitHub Actions cada 15 min:
-   busca partidos que empiezan en las próximas dos horas y avisa a suscriptores
-   que aún no tienen predicción. Dedupe vía tabla push_sent (PK match+user).
+/* Push pre-partido de la quiniela. Corre en GitHub Actions cada 15 min:
+   ~75 min antes del primer partido de cada ventana manda un push a TODOS los
+   suscriptores con el % del resultado más votado; añade línea extra si al
+   usuario aún le falta el pick. Dedupe vía tabla push_sent (PK match+user).
 
    Env: SUPABASE_SERVICE_KEY, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY,
         DRY_RUN=1 → solo lista, no envía ni registra.
@@ -9,12 +10,13 @@
 const fs = require("fs");
 const path = require("path");
 const webpush = require("web-push");
+const pm = require("./push-messages.js");
 
 const SUPABASE_URL = process.env.SUPABASE_URL || "https://wwzgpifvfmogjttwstxy.supabase.co";
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
 const DRY = process.env.DRY_RUN === "1";
 const SITE = "https://jmcriptos.github.io/ruta26/";
-const WINDOW_MS = 2 * 60 * 60 * 1000; // tolera cron retrasado o saltado
+const WINDOW_MS = 75 * 60 * 1000; // ~1h antes; margen por crons retrasados
 const MAX_SUBSCRIPTIONS_PER_USER = 5;
 
 if (!SERVICE_KEY) { console.error("ERROR: falta SUPABASE_SERVICE_KEY"); process.exit(1); }
@@ -33,6 +35,16 @@ async function rest(pathq, init) {
   if (!res.ok) throw new Error("Supabase " + res.status + " en " + pathq.split("?")[0]);
   const txt = await res.text();
   return txt ? JSON.parse(txt) : null;
+}
+
+async function pushSubscriptions(fields, filter) {
+  const suffix = filter || "";
+  try {
+    return await rest("push_subscriptions?select=" + fields + ",timezone" + suffix);
+  } catch (e) {
+    console.error("Zona horaria aún no disponible; se enviará sin mostrar hora local.");
+    return rest("push_subscriptions?select=" + fields + suffix);
+  }
 }
 
 function validPushEndpoint(endpoint) {
@@ -96,9 +108,11 @@ function snapshot() {
     const prof = await rest("profiles?select=id,username&username=eq." + encodeURIComponent(uname));
     if (!prof.length) { console.error("No existe el usuario " + uname); process.exit(1); }
     const uid = prof[0].id;
-    const subs = await rest("push_subscriptions?select=endpoint,p256dh,auth&user_id=eq." + uid);
+    const subs = await pushSubscriptions("endpoint,p256dh,auth", "&user_id=eq." + uid);
     const valid = validSubscriptions(subs);
-    console.log("Diagnóstico " + uname + ": suscripciones=" + subs.length + ", válidas=" + valid.length);
+    const zones = Array.from(new Set(valid.map(function (s) { return s.timezone; }).filter(Boolean)));
+    console.log("Diagnóstico " + uname + ": suscripciones=" + subs.length + ", válidas=" + valid.length +
+      ", zonas=" + (zones.length ? zones.join(",") : "sin registrar"));
     if (!soon.length) { console.log("Sin partidos en las próximas dos horas."); return; }
     const ids = soon.map(function (m) { return m.id; }).join(",");
     const preds = await rest("predictions?select=match_id&user_id=eq." + uid + "&match_id=in.(" + ids + ")");
@@ -117,11 +131,10 @@ function snapshot() {
     const uname = process.env.TEST_USERNAME.trim().toLowerCase();
     const prof = await rest("profiles?select=id,username&username=eq." + encodeURIComponent(uname));
     if (!prof.length) { console.error("No existe el usuario " + uname); process.exit(1); }
-    const subs = validSubscriptions(await rest("push_subscriptions?select=endpoint,p256dh,auth&user_id=eq." + prof[0].id))
+    const subs = validSubscriptions(await pushSubscriptions("endpoint,p256dh,auth", "&user_id=eq." + prof[0].id))
       .slice(0, MAX_SUBSCRIPTIONS_PER_USER);
     if (!subs.length) { console.error(uname + " no tiene suscripciones push activas."); process.exit(1); }
-    const payload = pushPayload("🔔 Prueba de recordatorios",
-      "Así te avisaremos con tiempo si te falta un pick. ¡Todo listo! ✓");
+    const payload = pushPayload("🔔 Prueba de avisos", "Así te avisaremos ~1 hora antes de cada partido con el pulso de la quiniela. ¡Todo listo! ✓");
     for (const s of subs) {
       try {
         await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload);
@@ -137,21 +150,13 @@ function snapshot() {
   const subs = validSubscriptions(await rest("push_subscriptions?select=user_id,endpoint,p256dh,auth"));
   if (!subs.length) { console.log("Sin suscriptores."); return; }
   const ids = soon.map(function (m) { return m.id; }).join(",");
-  const preds = await rest("predictions?select=user_id,match_id&match_id=in.(" + ids + ")");
+  const preds = await rest("predictions?select=user_id,match_id,hg,ag&match_id=in.(" + ids + ")");
   const sent = await rest("push_sent?select=user_id,match_id&match_id=in.(" + ids + ")");
+  const tallies = pm.tallyByMatch(preds);
   const hasPred = new Set(preds.map(function (p) { return p.user_id + "|" + p.match_id; }));
   const wasSent = new Set(sent.map(function (s) { return s.user_id + "|" + s.match_id; }));
 
-  const teamTxt = function (id) {
-    const t = snap.teams[id];
-    return t ? t.flag + " " + t.name : null;
-  };
-  const horaTxt = function (iso) {
-    return new Intl.DateTimeFormat("es", { hour: "numeric", minute: "2-digit", hour12: true, timeZone: "America/Curacao" })
-      .format(new Date(iso)).replace(/ /g, " ");
-  };
-
-  // agrupar suscripciones por usuario; un aviso por usuario aunque falten varios partidos
+  // agrupar suscripciones por usuario; un push por usuario y por ventana
   const byUser = {};
   subs.forEach(function (s) {
     const userSubs = byUser[s.user_id] = byUser[s.user_id] || [];
@@ -160,19 +165,12 @@ function snapshot() {
 
   let avisados = 0;
   for (const uid of Object.keys(byUser)) {
-    const missing = soon.filter(function (m) {
-      return !hasPred.has(uid + "|" + m.id) && !wasSent.has(uid + "|" + m.id);
-    });
-    if (!missing.length) continue;
-    const first = missing[0];
-    const vs = teamTxt(first.home) && teamTxt(first.away)
-      ? teamTxt(first.home) + " vs " + teamTxt(first.away)
-      : "El partido";
-    const body = missing.length === 1
-      ? vs + " empieza a las " + horaTxt(first.date) + " y aún no pones tu predicción."
-      : "Te faltan picks para " + missing.length + " partidos que empiezan pronto. El primero a las " + horaTxt(first.date) + ".";
-    const payload = pushPayload("⚽ ¡Te falta tu pick!", body);
-    console.log((DRY ? "[dry-run] " : "") + uid.slice(0, 8) + "… ← " + body);
+    const pending = soon.filter(function (m) { return !wasSent.has(uid + "|" + m.id); });
+    if (!pending.length) continue;
+    const missingPick = pending.some(function (m) { return !hasPred.has(uid + "|" + m.id); });
+    const msg = pm.buildPush(pending, snap.teams, tallies, missingPick);
+    const payload = pushPayload(msg.title, msg.body);
+    console.log((DRY ? "[dry-run] " : "") + uid.slice(0, 8) + "… ← " + msg.title + " | " + msg.body.replace(/\n/g, " ⏎ "));
     if (DRY) { avisados++; continue; }
 
     let delivered = 0;
@@ -183,7 +181,6 @@ function snapshot() {
         console.log("  push aceptado por proveedor");
       } catch (e) {
         if (e.statusCode === 404 || e.statusCode === 410) {
-          // suscripción muerta: limpiarla
           await rest("push_subscriptions?user_id=eq." + uid + "&endpoint=eq." + encodeURIComponent(s.endpoint), { method: "DELETE" });
           console.log("  suscripción expirada eliminada");
         } else {
@@ -197,7 +194,7 @@ function snapshot() {
     }
     await rest("push_sent", {
       method: "POST",
-      body: JSON.stringify(missing.map(function (m) { return { match_id: m.id, user_id: uid }; }))
+      body: JSON.stringify(pending.map(function (m) { return { match_id: m.id, user_id: uid }; }))
     });
     avisados++;
   }
