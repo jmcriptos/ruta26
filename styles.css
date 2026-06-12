@@ -899,6 +899,6 @@ footer { color: var(--white); }
 .push-mini { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
 .push-mini span { font-size: 14px; color: var(--muted); }
 .push-mini .pm-ok { color: #2e9e5b; }
-.push-mini .game-btn { padding: 8px 16px; font-size: 12px; }
+.push-mini .game-btn { flex: 0 0 auto; padding: 8px 22px; font-size: 12px; min-height: 40px; }
 .push-cta .game-actions { justify-content: flex-start; }
 .push-cta .game-btn { flex: 0 1 320px; padding: 0 32px; }
