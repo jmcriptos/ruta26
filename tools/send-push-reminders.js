@@ -137,7 +137,7 @@ function snapshot() {
     });
     const msg = pm.buildPush(nextMatches, snap.teams, pm.tallyByMatch(nextPreds), missingPick);
     console.log("Prueba para " + uname + ": " + msg.title + " | " + msg.body.replace(/\n/g, " ⏎ "));
-    const payload = pushPayload("🔔 Prueba · " + msg.title.replace(/^⚽ /, ""), msg.body);
+    const payload = pushPayload(msg.title, msg.body);
     for (const s of subs) {
       try {
         await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload);
