@@ -114,15 +114,30 @@ function snapshot() {
     return;
   }
 
-  // Modo prueba: TEST_USERNAME=<usuario> manda un push de prueba a ese usuario y termina.
+  // Modo prueba: TEST_USERNAME=<usuario> le manda a ese usuario el push REAL
+  // del próximo partido del calendario (aunque falte más de 75 min) y termina.
+  // Es un preview exacto de lo que recibirán todos en la ventana real.
   if (process.env.TEST_USERNAME) {
     const uname = process.env.TEST_USERNAME.trim().toLowerCase();
     const prof = await rest("profiles?select=id,username&username=eq." + encodeURIComponent(uname));
     if (!prof.length) { console.error("No existe el usuario " + uname); process.exit(1); }
-    const subs = validSubscriptions(await rest("push_subscriptions?select=endpoint,p256dh,auth&user_id=eq." + prof[0].id))
+    const uid = prof[0].id;
+    const subs = validSubscriptions(await rest("push_subscriptions?select=endpoint,p256dh,auth&user_id=eq." + uid))
       .slice(0, MAX_SUBSCRIPTIONS_PER_USER);
     if (!subs.length) { console.error(uname + " no tiene suscripciones push activas."); process.exit(1); }
-    const payload = pushPayload("🔔 Prueba de avisos", "Así te avisaremos ~1 hora antes de cada partido con el pulso de la quiniela. ¡Todo listo! ✓");
+
+    const upcoming = snap.matches.filter(function (m) { return new Date(m.date).getTime() > now; })
+      .sort(function (a, b) { return new Date(a.date) - new Date(b.date); });
+    if (!upcoming.length) { console.error("No quedan partidos en el calendario."); process.exit(1); }
+    const nextMatches = upcoming.filter(function (m) { return m.date === upcoming[0].date; });
+    const nextIds = nextMatches.map(function (m) { return m.id; }).join(",");
+    const nextPreds = await rest("predictions?select=user_id,match_id,hg,ag&match_id=in.(" + nextIds + ")");
+    const missingPick = nextMatches.some(function (m) {
+      return !nextPreds.some(function (p) { return p.user_id === uid && p.match_id === m.id; });
+    });
+    const msg = pm.buildPush(nextMatches, snap.teams, pm.tallyByMatch(nextPreds), missingPick);
+    console.log("Prueba para " + uname + ": " + msg.title + " | " + msg.body.replace(/\n/g, " ⏎ "));
+    const payload = pushPayload("🔔 Prueba · " + msg.title.replace(/^⚽ /, ""), msg.body);
     for (const s of subs) {
       try {
         await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload);
