@@ -185,3 +185,40 @@ test("renderDetail: caché manipulada no inyecta HTML por minute ni por posesió
   assert.ok(!html.includes("<img"));
   assert.ok(!html.includes("<script"));
 });
+
+test("parseCommentary: ordena descendente, sanitiza y marca goles", () => {
+  const c = detail.parseCommentary({
+    commentary: [
+      { sequence: 0, time: { displayValue: "" }, text: "Comienza el partido." },
+      { sequence: 5, time: { displayValue: "9'" }, text: "¡Gooooool! México 1, Sudáfrica 0. Julián Quiñones remate con la derecha." },
+      { sequence: 3, time: { displayValue: "3'" }, text: "Falta de Aubrey Modiba (Sudáfrica)." },
+      null,
+      { sequence: 7, time: { displayValue: "12'" }, text: "" }
+    ]
+  });
+  assert.deepStrictEqual(c.map(e => e.seq), [5, 3, 0]);
+  assert.strictEqual(c[0].isGoal, true);
+  assert.strictEqual(c[0].minute, "9'");
+  assert.strictEqual(c[1].isGoal, false);
+  assert.strictEqual(c[2].minute, "");
+});
+
+test("parseCommentary: limpia HTML-control y tolera JSON sin commentary", () => {
+  assert.deepStrictEqual(detail.parseCommentary({}), []);
+  assert.deepStrictEqual(detail.parseCommentary(null), []);
+  const c = detail.parseCommentary({ commentary: [{ sequence: 1, time: {}, text: "x".repeat(500) }] });
+  assert.strictEqual(c[0].text.length, 300);
+});
+
+test("parseSummary: clasifica eventos por type.id con respuesta en español", () => {
+  const f = fixture();
+  f.keyEvents.forEach(ev => {
+    if (ev.type.text === "Yellow Card") ev.type = { id: "94", text: "Tarjeta amarilla" };
+    if (ev.type.text === "Red Card") ev.type = { id: "93", text: "Tarjeta roja" };
+    if (ev.type.text === "Goal") ev.type = { id: "70", text: "Gol" };
+  });
+  const m = detail.parseSummary(f);
+  assert.strictEqual(m.events.away[0].kind, "yellow");
+  assert.strictEqual(m.events.away[1].kind, "red");
+  assert.strictEqual(m.events.home[0].kind, "goal");
+});

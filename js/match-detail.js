@@ -1,5 +1,5 @@
 (function (root) {
-  const SUMMARY_URL = "https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/summary?event=";
+  const SUMMARY_URL = "https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/summary?lang=es&region=mx&event=";
   const CACHE_PREFIX = "wc26-detail-v1:";
   // [clave ESPN, etiqueta] en orden de render; posesión se dibuja como barra.
   const STATS = [
@@ -16,8 +16,8 @@
   ];
 
   // Elimina caracteres de control; el escape HTML lo hace el render.
-  function safeText(value) {
-    return typeof value === "string" ? value.replace(/[\u0000-\u001f\u007f]/g, "").slice(0, 80) : "";
+  function safeText(value, max) {
+    return typeof value === "string" ? value.replace(/[\u0000-\u001f\u007f]/g, "").slice(0, max || 80) : "";
   }
 
   // Acepta solo minutos con formato "9'" o "90'+2'"; rechaza cualquier otra cosa.
@@ -52,9 +52,10 @@
       if (ev.penaltyKick === true) return "pen";
       return "goal";
     }
-    const text = (ev.type || {}).text || "";
-    if (text === "Yellow Card") return "yellow";
-    if (text === "Red Card") return "red";
+    const type = ev.type || {};
+    const typeId = type.id == null ? "" : String(type.id);
+    if (typeId === "94" || type.text === "Yellow Card") return "yellow";
+    if (typeId === "93" || type.text === "Red Card") return "red";
     return null;
   }
 
@@ -104,6 +105,26 @@
   function parseSummary(json) {
     json = json && typeof json === "object" ? json : {};
     return { events: parseEvents(json, sideByTeamId(json)), stats: parseStats(json) };
+  }
+
+  // Narración jugada a jugada; lo más reciente primero. isGoal es solo presentación.
+  function parseCommentary(json) {
+    const list = Array.isArray(json && json.commentary) ? json.commentary : [];
+    const out = [];
+    list.forEach(function (e) {
+      if (!e) return;
+      const text = safeText(e.text, 300);
+      if (!text) return;
+      const seq = safeNum(e.sequence);
+      out.push({
+        seq: seq == null ? 0 : seq,
+        minute: safeMinute((e.time || {}).displayValue) || "",
+        text: text,
+        isGoal: /^¡Go+l/.test(text)
+      });
+    });
+    out.sort(function (a, b) { return b.seq - a.seq; });
+    return out;
   }
 
   // Escapa caracteres especiales de HTML para evitar inyección.
@@ -222,7 +243,7 @@
     loadInto(matchId, retryBtn.closest(".match-detail"));
   }
 
-  const api = { parseSummary: parseSummary, renderDetail: renderDetail, toggle: toggle, retry: retry, STATS: STATS };
+  const api = { parseSummary: parseSummary, renderDetail: renderDetail, toggle: toggle, retry: retry, STATS: STATS, parseCommentary: parseCommentary };
   root.WC = root.WC || {};
   root.WC.matchDetail = api;
   if (typeof module !== "undefined" && module.exports) module.exports = api;
