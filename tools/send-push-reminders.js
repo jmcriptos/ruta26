@@ -16,7 +16,7 @@ const SUPABASE_URL = process.env.SUPABASE_URL || "https://wwzgpifvfmogjttwstxy.s
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
 const DRY = process.env.DRY_RUN === "1";
 const SITE = "https://jmcriptos.github.io/ruta26/";
-const WINDOW_MS = 75 * 60 * 1000; // ~1h antes; margen por crons retrasados
+const WINDOW_MS = (Number(process.env.WINDOW_MIN) > 0 ? Number(process.env.WINDOW_MIN) : 75) * 60 * 1000; // ~1h antes; WINDOW_MIN lo amplía (envíos manuales)
 const MAX_SUBSCRIPTIONS_PER_USER = 5;
 
 if (!SERVICE_KEY) { console.error("ERROR: falta SUPABASE_SERVICE_KEY"); process.exit(1); }
