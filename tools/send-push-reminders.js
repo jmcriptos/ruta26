@@ -101,7 +101,7 @@ function snapshot() {
     const subs = await rest("push_subscriptions?select=endpoint,p256dh,auth&user_id=eq." + uid);
     const valid = validSubscriptions(subs);
     console.log("Diagnóstico " + uname + ": suscripciones=" + subs.length + ", válidas=" + valid.length);
-    if (!soon.length) { console.log("Sin partidos en las próximas dos horas."); return; }
+    if (!soon.length) { console.log("Sin partidos en los próximos 75 min."); return; }
     const ids = soon.map(function (m) { return m.id; }).join(",");
     const preds = await rest("predictions?select=match_id&user_id=eq." + uid + "&match_id=in.(" + ids + ")");
     const sent = await rest("push_sent?select=match_id&user_id=eq." + uid + "&match_id=in.(" + ids + ")");
@@ -132,7 +132,7 @@ function snapshot() {
     return;
   }
 
-  if (!soon.length) { console.log("Sin partidos en las próximas dos horas."); return; }
+  if (!soon.length) { console.log("Sin partidos en los próximos 75 min."); return; }
   console.log("Partidos próximos: " + soon.map(function (m) { return m.id; }).join(", "));
 
   const subs = validSubscriptions(await rest("push_subscriptions?select=user_id,endpoint,p256dh,auth"));
