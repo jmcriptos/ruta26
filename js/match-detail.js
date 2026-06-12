@@ -115,9 +115,10 @@
       if (!e) return;
       const text = safeText(e.text, 300);
       if (!text) return;
-      const seq = safeNum(e.sequence);
+      // No usar safeNum: su tope de 2000 es para stats y sequence podría excederlo.
+      const seq = Number(e.sequence);
       out.push({
-        seq: seq == null ? 0 : seq,
+        seq: Number.isFinite(seq) && seq >= 0 ? seq : 0,
         minute: safeMinute((e.time || {}).displayValue) || "",
         text: text,
         isGoal: /^¡Go+l/.test(text)
@@ -195,7 +196,11 @@
     const tabs = '<div class="live-tabs">' +
       '<button type="button" class="live-tab' + (statsTab ? "" : " active") + '" data-live-tab="narracion">Narración</button>' +
       '<button type="button" class="live-tab' + (statsTab ? " active" : "") + '" data-live-tab="stats">Estadísticas</button></div>';
-    const body = statsTab ? renderDetail(state.model) : renderNarration(commentary, state.showAll);
+    const model = state.model || { events: { home: [], away: [] }, stats: [] };
+    const hasModel = model.events.home.length || model.events.away.length || model.stats.length;
+    const body = statsTab
+      ? (hasModel ? renderDetail(model) : '<p class="detail-empty">Aún no hay estadísticas disponibles.</p>')
+      : renderNarration(commentary, state.showAll);
     const latest = commentary.find(function (e) { return e.minute; });
     const minute = latest ? safeMinute(latest.minute) : null;
     const ago = state.updatedAt ? Math.max(0, Math.round((Date.now() - state.updatedAt) / 1000)) : 0;
@@ -271,7 +276,8 @@
   async function refreshLive(matchId, panel) {
     const session = panel._live;
     const espnId = (root.WC.ESPN_MAP || {})[matchId];
-    if (!session || !espnId) return;
+    if (!session) return;
+    if (!espnId) { stopLive(panel); panel.innerHTML = '<p class="detail-empty">Sin narración disponible.</p>'; return; }
     try {
       const json = await fetchSummary(espnId);
       if (panel._live !== session) return; // se cerró durante el fetch
