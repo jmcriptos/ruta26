@@ -190,12 +190,13 @@
 
   // Panel completo de partido en vivo: tabs + cuerpo + pie.
   function renderLive(state) {
+    const commentary = Array.isArray(state.commentary) ? state.commentary : [];
     const statsTab = state.tab === "stats";
     const tabs = '<div class="live-tabs">' +
       '<button type="button" class="live-tab' + (statsTab ? "" : " active") + '" data-live-tab="narracion">Narración</button>' +
       '<button type="button" class="live-tab' + (statsTab ? " active" : "") + '" data-live-tab="stats">Estadísticas</button></div>';
-    const body = statsTab ? renderDetail(state.model) : renderNarration(state.commentary, state.showAll);
-    const latest = state.commentary.find(function (e) { return e.minute; });
+    const body = statsTab ? renderDetail(state.model) : renderNarration(commentary, state.showAll);
+    const latest = commentary.find(function (e) { return e.minute; });
     const minute = latest ? safeMinute(latest.minute) : null;
     return tabs + '<div class="live-body">' + body + "</div>" +
       '<div class="live-foot"><span data-live-updated>Actualizado hace 0 s</span><span>' +
