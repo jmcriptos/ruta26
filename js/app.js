@@ -105,10 +105,15 @@
     const statusTxt = m.status === "played" ? "FINAL" : m.status === "live" ? "● EN VIVO" :
       '<span data-kickoff="' + m.date + '">' + relativeToKickoff(m.date) + "</span>";
     const pens = m.hp != null && m.hp + m.ap > 0 ? "Penales " + m.hp + "–" + m.ap + " · " : "";
+    const hasDetail = m.status === "played" && WC.ESPN_MAP && WC.ESPN_MAP[m.id];
+    const detailHtml = hasDetail
+      ? '<button type="button" class="detail-toggle" data-detail="' + esc(m.id) + '">Ver más</button><div class="match-detail" hidden></div>'
+      : "";
     return '<article class="match-card ' + m.status + '">' +
       '<div class="match-meta"><span>' + dayLocal(m.date) + " · " + stageLabel(m) + '</span><span>' + timeLocal(m.date) + " tu hora</span></div>" +
       teamRowHtml(m, "home") + teamRowHtml(m, "away") +
-      '<div class="match-bottom"><strong>' + pens + esc(m.city) + '</strong><span class="status-' + m.status + '">' + statusTxt + "</span></div></article>";
+      '<div class="match-bottom"><strong>' + pens + esc(m.city) + '</strong><span class="status-' + m.status + '">' + statusTxt + "</span></div>" +
+      detailHtml + "</article>";
   }
 
   function filteredMatches() {
@@ -304,6 +309,13 @@
     visibleMatches = 6;
     document.querySelectorAll("[data-match-filter]").forEach(function (item) { item.classList.toggle("active", item === button); });
     renderMatches();
+  });
+
+  matchesGrid.addEventListener("click", function (event) {
+    const retryBtn = event.target.closest("[data-detail-retry]");
+    if (retryBtn) { WC.matchDetail.retry(retryBtn.dataset.detailRetry, retryBtn); return; }
+    const btn = event.target.closest("[data-detail]");
+    if (btn) WC.matchDetail.toggle(btn.dataset.detail, btn);
   });
 
   document.getElementById("searchToggle").addEventListener("click", function () { toggleSearch(true); });
