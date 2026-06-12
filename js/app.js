@@ -135,7 +135,11 @@
     const showMore = document.getElementById("showMoreMatches");
     empty.hidden = !(activeMatchFilter === "results" && list.length === 0);
     const shown = activeDate === "TODOS" ? list.slice(0, visibleMatches) : list;
+    // Preservar paneles de detalle/narración abiertos a través del re-render
+    // (el polling FIFA re-renderiza cada 2 min durante partidos en vivo).
+    const openDetails = WC.matchDetail ? WC.matchDetail.captureOpen(matchesGrid) : [];
     matchesGrid.innerHTML = shown.map(matchCard).join("");
+    if (WC.matchDetail) WC.matchDetail.restoreOpen(matchesGrid, openDetails);
     showMore.hidden = activeDate !== "TODOS" || visibleMatches >= list.length;
   }
 

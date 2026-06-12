@@ -77,8 +77,14 @@ Todo en `js/match-detail.js` (mismo módulo, sigue siendo el dueño del detalle)
 
 ## Errores
 
-- Fetch falla → mismo estado de error con "Reintentar" del flujo actual; el
-  intervalo sigue intentando mientras el panel esté abierto.
+- Fetch falla antes del primer dato → mensaje "No se pudo cargar la narración.
+  Se reintentará en 1 min."; el intervalo sigue intentando solo mientras el
+  panel esté abierto (sin botón manual: el auto-reintento lo cubre). Si ya
+  había datos, un fallo puntual se ignora y se reintenta al próximo ciclo.
+- Los paneles abiertos sobreviven los re-renders de la grilla (polling FIFA
+  cada 2 min): `renderMatches` captura los paneles abiertos antes de
+  reemplazar el innerHTML y los restaura después, conservando tab y
+  "jugadas anteriores".
 - `commentary` ausente o vacío → tab muestra "Aún no hay narración disponible";
   el tab de estadísticas puede tener datos igualmente.
 

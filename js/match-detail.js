@@ -198,8 +198,9 @@
     const body = statsTab ? renderDetail(state.model) : renderNarration(commentary, state.showAll);
     const latest = commentary.find(function (e) { return e.minute; });
     const minute = latest ? safeMinute(latest.minute) : null;
+    const ago = state.updatedAt ? Math.max(0, Math.round((Date.now() - state.updatedAt) / 1000)) : 0;
     return tabs + '<div class="live-body">' + body + "</div>" +
-      '<div class="live-foot"><span data-live-updated>Actualizado hace 0 s</span><span>' +
+      '<div class="live-foot"><span data-live-updated>Actualizado hace ' + ago + ' s</span><span>' +
       (minute ? minute + " · " : "") + "Datos: ESPN</span></div>";
   }
 
@@ -298,7 +299,7 @@
       refreshLive(matchId, panel);
     }, LIVE_REFRESH_MS);
     session.tick = setInterval(function () {
-      if (!panel.isConnected) { stopLive(panel); return; }
+      if (!panel.isConnected || panel.hidden) { stopLive(panel); return; }
       const el = panel.querySelector("[data-live-updated]");
       if (el && session.updatedAt) {
         el.textContent = "Actualizado hace " + Math.max(0, Math.round((Date.now() - session.updatedAt) / 1000)) + " s";
@@ -334,7 +335,46 @@
     loadInto(matchId, retryBtn.closest(".match-detail"));
   }
 
-  const api = { parseSummary: parseSummary, renderDetail: renderDetail, toggle: toggle, retry: retry, STATS: STATS, parseCommentary: parseCommentary, renderNarration: renderNarration, renderLive: renderLive };
+  // Captura los paneles abiertos de la grilla y detiene sus sesiones en vivo.
+  // renderMatches() reemplaza el innerHTML completo (p. ej. con el polling de
+  // FIFA cada 2 min); sin esto, un panel abierto se colapsaría a mitad del partido.
+  function captureOpen(gridEl) {
+    const open = [];
+    gridEl.querySelectorAll("[data-detail]").forEach(function (btn) {
+      const panel = btn.nextElementSibling;
+      if (!panel || !panel.classList.contains("match-detail") || panel.hidden) return;
+      const session = panel._live;
+      open.push({
+        id: btn.dataset.detail,
+        tab: session ? session.tab : null,
+        showAll: session ? session.showAll : false
+      });
+      if (session) stopLive(panel);
+    });
+    return open;
+  }
+
+  // Reabre los paneles capturados tras el re-render; cada tarjeta decide su
+  // modo actual (una que pasó de vivo a finalizado se reabre como finalizado).
+  function restoreOpen(gridEl, open) {
+    open.forEach(function (o) {
+      if (!/^[0-9]{1,20}$/.test(o.id || "")) return;
+      const btn = gridEl.querySelector('[data-detail="' + o.id + '"]');
+      const panel = btn && btn.nextElementSibling;
+      if (!panel || !panel.classList.contains("match-detail")) return;
+      panel.hidden = false;
+      btn.textContent = "Ver menos";
+      btn.setAttribute("aria-expanded", "true");
+      if (btn.dataset.live === "1") {
+        startLive(o.id, panel);
+        if (panel._live && o.tab) { panel._live.tab = o.tab; panel._live.showAll = o.showAll; }
+      } else {
+        loadInto(o.id, panel);
+      }
+    });
+  }
+
+  const api = { parseSummary: parseSummary, renderDetail: renderDetail, toggle: toggle, retry: retry, STATS: STATS, parseCommentary: parseCommentary, renderNarration: renderNarration, renderLive: renderLive, captureOpen: captureOpen, restoreOpen: restoreOpen };
   root.WC = root.WC || {};
   root.WC.matchDetail = api;
   if (typeof module !== "undefined" && module.exports) module.exports = api;
