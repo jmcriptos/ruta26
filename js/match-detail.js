@@ -206,6 +206,7 @@
     const open = !panel.hidden;
     panel.hidden = open;
     btn.textContent = open ? "Ver más" : "Ver menos";
+    btn.setAttribute("aria-expanded", open ? "false" : "true");
     if (!open) loadInto(matchId, panel);
   }
 

@@ -107,7 +107,7 @@
     const pens = m.hp != null && m.hp + m.ap > 0 ? "Penales " + m.hp + "–" + m.ap + " · " : "";
     const hasDetail = m.status === "played" && WC.ESPN_MAP && WC.ESPN_MAP[m.id];
     const detailHtml = hasDetail
-      ? '<button type="button" class="detail-toggle" data-detail="' + esc(m.id) + '">Ver más</button><div class="match-detail" hidden></div>'
+      ? '<button type="button" class="detail-toggle" aria-expanded="false" data-detail="' + esc(m.id) + '">Ver más</button><div class="match-detail" hidden></div>'
       : "";
     return '<article class="match-card ' + m.status + '">' +
       '<div class="match-meta"><span>' + dayLocal(m.date) + " · " + stageLabel(m) + '</span><span>' + timeLocal(m.date) + " tu hora</span></div>" +
@@ -313,9 +313,9 @@
 
   matchesGrid.addEventListener("click", function (event) {
     const retryBtn = event.target.closest("[data-detail-retry]");
-    if (retryBtn) { WC.matchDetail.retry(retryBtn.dataset.detailRetry, retryBtn); return; }
+    if (retryBtn) { if (WC.matchDetail) WC.matchDetail.retry(retryBtn.dataset.detailRetry, retryBtn); return; }
     const btn = event.target.closest("[data-detail]");
-    if (btn) WC.matchDetail.toggle(btn.dataset.detail, btn);
+    if (btn && WC.matchDetail) WC.matchDetail.toggle(btn.dataset.detail, btn);
   });
 
   document.getElementById("searchToggle").addEventListener("click", function () { toggleSearch(true); });

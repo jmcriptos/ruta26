@@ -194,7 +194,7 @@ h1 em { color: var(--lime); font-style: normal; }
 .match-bottom { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 21px; padding-top: 13px; border-top: 1px solid var(--line); color: var(--muted); font-size: 10px; }
 .match-bottom strong { color: var(--ink); font-size: 11px; }
 .match-bottom span { color: #426a37; font-weight: 800; }
-.detail-toggle { margin-top: 12px; width: 100%; border: 1px solid var(--line); background: var(--paper-bright); color: var(--ink); font: inherit; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .7px; padding: 7px 0; border-radius: 8px; cursor: pointer; }
+.detail-toggle { margin-top: 12px; width: 100%; border: 1px solid var(--line); background: var(--paper-bright); color: var(--ink); font: inherit; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .7px; padding: 10px 0; border-radius: 8px; cursor: pointer; }
 .detail-toggle:hover { border-color: var(--lime-deep); }
 .match-detail { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); font-size: 12px; }
 .detail-events { display: flex; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
