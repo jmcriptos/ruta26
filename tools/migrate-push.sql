@@ -1,4 +1,4 @@
--- Migración: notificaciones push (recordatorio 1h antes si falta el pick).
+-- Migración: notificaciones push (recordatorio previo si falta el pick).
 -- Pegar en Supabase: SQL Editor → New query → Run.
 
 -- Suscripciones push de cada jugador. Un navegador (endpoint) puede tener

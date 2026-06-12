@@ -1,9 +1,10 @@
 /* Recordatorios push de la quiniela. Corre en GitHub Actions cada 15 min:
-   busca partidos que empiezan en la próxima hora y avisa a los suscriptores
+   busca partidos que empiezan en las próximas dos horas y avisa a suscriptores
    que aún no tienen predicción. Dedupe vía tabla push_sent (PK match+user).
 
    Env: SUPABASE_SERVICE_KEY, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY,
-        DRY_RUN=1 → solo lista, no envía ni registra. */
+        DRY_RUN=1 → solo lista, no envía ni registra.
+        DIAG_USERNAME=<usuario> → diagnostica sin enviar ni registrar. */
 
 const fs = require("fs");
 const path = require("path");
@@ -13,7 +14,7 @@ const SUPABASE_URL = process.env.SUPABASE_URL || "https://wwzgpifvfmogjttwstxy.s
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
 const DRY = process.env.DRY_RUN === "1";
 const SITE = "https://jmcriptos.github.io/ruta26/";
-const WINDOW_MS = 60 * 60 * 1000; // 1 hora antes del kickoff
+const WINDOW_MS = 2 * 60 * 60 * 1000; // tolera cron retrasado o saltado
 const MAX_SUBSCRIPTIONS_PER_USER = 5;
 
 if (!SERVICE_KEY) { console.error("ERROR: falta SUPABASE_SERVICE_KEY"); process.exit(1); }
@@ -82,6 +83,35 @@ function snapshot() {
 }
 
 (async function main() {
+  const snap = snapshot();
+  const now = Date.now();
+  const soon = snap.matches.filter(function (m) {
+    const t = new Date(m.date).getTime();
+    return t > now && t <= now + WINDOW_MS;
+  });
+
+  // Diagnóstico de solo lectura para soporte: nunca envía ni registra.
+  if (process.env.DIAG_USERNAME) {
+    const uname = process.env.DIAG_USERNAME.trim().toLowerCase();
+    const prof = await rest("profiles?select=id,username&username=eq." + encodeURIComponent(uname));
+    if (!prof.length) { console.error("No existe el usuario " + uname); process.exit(1); }
+    const uid = prof[0].id;
+    const subs = await rest("push_subscriptions?select=endpoint,p256dh,auth&user_id=eq." + uid);
+    const valid = validSubscriptions(subs);
+    console.log("Diagnóstico " + uname + ": suscripciones=" + subs.length + ", válidas=" + valid.length);
+    if (!soon.length) { console.log("Sin partidos en las próximas dos horas."); return; }
+    const ids = soon.map(function (m) { return m.id; }).join(",");
+    const preds = await rest("predictions?select=match_id&user_id=eq." + uid + "&match_id=in.(" + ids + ")");
+    const sent = await rest("push_sent?select=match_id&user_id=eq." + uid + "&match_id=in.(" + ids + ")");
+    const hasPred = new Set(preds.map(function (p) { return p.match_id; }));
+    const wasSent = new Set(sent.map(function (s) { return s.match_id; }));
+    soon.forEach(function (m) {
+      console.log("P" + m.num + ": pick=" + (hasPred.has(m.id) ? "sí" : "no") +
+        ", marcado_enviado=" + (wasSent.has(m.id) ? "sí" : "no"));
+    });
+    return;
+  }
+
   // Modo prueba: TEST_USERNAME=<usuario> manda un push de prueba a ese usuario y termina.
   if (process.env.TEST_USERNAME) {
     const uname = process.env.TEST_USERNAME.trim().toLowerCase();
@@ -91,7 +121,7 @@ function snapshot() {
       .slice(0, MAX_SUBSCRIPTIONS_PER_USER);
     if (!subs.length) { console.error(uname + " no tiene suscripciones push activas."); process.exit(1); }
     const payload = pushPayload("🔔 Prueba de recordatorios",
-      "Así te avisaremos una hora antes si te falta un pick. ¡Todo listo! ✓");
+      "Así te avisaremos con tiempo si te falta un pick. ¡Todo listo! ✓");
     for (const s of subs) {
       try {
         await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload);
@@ -101,13 +131,7 @@ function snapshot() {
     return;
   }
 
-  const snap = snapshot();
-  const now = Date.now();
-  const soon = snap.matches.filter(function (m) {
-    const t = new Date(m.date).getTime();
-    return t > now && t <= now + WINDOW_MS;
-  });
-  if (!soon.length) { console.log("Sin partidos en la próxima hora."); return; }
+  if (!soon.length) { console.log("Sin partidos en las próximas dos horas."); return; }
   console.log("Partidos próximos: " + soon.map(function (m) { return m.id; }).join(", "));
 
   const subs = validSubscriptions(await rest("push_subscriptions?select=user_id,endpoint,p256dh,auth"));
@@ -151,9 +175,12 @@ function snapshot() {
     console.log((DRY ? "[dry-run] " : "") + uid.slice(0, 8) + "… ← " + body);
     if (DRY) { avisados++; continue; }
 
+    let delivered = 0;
     for (const s of byUser[uid]) {
       try {
         await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload);
+        delivered++;
+        console.log("  push aceptado por proveedor");
       } catch (e) {
         if (e.statusCode === 404 || e.statusCode === 410) {
           // suscripción muerta: limpiarla
@@ -163,6 +190,10 @@ function snapshot() {
           console.error("  error de envío: " + (e.statusCode || e.message));
         }
       }
+    }
+    if (!delivered) {
+      console.error("  ningún endpoint aceptó el push; se reintentará");
+      continue;
     }
     await rest("push_sent", {
       method: "POST",

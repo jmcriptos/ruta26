@@ -1,13 +1,15 @@
 name: Recordatorios push de picks
 
-# Cada 15 min revisa si hay partidos que empiezan en la próxima hora y manda
+# Cada 15 min revisa si hay partidos que empiezan en las próximas dos horas y manda
 # un push a los suscriptores que aún no tienen predicción (tools/send-push-reminders.js).
 # Dedupe en la tabla push_sent: cada (partido, usuario) se avisa una sola vez.
 # Requiere secrets: SUPABASE_SERVICE_KEY (ya existe) y VAPID_PRIVATE_KEY.
 
 on:
   schedule:
-    - cron: "*/15 * * * *"
+    # GitHub advierte que al inicio de cada hora los cron pueden retrasarse o
+    # descartarse; usar minutos desplazados reduce ese riesgo.
+    - cron: "7,22,37,52 * * * *"
   workflow_dispatch:
     inputs:
       dry_run:
@@ -15,6 +17,9 @@ on:
         default: "1"
       test_username:
         description: "Mandar un push de prueba a este usuario (ignora partidos y dry_run)"
+        default: ""
+      diagnostic_username:
+        description: "Diagnosticar este usuario sin enviar ni modificar datos"
         default: ""
 
 permissions:
@@ -42,4 +47,5 @@ jobs:
           VAPID_PUBLIC_KEY: "BFovXeG7ex6_Y8NWZO9k_TRWWkXZTlgRK-nc6vaKhxfO0UBrc1G9Ov4CP23rEtIxSmVTqu-6GKVTaKBLzGt87Jg"
           DRY_RUN: ${{ github.event.inputs.dry_run || '0' }}
           TEST_USERNAME: ${{ github.event.inputs.test_username || '' }}
+          DIAG_USERNAME: ${{ github.event.inputs.diagnostic_username || '' }}
         run: node tools/send-push-reminders.js

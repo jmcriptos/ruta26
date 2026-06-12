@@ -256,7 +256,7 @@
     } else if (pushStatus === "denied") {
       inner = "<p>Las notificaciones están bloqueadas para este sitio. Actívalas en la configuración de tu navegador y recarga.</p>";
     } else {
-      inner = "<p>Recibe un aviso una hora antes de cada partido si aún no pusiste tu predicción.</p>" +
+      inner = "<p>Recibe un aviso con tiempo antes de cada partido si aún no pusiste tu predicción.</p>" +
         '<div class="game-actions"><button class="game-btn" id="pushOn">Activar avisos 🔔</button></div>';
     }
     return '<div class="game-card push-cta"><h3>Recordatorios 🔔</h3>' + inner + "</div>";

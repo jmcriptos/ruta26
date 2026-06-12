@@ -82,7 +82,7 @@ create policy "cambiar campeón antes del cierre"
     user_id = auth.uid() and now() < timestamptz '2026-06-28T19:00:00Z'
   );
 
--- 5) Suscripciones push (recordatorio 1h antes si falta el pick)
+-- 5) Suscripciones push (recordatorio previo si falta el pick)
 create table public.push_subscriptions (
   user_id uuid not null references public.profiles(id) on delete cascade,
   endpoint text not null check (char_length(endpoint) between 1 and 2048 and endpoint ~ '^https://'),
