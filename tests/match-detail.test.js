@@ -222,3 +222,56 @@ test("parseSummary: clasifica eventos por type.id con respuesta en español", ()
   assert.strictEqual(m.events.away[1].kind, "red");
   assert.strictEqual(m.events.home[0].kind, "goal");
 });
+
+function liveState(over) {
+  return Object.assign({
+    tab: "narracion",
+    showAll: false,
+    model: { events: { home: [], away: [] }, stats: [] },
+    commentary: [
+      { seq: 9, minute: "67'", text: "¡Gooooool! México 2, Sudáfrica 0.", isGoal: true },
+      { seq: 8, minute: "64'", text: "Cambio en México.", isGoal: false },
+      { seq: 7, minute: "61'", text: "Remate parado.", isGoal: false },
+      { seq: 6, minute: "58'", text: "Amonestado Sibisi.", isGoal: false },
+      { seq: 5, minute: "55'", text: "Falta de Mokoena.", isGoal: false },
+      { seq: 4, minute: "52'", text: "Córner de México.", isGoal: false }
+    ]
+  }, over);
+}
+
+test("renderLive: tabs, 5 jugadas, gol resaltado y botón de anteriores", () => {
+  const html = detail.renderLive(liveState());
+  assert.ok(html.includes("data-live-tab=\"narracion\""));
+  assert.ok(html.includes("data-live-tab=\"stats\""));
+  assert.ok(html.includes("live-goal"));
+  assert.ok(html.includes("¡Gooooool!"));
+  assert.ok(!html.includes("Córner de México."));
+  assert.ok(html.includes("data-live-more"));
+  assert.ok(html.includes("67'"));
+  assert.ok(html.includes("Datos: ESPN"));
+});
+
+test("renderLive: showAll muestra todo y oculta el botón", () => {
+  const html = detail.renderLive(liveState({ showAll: true }));
+  assert.ok(html.includes("Córner de México."));
+  assert.ok(!html.includes("data-live-more"));
+});
+
+test("renderLive: tab stats reusa el render del detalle", () => {
+  const html = detail.renderLive(liveState({
+    tab: "stats",
+    model: { events: { home: [], away: [] }, stats: [{ key: "totalShots", label: "Tiros", home: 16, away: 3 }] }
+  }));
+  assert.ok(html.includes("Tiros"));
+  assert.ok(!html.includes("¡Gooooool!"));
+});
+
+test("renderLive: narración vacía muestra mensaje y escapa HTML", () => {
+  const vacio = detail.renderLive(liveState({ commentary: [] }));
+  assert.ok(vacio.includes("Aún no hay narración"));
+  const xss = detail.renderLive(liveState({
+    commentary: [{ seq: 1, minute: "", text: "<img src=x onerror=alert(1)>", isGoal: false }]
+  }));
+  assert.ok(!xss.includes("<img"));
+  assert.ok(xss.includes("&lt;img"));
+});

@@ -174,6 +174,34 @@
     return html;
   }
 
+  // Lista de jugadas, lo más nuevo arriba; con showAll=false solo las últimas 5.
+  function renderNarration(entries, showAll) {
+    if (!entries.length) return '<p class="detail-empty">Aún no hay narración disponible.</p>';
+    const shown = showAll ? entries : entries.slice(0, 5);
+    let html = '<ul class="live-feed">' + shown.map(function (e) {
+      const minute = safeMinute(e.minute) || "";
+      return '<li' + (e.isGoal ? ' class="live-goal"' : "") + '><span class="ev-min">' + minute + "</span><span>" + esc(e.text) + "</span></li>";
+    }).join("") + "</ul>";
+    if (!showAll && entries.length > 5) {
+      html += '<button type="button" class="detail-toggle live-more" data-live-more>Ver jugadas anteriores</button>';
+    }
+    return html;
+  }
+
+  // Panel completo de partido en vivo: tabs + cuerpo + pie.
+  function renderLive(state) {
+    const statsTab = state.tab === "stats";
+    const tabs = '<div class="live-tabs">' +
+      '<button type="button" class="live-tab' + (statsTab ? "" : " active") + '" data-live-tab="narracion">Narración</button>' +
+      '<button type="button" class="live-tab' + (statsTab ? " active" : "") + '" data-live-tab="stats">Estadísticas</button></div>';
+    const body = statsTab ? renderDetail(state.model) : renderNarration(state.commentary, state.showAll);
+    const latest = state.commentary.find(function (e) { return e.minute; });
+    const minute = latest ? safeMinute(latest.minute) : null;
+    return tabs + '<div class="live-body">' + body + "</div>" +
+      '<div class="live-foot"><span data-live-updated>Actualizado hace 0 s</span><span>' +
+      (minute ? minute + " · " : "") + "Datos: ESPN</span></div>";
+  }
+
   function isObj(value) { return value != null && typeof value === "object"; }
 
   // Lee el modelo cacheado de localStorage; devuelve null si no existe o es inválido.
@@ -243,7 +271,7 @@
     loadInto(matchId, retryBtn.closest(".match-detail"));
   }
 
-  const api = { parseSummary: parseSummary, renderDetail: renderDetail, toggle: toggle, retry: retry, STATS: STATS, parseCommentary: parseCommentary };
+  const api = { parseSummary: parseSummary, renderDetail: renderDetail, toggle: toggle, retry: retry, STATS: STATS, parseCommentary: parseCommentary, renderNarration: renderNarration, renderLive: renderLive };
   root.WC = root.WC || {};
   root.WC.matchDetail = api;
   if (typeof module !== "undefined" && module.exports) module.exports = api;
