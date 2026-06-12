@@ -141,9 +141,11 @@
     const poss = model.stats.find(function (s) { return s.key === "possessionPct"; });
     // safeNum re-valida los porcentajes: van a un atributo style y el modelo
     // puede venir de una caché manipulada.
-    if (poss && safeNum(poss.home) != null && safeNum(poss.away) != null) {
-      html += '<div class="detail-row poss"><b>' + safeNum(poss.home) + '%</b><span>Posesión</span><b>' + safeNum(poss.away) + "%</b></div>" +
-        '<div class="poss-bar"><i style="width:' + safeNum(poss.home) + '%"></i></div>';
+    const possHome = poss ? safeNum(poss.home) : null;
+    const possAway = poss ? safeNum(poss.away) : null;
+    if (possHome != null && possAway != null) {
+      html += '<div class="detail-row poss"><b>' + possHome + '%</b><span>Posesión</span><b>' + possAway + "%</b></div>" +
+        '<div class="poss-bar"><i style="width:' + possHome + '%"></i></div>';
     }
     html += model.stats.filter(function (s) { return s.key !== "possessionPct"; }).map(function (s) {
       return '<div class="detail-row"><b>' + esc(s.home) + "</b><span>" + esc(s.label) + "</span><b>" + esc(s.away) + "</b></div>";
@@ -155,7 +157,8 @@
   function readCache(matchId) {
     try {
       const model = JSON.parse(localStorage.getItem(CACHE_PREFIX + matchId));
-      return model && model.events && Array.isArray(model.stats) ? model : null;
+      return model && model.events && Array.isArray(model.events.home) &&
+        Array.isArray(model.events.away) && Array.isArray(model.stats) ? model : null;
     } catch (e) { return null; }
   }
 
@@ -184,7 +187,11 @@
     panel.innerHTML = '<p class="detail-empty">Cargando…</p>';
     try {
       const model = await fetchDetail(espnId);
-      writeCache(matchId, model);
+      // No cachear modelos vacíos: ESPN puede tardar en publicar el detalle
+      // tras el final y un vacío cacheado quedaría "sin detalle" para siempre.
+      if (model.events.home.length || model.events.away.length || model.stats.length) {
+        writeCache(matchId, model);
+      }
       panel.innerHTML = renderDetail(model);
     } catch (e) {
       panel.innerHTML = '<p class="detail-empty">No se pudo cargar el detalle. ' +
