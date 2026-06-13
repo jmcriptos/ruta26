@@ -156,7 +156,14 @@ function snapshot() {
         try {
           await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload);
           console.log("  enviado a " + uname + " (" + s.endpoint.slice(0, 40) + "…)");
-        } catch (e) { console.error("  error " + (e.statusCode || "") + ": " + (e.body || e.message)); }
+        } catch (e) {
+          if (e.statusCode === 404 || e.statusCode === 410) {
+            await rest("push_subscriptions?user_id=eq." + uid + "&endpoint=eq." + encodeURIComponent(s.endpoint), { method: "DELETE" });
+            console.log("  suscripción expirada eliminada (" + uname + "); debe reactivar avisos en la app");
+          } else {
+            console.error("  error " + (e.statusCode || "") + ": " + (e.body || e.message));
+          }
+        }
       }
     }
     return;
