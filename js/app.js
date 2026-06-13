@@ -74,20 +74,31 @@
   let visibleMatches = 6;
   let activeMatchFilter = "upcoming";
 
-  function teamRowHtml(m, side) {
+  // Columna de un equipo en la tarjeta: bandera arriba, nombre debajo.
+  // Local a la izquierda, visitante a la derecha (mismo orden que las stats).
+  function teamCol(m, side) {
     const id = side === "home" ? m.home : m.away;
-    const score = side === "home" ? m.hs : m.as;
     if (id) {
       const t = team(id);
-      return '<button class="team-row" data-team-id="' + t.id + '"><em>' + t.name + "</em><span>" + t.flag + "</span>" +
-        (m.status !== "scheduled" && score != null ? "<strong>" + score + "</strong>" : "") + "</button>";
+      return '<button class="team-col" data-team-id="' + t.id + '"><span class="tc-flag">' + t.flag +
+        '</span><span class="tc-name">' + t.name + "</span></button>";
     }
     const slot = WC.standings.resolveSlot(side === "home" ? m.phA : m.phB, slotCtx());
     if (slot.teamId) {
       const t = team(slot.teamId);
-      return '<button class="team-row" data-team-id="' + t.id + '"><em>' + t.name + "</em><span>" + t.flag + "</span></button>";
+      return '<button class="team-col" data-team-id="' + t.id + '"><span class="tc-flag">' + t.flag +
+        '</span><span class="tc-name">' + t.name + "</span></button>";
     }
-    return '<div class="team-row placeholder"><em>' + esc(slot.label) + "</em></div>";
+    return '<div class="team-col placeholder"><span class="tc-flag">🏆</span><span class="tc-name"><em>' +
+      esc(slot.label) + "</em></span></div>";
+  }
+
+  // Centro de la tarjeta: marcador (jugado/en vivo) o "VS" (programado).
+  function scoreCenter(m) {
+    if (m.status === "scheduled") return '<div class="match-score vs">VS</div>';
+    const hs = m.hs != null ? m.hs : "–";
+    const as = m.as != null ? m.as : "–";
+    return '<div class="match-score"><b>' + hs + "</b><i>–</i><b>" + as + "</b></div>";
   }
 
   function relativeToKickoff(iso) {
@@ -114,7 +125,7 @@
       : "";
     return '<article class="match-card ' + m.status + '">' +
       '<div class="match-meta"><span>' + dayLocal(m.date) + " · " + stageLabel(m) + '</span><span>' + timeLocal(m.date) + " tu hora</span></div>" +
-      teamRowHtml(m, "home") + teamRowHtml(m, "away") +
+      '<div class="match-teams">' + teamCol(m, "home") + scoreCenter(m) + teamCol(m, "away") + "</div>" +
       '<div class="match-bottom"><strong>' + pens + esc(m.city) + '</strong><span class="status-' + m.status + '">' + statusTxt + "</span></div>" +
       detailHtml + "</article>";
   }
