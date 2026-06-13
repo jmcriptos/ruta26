@@ -16,7 +16,10 @@ on:
         description: "1 = solo listar a quién se avisaría, sin enviar"
         default: "1"
       test_username:
-        description: "Mandar un push de prueba a este usuario (ignora partidos y dry_run)"
+        description: "Push dirigido a estos usuarios (coma-separados; ignora ventana y dry_run)"
+        default: ""
+      test_match:
+        description: "Número de partido para test_username (vacío = próximo del calendario)"
         default: ""
       diagnostic_username:
         description: "Diagnosticar este usuario sin enviar ni modificar datos"
@@ -50,6 +53,7 @@ jobs:
           VAPID_PUBLIC_KEY: "BFovXeG7ex6_Y8NWZO9k_TRWWkXZTlgRK-nc6vaKhxfO0UBrc1G9Ov4CP23rEtIxSmVTqu-6GKVTaKBLzGt87Jg"
           DRY_RUN: ${{ github.event.inputs.dry_run || '0' }}
           TEST_USERNAME: ${{ github.event.inputs.test_username || '' }}
+          TEST_MATCH: ${{ github.event.inputs.test_match || '' }}
           DIAG_USERNAME: ${{ github.event.inputs.diagnostic_username || '' }}
           WINDOW_MIN: ${{ github.event.inputs.window_min || '' }}
         run: node tools/send-push-reminders.js

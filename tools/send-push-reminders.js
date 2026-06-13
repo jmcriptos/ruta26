@@ -114,35 +114,50 @@ function snapshot() {
     return;
   }
 
-  // Modo prueba: TEST_USERNAME=<usuario> le manda a ese usuario el push REAL
-  // del próximo partido del calendario (aunque falte más de 75 min) y termina.
-  // Es un preview exacto de lo que recibirán todos en la ventana real.
+  // Modo prueba/dirigido: TEST_USERNAME=usuario1,usuario2 manda el push REAL a
+  // esos usuarios (aunque falte mucho para el partido) y termina. Por defecto
+  // usa el próximo partido del calendario; TEST_MATCH=<número de partido> elige
+  // uno específico. Es un preview exacto de lo que recibirán todos en la ventana.
   if (process.env.TEST_USERNAME) {
-    const uname = process.env.TEST_USERNAME.trim().toLowerCase();
-    const prof = await rest("profiles?select=id,username&username=eq." + encodeURIComponent(uname));
-    if (!prof.length) { console.error("No existe el usuario " + uname); process.exit(1); }
-    const uid = prof[0].id;
-    const subs = validSubscriptions(await rest("push_subscriptions?select=endpoint,p256dh,auth&user_id=eq." + uid))
-      .slice(0, MAX_SUBSCRIPTIONS_PER_USER);
-    if (!subs.length) { console.error(uname + " no tiene suscripciones push activas."); process.exit(1); }
+    const unames = process.env.TEST_USERNAME.split(",").map(function (u) { return u.trim().toLowerCase(); }).filter(Boolean);
+    if (!unames.length) { console.error("TEST_USERNAME vacío"); process.exit(1); }
 
-    const upcoming = snap.matches.filter(function (m) { return new Date(m.date).getTime() > now; })
-      .sort(function (a, b) { return new Date(a.date) - new Date(b.date); });
-    if (!upcoming.length) { console.error("No quedan partidos en el calendario."); process.exit(1); }
-    const nextMatches = upcoming.filter(function (m) { return m.date === upcoming[0].date; });
-    const nextIds = nextMatches.map(function (m) { return m.id; }).join(",");
-    const nextPreds = await rest("predictions?select=user_id,match_id,hg,ag&match_id=in.(" + nextIds + ")");
-    const missingPick = nextMatches.some(function (m) {
-      return !nextPreds.some(function (p) { return p.user_id === uid && p.match_id === m.id; });
-    });
-    const msg = pm.buildPush(nextMatches, snap.teams, pm.tallyByMatch(nextPreds), missingPick);
-    console.log("Prueba para " + uname + ": " + msg.title + " | " + msg.body.replace(/\n/g, " ⏎ "));
-    const payload = pushPayload(msg.title, msg.body);
-    for (const s of subs) {
-      try {
-        await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload);
-        console.log("Prueba enviada a " + uname + " (" + s.endpoint.slice(0, 40) + "…)");
-      } catch (e) { console.error("Error " + (e.statusCode || "") + ": " + (e.body || e.message)); }
+    // Partido objetivo: TEST_MATCH (m.num) o el próximo del calendario.
+    let targetMatches;
+    if (process.env.TEST_MATCH) {
+      const num = Number(process.env.TEST_MATCH);
+      const m = snap.matches.find(function (x) { return x.num === num; });
+      if (!m) { console.error("No existe el partido número " + process.env.TEST_MATCH); process.exit(1); }
+      targetMatches = [m];
+    } else {
+      const upcoming = snap.matches.filter(function (m) { return new Date(m.date).getTime() > now; })
+        .sort(function (a, b) { return new Date(a.date) - new Date(b.date); });
+      if (!upcoming.length) { console.error("No quedan partidos en el calendario."); process.exit(1); }
+      targetMatches = upcoming.filter(function (m) { return m.date === upcoming[0].date; });
+    }
+    const targetIds = targetMatches.map(function (m) { return m.id; }).join(",");
+    const preds = await rest("predictions?select=user_id,match_id,hg,ag&match_id=in.(" + targetIds + ")");
+    const tallies = pm.tallyByMatch(preds);
+
+    for (const uname of unames) {
+      const prof = await rest("profiles?select=id,username&username=eq." + encodeURIComponent(uname));
+      if (!prof.length) { console.error("No existe el usuario " + uname); continue; }
+      const uid = prof[0].id;
+      const subs = validSubscriptions(await rest("push_subscriptions?select=endpoint,p256dh,auth&user_id=eq." + uid))
+        .slice(0, MAX_SUBSCRIPTIONS_PER_USER);
+      if (!subs.length) { console.error(uname + " no tiene suscripciones push activas."); continue; }
+      const missingPick = targetMatches.some(function (m) {
+        return !preds.some(function (p) { return p.user_id === uid && p.match_id === m.id; });
+      });
+      const msg = pm.buildPush(targetMatches, snap.teams, tallies, missingPick);
+      console.log("Prueba para " + uname + ": " + msg.title + " | " + msg.body.replace(/\n/g, " ⏎ "));
+      const payload = pushPayload(msg.title, msg.body);
+      for (const s of subs) {
+        try {
+          await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload);
+          console.log("  enviado a " + uname + " (" + s.endpoint.slice(0, 40) + "…)");
+        } catch (e) { console.error("  error " + (e.statusCode || "") + ": " + (e.body || e.message)); }
+      }
     }
     return;
   }
