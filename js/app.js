@@ -149,11 +149,12 @@
   function filteredMatches() {
     let list = state.matches;
     if (activeMatchFilter === "upcoming") list = list.filter(function (m) { return m.status !== "played"; });
-    if (activeMatchFilter === "results") {
-      list = list.filter(function (m) { return m.status === "played"; }).slice().reverse();
-    }
+    if (activeMatchFilter === "results") list = list.filter(function (m) { return m.status === "played"; });
     if (activeDate !== "TODOS") list = list.filter(function (m) { return dateKey(m.date) === activeDate; });
-    return list;
+    // orden cronológico por hora de inicio; resultados de más reciente a más antiguo.
+    // sort estable: a igual hora conserva el orden de número de partido del snapshot.
+    const dir = activeMatchFilter === "results" ? -1 : 1;
+    return list.slice().sort(function (a, b) { return dir * (new Date(a.date) - new Date(b.date)); });
   }
 
   function renderMatches() {
