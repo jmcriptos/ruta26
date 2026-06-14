@@ -309,9 +309,11 @@
       const real = m.status !== "scheduled" && m.hs != null
         ? m.hs + "–" + m.as + (m.hp != null ? " (pen " + m.hp + "–" + m.ap + ")" : "")
         : "—";
-      const chip = s.kind === "none" ? '<span class="pick-points miss">sin pick</span>'
-        : s.kind === "pending" ? '<span class="pick-points pending">en juego</span>'
-        : '<span class="pick-points ' + s.kind + '">' + (s.points > 0 ? "+" + s.points + " pts" : "0 pts") + "</span>";
+      // mismo formato que el chip de la sección Partidos (app.js pointsChip)
+      const chip = s.kind === "none" ? '<span class="pts-chip none">Sin pronóstico</span>'
+        : s.kind === "pending" ? '<span class="pts-chip pending">En juego</span>'
+        : s.points > 0 ? '<span class="pts-chip win">+' + s.points + " " + (s.points === 1 ? "punto" : "puntos") + "</span>"
+        : '<span class="pts-chip zero">0 puntos</span>';
       return '<div class="pick-card locked" data-match="' + m.id + '">' + head +
         '<div class="pick-foot"><small>Tu pick: ' + pickLabel(m, v) + " · Real: " + real + "</small>" + chip + "</div></div>";
     }

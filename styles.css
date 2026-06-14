@@ -646,11 +646,7 @@ html { scroll-padding-top: calc(84px + env(safe-area-inset-top)); }
 .pick-state.ok { color: #426a37; }
 .pick-state.err { color: #a83a22; }
 .pick-result { font-size: 13px; font-weight: 700; }
-.pick-points { padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 800; white-space: nowrap; }
-.pick-points.exact { background: var(--lime); color: var(--ink); }
-.pick-points.outcome { background: #e6efd2; color: #426a37; }
-.pick-points.miss { background: #ecebe3; color: var(--muted); }
-.pick-points.pending { background: transparent; border: 1px dashed var(--line); color: var(--muted); }
+.pts-chip.pending { background: transparent; border: 1px dashed var(--line); color: var(--muted); }
 
 .champ-pick { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
 .champ-pick select { flex: 1; min-width: 200px; min-height: 48px; padding: 10px 14px; border: 1px solid var(--line); background: white; border-radius: 999px; font-weight: 600; cursor: pointer; }
@@ -682,7 +678,6 @@ html { scroll-padding-top: calc(84px + env(safe-area-inset-top)); }
   .pick-info small { white-space: normal; }
   .pick-controls { flex: 0 0 auto; }
   .pick-row:not(.locked) .pick-state { flex: 1; text-align: right; min-width: 0; }
-  .pick-row.locked .pick-points { margin-left: auto; }
   .game-card { padding: 18px 16px; }
 }
 
