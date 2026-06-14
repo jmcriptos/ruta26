@@ -199,6 +199,10 @@ h1 em { color: var(--lime); font-style: normal; }
 .match-bottom { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 21px; padding-top: 13px; border-top: 1px solid var(--line); color: var(--muted); font-size: 10px; }
 .match-bottom strong { color: var(--ink); font-size: 11px; }
 .match-bottom span { color: #426a37; font-weight: 800; }
+.mb-end { display: flex; align-items: center; gap: 10px; }
+.pts-chip { padding: 3px 9px; border-radius: 999px; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .4px; white-space: nowrap; }
+.pts-chip.win { background: var(--lime); color: #2e4a07; }
+.pts-chip.zero, .pts-chip.none { background: #ecebe3; color: var(--muted); }
 .detail-toggle { margin-top: 12px; width: 100%; border: 1px solid var(--line); background: var(--paper-bright); color: var(--ink); font: inherit; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .7px; padding: 10px 0; border-radius: 8px; cursor: pointer; }
 .detail-toggle:hover { border-color: var(--lime-deep); }
 .match-detail { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); font-size: 12px; }

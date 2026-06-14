@@ -112,6 +112,21 @@
     return "EN " + days + " DÍAS";
   }
 
+  // Chip con los puntos del jugador logueado en un partido finalizado.
+  // game.js (dueño de la sesión) decide si hay algo que mostrar.
+  function pointsChip(m) {
+    if (m.status !== "played" || !WC.game || !WC.game.myMatchPoints) return "";
+    const mp = WC.game.myMatchPoints(m);
+    if (!mp) return "";
+    if (!mp.hasPred) return '<span class="pts-chip none">Sin pronóstico</span>';
+    if (mp.kind === "exact" || mp.kind === "outcome") {
+      const unidad = mp.points === 1 ? "punto" : "puntos";
+      return '<span class="pts-chip win">+' + mp.points + " " + unidad + "</span>";
+    }
+    if (mp.kind === "miss") return '<span class="pts-chip zero">0 puntos</span>';
+    return ""; // pending/none: partido sin marcador aún
+  }
+
   function matchCard(m) {
     const statusTxt = m.status === "played" ? "FINAL" : m.status === "live" ? "● EN VIVO" :
       '<span data-kickoff="' + m.date + '">' + relativeToKickoff(m.date) + "</span>";
@@ -126,7 +141,8 @@
     return '<article class="match-card ' + m.status + '">' +
       '<div class="match-meta"><span>' + dayLocal(m.date) + " · " + stageLabel(m) + '</span><span>' + timeLocal(m.date) + " tu hora</span></div>" +
       '<div class="match-teams">' + teamCol(m, "home") + scoreCenter(m) + teamCol(m, "away") + "</div>" +
-      '<div class="match-bottom"><strong>' + pens + esc(m.city) + '</strong><span class="status-' + m.status + '">' + statusTxt + "</span></div>" +
+      '<div class="match-bottom"><strong>' + pens + esc(m.city) + '</strong>' +
+      '<span class="mb-end">' + pointsChip(m) + '<span class="status-' + m.status + '">' + statusTxt + "</span></span></div>" +
       detailHtml + "</article>";
   }
 
@@ -437,4 +453,9 @@
       window.scrollTo(window.scrollX, window.scrollY - 1);
     });
   });
+
+  // game.js llama esto al cambiar la sesión para que las tarjetas muestren u
+  // oculten los puntos del jugador. renderMatches preserva filtros, fecha,
+  // paginado y paneles de detalle abiertos.
+  WC.app = { refreshMatches: renderMatches };
 })();

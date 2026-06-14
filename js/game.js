@@ -18,7 +18,7 @@
   if (!window.supabase || String(cfg.SUPABASE_URL).indexOf("http") !== 0) {
     rootEl.innerHTML = '<div class="game-card game-off"><h3>La quiniela aún no está activa</h3>' +
       "<p>Estamos conectando el juego. Vuelve en un rato.</p></div>";
-    WC.game = { onDataUpdate: function () {} };
+    WC.game = { onDataUpdate: function () {}, myMatchPoints: function () { return null; } };
     return;
   }
 
@@ -688,8 +688,20 @@
       await loadAll();
       await checkPush();
       render();
+      refreshMatchCards();
     })();
   });
+
+  // Puntos del jugador logueado en un partido finalizado, para mostrarlos en
+  // su tarjeta. null si no hay sesión / no aplica; {hasPred:false} si no
+  // pronosticó; {hasPred:true, points, kind} con el resultado de scoreMatch.
+  function myMatchPoints(match) {
+    if (!session || !match || match.status !== "played") return null;
+    const pred = mine[match.id];
+    if (!pred) return { hasPred: false };
+    const s = WC.scoring.scoreMatch({ hg: pred.hg, ag: pred.ag, pens: pred.pens }, match);
+    return { hasPred: true, points: s.points, kind: s.kind };
+  }
 
   WC.game = {
     onDataUpdate: function () {
@@ -700,8 +712,15 @@
       });
       if (!editing) render();
     },
+    myMatchPoints: myMatchPoints,
     reload: async function () { await loadAll(); render(); }
   };
+
+  // Las tarjetas de partidos (app.js) muestran los puntos del jugador; hay que
+  // re-renderizarlas cuando cambia la sesión o se (re)cargan las predicciones.
+  function refreshMatchCards() {
+    if (WC.app && WC.app.refreshMatches) WC.app.refreshMatches();
+  }
 
   (async function init() {
     const got = await client.auth.getSession();
@@ -711,5 +730,6 @@
     await loadAll();
     await checkPush();
     render();
+    refreshMatchCards();
   })();
 })();
