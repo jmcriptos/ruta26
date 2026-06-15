@@ -33,6 +33,15 @@ test("computeGroups: puntos, orden y desempates", () => {
   assert.strictEqual(tables.A[0].pts, 4);
   assert.strictEqual(tables.A[0].dg, 3);
   assert.strictEqual(tables.A[1].pj, 2);
+  // ganados/empatados/perdidos
+  const a1 = tables.A.find(function (r) { return r.teamId === "a1"; }); // ganó 1, empató 1
+  assert.deepStrictEqual({ pg: a1.pg, pe: a1.pe, pp: a1.pp }, { pg: 1, pe: 1, pp: 0 });
+  const a2 = tables.A.find(function (r) { return r.teamId === "a2"; }); // perdió 2
+  assert.deepStrictEqual({ pg: a2.pg, pe: a2.pe, pp: a2.pp }, { pg: 0, pe: 0, pp: 2 });
+  const a3 = tables.A.find(function (r) { return r.teamId === "a3"; }); // empató 2
+  assert.deepStrictEqual({ pg: a3.pg, pe: a3.pe, pp: a3.pp }, { pg: 0, pe: 2, pp: 0 });
+  // pg+pe+pp === pj para todos
+  assert.ok(tables.A.every(function (r) { return r.pg + r.pe + r.pp === r.pj; }));
 });
 
 test("computeGroups: ignora partidos no jugados y en vivo", () => {

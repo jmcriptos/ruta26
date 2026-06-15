@@ -207,17 +207,20 @@
       const rows = all.filter(function (r) { return team(r.teamId).name.toLocaleLowerCase("es").includes(normalized); });
       if (!rows.length) return "";
       const played = all.some(function (r) { return r.pj > 0; });
-      return '<article class="group-card"><div class="group-title"><strong>Grupo ' + g + "</strong><span>" +
-        (played ? "PTS · PJ · DG" : "4 selecciones") + "</span></div>" +
-        rows.map(function (r) {
-          const t = team(r.teamId);
-          const pos = all.indexOf(r);
-          const qualifying = played && pos < 2;
-          return '<button class="group-team' + (t.host ? " host" : "") + (qualifying ? " qualifying" : "") + '" data-team-id="' + t.id + '">' +
-            "<span>" + t.flag + "</span><em>" + t.name + "</em>" +
-            (played ? '<small class="mini-stats">' + r.pts + " · " + r.pj + " · " + (r.dg > 0 ? "+" : "") + r.dg + "</small>" : "") +
-            "</button>";
-        }).join("") + "</article>";
+      const head = '<div class="gt-row gt-head"><span class="gt-pos"></span><span class="gt-team">Grupo ' + g + "</span>" +
+        '<span>PJ</span><span>PG</span><span>PE</span><span>PP</span><span>DG</span><span class="gt-pts">PTS</span></div>';
+      const body = rows.map(function (r) {
+        const t = team(r.teamId);
+        const pos = all.indexOf(r);
+        const qualifying = played && pos < 2;
+        const dg = (r.dg > 0 ? "+" : "") + r.dg;
+        return '<button class="gt-row gt-team-row' + (qualifying ? " qualifying" : "") + '" data-team-id="' + t.id + '">' +
+          '<span class="gt-pos">' + (pos + 1) + '</span>' +
+          '<span class="gt-team"><i>' + t.flag + "</i><em>" + t.name + "</em></span>" +
+          "<span>" + r.pj + "</span><span>" + r.pg + "</span><span>" + r.pe + "</span><span>" + r.pp + "</span>" +
+          "<span>" + dg + '</span><span class="gt-pts">' + r.pts + "</span></button>";
+      }).join("");
+      return '<article class="group-card"><div class="group-table">' + head + body + "</div></article>";
     }).filter(Boolean);
     groupsGrid.innerHTML = cards.join("");
     noTeams.hidden = cards.length > 0;

@@ -5,7 +5,7 @@
     Object.keys(teams).forEach(function (id) {
       const t = teams[id];
       if (!t.group) return;
-      const row = { teamId: id, pts: 0, pj: 0, gf: 0, gc: 0, dg: 0 };
+      const row = { teamId: id, pts: 0, pj: 0, pg: 0, pe: 0, pp: 0, gf: 0, gc: 0, dg: 0 };
       rows[id] = row;
       (tables[t.group] = tables[t.group] || []).push(row);
     });
@@ -16,9 +16,9 @@
       h.pj++; a.pj++;
       h.gf += m.hs; h.gc += m.as;
       a.gf += m.as; a.gc += m.hs;
-      if (m.hs > m.as) h.pts += 3;
-      else if (m.hs < m.as) a.pts += 3;
-      else { h.pts++; a.pts++; }
+      if (m.hs > m.as) { h.pts += 3; h.pg++; a.pp++; }
+      else if (m.hs < m.as) { a.pts += 3; a.pg++; h.pp++; }
+      else { h.pts++; a.pts++; h.pe++; a.pe++; }
     });
     Object.keys(tables).forEach(function (g) {
       tables[g].forEach(function (r) { r.dg = r.gf - r.gc; });
