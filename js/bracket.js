@@ -51,12 +51,15 @@
   function teamBox(m, side, ctx, classes) {
     const id = side === "home" ? m.home : m.away;
     const score = side === "home" ? m.hs : m.as;
-    const slot = WC.standings.resolveSlot(side === "home" ? m.phA : m.phB, ctx);
+    const slot = WC.standings.resolveSlot(side === "home" ? m.phA : m.phB, ctx, { provisional: true });
     const resolved = id || slot.teamId;
     if (resolved) {
       const t = WC.state.teams[resolved] || { code: "?", flag: "🏳️" };
       const winner = m.status === "played" && m.winner === resolved;
-      return '<div class="b-team' + (winner ? " b-winner" : "") + '"><span class="b-flag">' + (t.flag || "🏳️") +
+      // equipo provisional: viene del slot (no de un equipo ya fijo) y el grupo no cerró
+      const prov = !id && slot.provisional;
+      return '<div class="b-team' + (winner ? " b-winner" : "") + (prov ? " b-prov" : "") + '"' +
+        (prov ? ' title="Clasificado provisional"' : "") + '><span class="b-flag">' + (t.flag || "🏳️") +
         '</span><span class="b-code">' + esc(t.code || "?") + "</span>" +
         (m.status !== "scheduled" && score != null ? '<span class="b-score">' + score + "</span>" : "") + "</div>";
     }

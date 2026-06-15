@@ -99,6 +99,36 @@ test("resolveSlot: grupo sin terminar devuelve etiqueta", () => {
   assert.strictEqual(slot.label, "1º grupo A");
 });
 
+test("resolveSlot: provisional resuelve grupo en curso solo con opts", () => {
+  const teams = makeTeams({ A: ["a1", "a2", "a3", "a4"] });
+  // a1 ganó 2-0 → va 1º; el resto 0 pts. Grupo NO terminado (1 partido).
+  const tables = st.computeGroups([gm(1, "A", "a1", "a2", 2, 0)], teams);
+  const ctx = { tables: tables, matchesByNum: {}, teams: teams };
+  // sin opts: comportamiento actual (placeholder, sin teamId)
+  assert.strictEqual(st.resolveSlot("1A", ctx).teamId, null);
+  // con opts.provisional: devuelve el líder provisional marcado
+  const prov = st.resolveSlot("1A", ctx, { provisional: true });
+  assert.strictEqual(prov.teamId, "a1");
+  assert.strictEqual(prov.provisional, true);
+  assert.strictEqual(prov.label, "1º grupo A");
+});
+
+test("resolveSlot: provisional no aplica a grupo sin jugar", () => {
+  const teams = makeTeams({ A: ["a1", "a2", "a3", "a4"] });
+  const tables = st.computeGroups([], teams); // 0 partidos
+  const slot = st.resolveSlot("2A", { tables: tables, matchesByNum: {}, teams: teams }, { provisional: true });
+  assert.strictEqual(slot.teamId, null);
+  assert.strictEqual(slot.provisional, false);
+});
+
+test("resolveSlot: grupo cerrado es definitivo, no provisional", () => {
+  const teams = makeTeams({ A: ["a1", "a2", "a3", "a4"] });
+  const tables = st.computeGroups(fullGroup("A", { base: 0, ids: ["a1", "a2", "a3", "a4"], thirdGoals: 1 }), teams);
+  const slot = st.resolveSlot("1A", { tables: tables, matchesByNum: {}, teams: teams }, { provisional: true });
+  assert.strictEqual(slot.teamId, "a1");
+  assert.strictEqual(slot.provisional, false);
+});
+
 test("resolveSlot: terceros, ganador y perdedor", () => {
   const ctx = { tables: {}, teams: {}, matchesByNum: {
     74: { num: 74, home: "x", away: "y", status: "played", winner: "x" },

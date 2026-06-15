@@ -452,6 +452,8 @@ footer { display: flex; align-items: center; gap: 25px; padding: 28px 32px; colo
 .b-team .b-score { margin-left: auto; font-weight: 700; }
 .b-team.b-winner { color: var(--lime); }
 .b-team.b-tbd { color: rgba(243,242,235,.45); font-weight: 500; }
+.b-team.b-prov { opacity: .62; font-style: italic; }
+.b-team.b-prov .b-code::after { content: "*"; margin-left: 1px; }
 
 .b-final-col { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 0 6px; }
 .b-trophy { font-size: 30px; line-height: 1; }

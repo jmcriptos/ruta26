@@ -45,31 +45,37 @@
     return thirds;
   }
 
-  function resolveSlot(ph, ctx) {
-    if (!ph) return { teamId: null, label: "" };
+  // opts.provisional: en slots de grupo aún sin cerrar, devuelve el equipo que
+  // va en esa posición ahora (marcado provisional) en vez del placeholder.
+  function resolveSlot(ph, ctx, opts) {
+    if (!ph) return { teamId: null, label: "", provisional: false };
     let m;
     if ((m = ph.match(/^([12])([A-L])$/))) {
       const pos = Number(m[1]), g = m[2];
-      if (groupFinished(g, ctx.tables)) return { teamId: ctx.tables[g][pos - 1].teamId, label: "" };
-      return { teamId: null, label: pos + "º grupo " + g };
+      const table = ctx.tables[g];
+      if (groupFinished(g, ctx.tables)) return { teamId: table[pos - 1].teamId, label: "", provisional: false };
+      if (opts && opts.provisional && table && table.some(function (r) { return r.pj > 0; })) {
+        return { teamId: table[pos - 1].teamId, label: pos + "º grupo " + g, provisional: true };
+      }
+      return { teamId: null, label: pos + "º grupo " + g, provisional: false };
     }
     if ((m = ph.match(/^3([A-L]+)$/))) {
       // La asignación real de terceros la entrega la API (Home/Away del partido); aquí solo etiqueta.
-      return { teamId: null, label: "Mejor 3º " + m[1].split("").join("/") };
+      return { teamId: null, label: "Mejor 3º " + m[1].split("").join("/"), provisional: false };
     }
     if ((m = ph.match(/^W(\d+)$/))) {
       const prev = ctx.matchesByNum[Number(m[1])];
-      if (prev && prev.status === "played" && prev.winner) return { teamId: prev.winner, label: "" };
-      return { teamId: null, label: "Gana P" + m[1] };
+      if (prev && prev.status === "played" && prev.winner) return { teamId: prev.winner, label: "", provisional: false };
+      return { teamId: null, label: "Gana P" + m[1], provisional: false };
     }
     if ((m = ph.match(/^RU(\d+)$/))) {
       const prev = ctx.matchesByNum[Number(m[1])];
       if (prev && prev.status === "played" && prev.winner) {
-        return { teamId: prev.winner === prev.home ? prev.away : prev.home, label: "" };
+        return { teamId: prev.winner === prev.home ? prev.away : prev.home, label: "", provisional: false };
       }
-      return { teamId: null, label: "Pierde P" + m[1] };
+      return { teamId: null, label: "Pierde P" + m[1], provisional: false };
     }
-    return { teamId: null, label: ph };
+    return { teamId: null, label: ph, provisional: false };
   }
 
   function nextMatch(num, koMatches) {
