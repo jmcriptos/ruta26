@@ -517,11 +517,12 @@
     const uid = session ? session.user.id : null;
     return '<div class="game-card"><h3>Ranking</h3>' +
       (rows.length === 0 ? '<p class="rank-empty">Aún no hay jugadores. ¡Sé el primero!</p>'
-        : '<table class="rank-table"><tr><th>#</th><th></th><th>Jugador</th><th class="col-x">Exactos</th><th class="col-x">Resultados</th><th class="col-x">Bonus</th><th>Pts</th></tr>' +
+        : '<table class="rank-table"><tr><th>#</th><th></th><th>Jugador</th><th class="col-x">Exactos</th><th class="col-x">Resultados</th><th class="col-x">% Acierto</th><th class="col-x">Bonus</th><th>Pts</th></tr>' +
           rows.map(function (r) {
             const medal = r.pos === 1 ? "🥇" : r.pos === 2 ? "🥈" : r.pos === 3 ? "🥉" : '<span class="num">' + r.pos + "</span>";
+            const acc = r.decided > 0 ? Math.round((r.exact + r.outcome) / r.decided * 100) + "%" : "—";
             return "<tr" + (r.userId === uid ? ' class="me"' : "") + '><td class="pos">' + medal + '</td><td class="flag">' + champFlagFor(r.userId) + "</td><td>" + esc(r.username) + '</td><td class="col-x">' +
-              r.exact + '</td><td class="col-x">' + r.outcome + '</td><td class="col-x">' + (r.bonus || 0) + '</td><td class="pts">' + r.points + "</td></tr>";
+              r.exact + '</td><td class="col-x">' + r.outcome + '</td><td class="col-x">' + acc + '</td><td class="col-x">' + (r.bonus || 0) + '</td><td class="pts">' + r.points + "</td></tr>";
           }).join("") + "</table>") +
       (uid && rows.some(function (r) { return r.userId === uid; })
         ? '<div class="game-actions game-share" style="margin-top:14px"><button class="game-btn secondary" id="gShare">Compartir mi posición</button></div>'

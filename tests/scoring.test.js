@@ -83,6 +83,26 @@ test("buildLeaderboard: agrega 1X2, penales y bonus; posiciona", () => {
   assert.strictEqual(rows[2].username, "beto");
   assert.strictEqual(rows[2].points, 1);
   assert.strictEqual(rows[2].pos, 3);
+  // decided = picks de partidos ya jugados (denominador del % de acierto)
+  assert.strictEqual(rows.find(function (r) { return r.username === "ana"; }).decided, 2);
+  assert.strictEqual(rows.find(function (r) { return r.username === "beto"; }).decided, 2);
+  assert.strictEqual(rows.find(function (r) { return r.username === "caro"; }).decided, 0);
+});
+
+test("buildLeaderboard: decided ignora picks de partidos no jugados", () => {
+  const matches = [
+    played("group", 2, 0, "H", { id: "g1" }),
+    Object.assign(played("group", null, null, null, { id: "g2" }), { status: "scheduled" })
+  ];
+  const profiles = [{ id: "u1", username: "ana" }];
+  const predictions = [
+    { user_id: "u1", match_id: "g1", hg: 1, ag: 0, pens: false }, // jugado, acierta
+    { user_id: "u1", match_id: "g2", hg: 1, ag: 0, pens: false }  // futuro → pending
+  ];
+  const rows = sc.buildLeaderboard(profiles, predictions, [], matches);
+  assert.strictEqual(rows[0].predicted, 2);
+  assert.strictEqual(rows[0].decided, 1);
+  assert.strictEqual(rows[0].exact + rows[0].outcome, 1);
 });
 
 test("campeón: 15 pts si acierta al ganador de la final", () => {

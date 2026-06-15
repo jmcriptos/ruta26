@@ -49,7 +49,7 @@
     matches.forEach(function (m) { matchById[m.id] = m; });
     const rowByUser = {};
     const rows = profiles.map(function (p) {
-      const row = { userId: p.id, username: p.username, points: 0, exact: 0, outcome: 0, bonus: 0, predicted: 0 };
+      const row = { userId: p.id, username: p.username, points: 0, exact: 0, outcome: 0, bonus: 0, predicted: 0, decided: 0 };
       rowByUser[p.id] = row;
       return row;
     });
@@ -62,6 +62,8 @@
       row.points += s.points;
       if (s.kind === "exact") row.exact++;
       if (s.kind === "outcome") row.outcome++;
+      // decided = picks de partidos ya resueltos (acierto o fallo); excluye pendientes/sin pick
+      if (s.kind === "exact" || s.kind === "outcome" || s.kind === "miss") row.decided++;
     });
     picks.forEach(function (pk) {
       const row = rowByUser[pk.user_id];
