@@ -83,10 +83,32 @@ test("buildLeaderboard: agrega 1X2, penales y bonus; posiciona", () => {
   assert.strictEqual(rows[2].username, "beto");
   assert.strictEqual(rows[2].points, 1);
   assert.strictEqual(rows[2].pos, 3);
+  // tier = nivel de puntaje (1=oro, 2=plata, 3=bronce); caro 15, ana 3, beto 1 → tiers 1,2,3
+  assert.strictEqual(rows[0].tier, 1);
+  assert.strictEqual(rows[1].tier, 2);
+  assert.strictEqual(rows[2].tier, 3);
   // decided = picks de partidos ya jugados (denominador del % de acierto)
   assert.strictEqual(rows.find(function (r) { return r.username === "ana"; }).decided, 2);
   assert.strictEqual(rows.find(function (r) { return r.username === "beto"; }).decided, 2);
   assert.strictEqual(rows.find(function (r) { return r.username === "caro"; }).decided, 0);
+});
+
+test("buildLeaderboard: tier agrupa empates y el 3er nivel recibe bronce", () => {
+  // 1 con 3pts, dos con 1pt (empate), uno con 0 → tiers 1, 2, 2, 3
+  const matches = [
+    Object.assign(played("final", 1, 0, "X"), { id: "104" }),  // exacto → 3
+    played("group", 2, 1, "H", { id: "g1" })                   // gana local → 1
+  ];
+  const profiles = [{ id: "u1", username: "a" }, { id: "u2", username: "b" }, { id: "u3", username: "c" }, { id: "u4", username: "d" }];
+  const predictions = [
+    { user_id: "u1", match_id: "104", hg: 1, ag: 0, pens: false }, // 3 pts
+    { user_id: "u2", match_id: "g1", hg: 1, ag: 0, pens: false },  // 1 pt
+    { user_id: "u3", match_id: "g1", hg: 2, ag: 0, pens: false },  // 1 pt (mismo nivel que u2)
+    { user_id: "u4", match_id: "g1", hg: 0, ag: 1, pens: false }   // 0 pts
+  ];
+  const rows = sc.buildLeaderboard(profiles, predictions, [], matches);
+  assert.deepStrictEqual(rows.map(function (r) { return r.points; }), [3, 1, 1, 0]);
+  assert.deepStrictEqual(rows.map(function (r) { return r.tier; }), [1, 2, 2, 3]); // el grupo de 0 pts es bronce
 });
 
 test("buildLeaderboard: decided ignora picks de partidos no jugados", () => {

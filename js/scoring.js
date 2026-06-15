@@ -75,10 +75,13 @@
     rows.sort(function (x, y) {
       return y.points - x.points || y.exact - x.exact || (x.username || "").localeCompare(y.username || "", "es");
     });
-    let pos = 0, lastPoints = null;
+    // pos = posición con saltos por empate; tier = nivel de puntaje distinto
+    // (1 = puntaje más alto, 2 = siguiente…). Las medallas usan tier (1-3).
+    let pos = 0, lastPoints = null, tier = 0;
     rows.forEach(function (r, i) {
-      if (lastPoints === null || r.points < lastPoints) { pos = i + 1; lastPoints = r.points; }
+      if (lastPoints === null || r.points < lastPoints) { pos = i + 1; lastPoints = r.points; tier++; }
       r.pos = pos;
+      r.tier = tier;
     });
     return rows;
   }

@@ -661,6 +661,9 @@ html { scroll-padding-top: calc(84px + env(safe-area-inset-top)); }
 .rank-table td.num { font: 800 16px "League Spartan"; }
 .rank-table tr.me td { background: rgba(215, 255, 67, .22); }
 .rank-table .pts { font-weight: 800; }
+.rank-table th.sortable { cursor: pointer; -webkit-user-select: none; user-select: none; }
+.rank-table th.sortable:hover, .rank-table th.sort-active { color: var(--ink); }
+.rank-table .sort-ar { font-size: 8px; vertical-align: middle; }
 .rank-empty { color: var(--muted); font-size: 14px; padding: 10px 0; }
 
 .game-rules summary { cursor: pointer; font-weight: 700; font-size: 14px; padding: 4px 0; }

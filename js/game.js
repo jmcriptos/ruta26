@@ -30,6 +30,7 @@
   let mine = {};            // match_id → {hg, ag, state, error}
   let myPick = null;        // team_id
   let predDate = null;      // jornada activa: clave YYYY-MM-DD
+  let rankSort = "pts";     // orden del ranking: "pts" | "acc" (% de acierto)
   let loadError = false;
   const saveTimers = {};
 
@@ -512,14 +513,25 @@
     });
   }
 
+  // % de acierto como fracción para ordenar; sin partidos resueltos va al fondo
+  function accValue(r) { return r.decided > 0 ? (r.exact + r.outcome) / r.decided : -1; }
+
   function rankingHtml() {
     const rows = WC.scoring.buildLeaderboard(data.profiles, data.predictions, data.picks, matches());
     const uid = session ? session.user.id : null;
+    // las medallas (tier) y el número (pos) son del ranking oficial de Pts;
+    // ordenar por % solo cambia el orden de aparición, no el podio.
+    const view = rankSort === "acc"
+      ? rows.slice().sort(function (x, y) { return accValue(y) - accValue(x) || y.points - x.points; })
+      : rows;
+    const arrow = function (key) { return rankSort === key ? ' <span class="sort-ar">▼</span>' : ""; };
+    const accTh = '<th class="col-acc sortable' + (rankSort === "acc" ? " sort-active" : "") + '" data-rank-sort="acc">% Acierto' + arrow("acc") + "</th>";
+    const ptsTh = '<th class="sortable' + (rankSort === "pts" ? " sort-active" : "") + '" data-rank-sort="pts">Pts' + arrow("pts") + "</th>";
     return '<div class="game-card"><h3>Ranking</h3>' +
       (rows.length === 0 ? '<p class="rank-empty">Aún no hay jugadores. ¡Sé el primero!</p>'
-        : '<table class="rank-table"><tr><th>#</th><th></th><th>Jugador</th><th class="col-x">Exactos</th><th class="col-x">Resultados</th><th class="col-acc">% Acierto</th><th class="col-x">Bonus</th><th>Pts</th></tr>' +
-          rows.map(function (r) {
-            const medal = r.pos === 1 ? "🥇" : r.pos === 2 ? "🥈" : r.pos === 3 ? "🥉" : '<span class="num">' + r.pos + "</span>";
+        : '<table class="rank-table"><tr><th>#</th><th></th><th>Jugador</th><th class="col-x">Exactos</th><th class="col-x">Resultados</th>' + accTh + '<th class="col-x">Bonus</th>' + ptsTh + "</tr>" +
+          view.map(function (r) {
+            const medal = r.tier === 1 ? "🥇" : r.tier === 2 ? "🥈" : r.tier === 3 ? "🥉" : '<span class="num">' + r.pos + "</span>";
             const acc = r.decided > 0 ? Math.round((r.exact + r.outcome) / r.decided * 100) + "%" : "—";
             return "<tr" + (r.userId === uid ? ' class="me"' : "") + '><td class="pos">' + medal + '</td><td class="flag">' + champFlagFor(r.userId) + "</td><td>" + esc(r.username) + '</td><td class="col-x">' +
               r.exact + '</td><td class="col-x">' + r.outcome + '</td><td class="col-acc">' + acc + '</td><td class="col-x">' + (r.bonus || 0) + '</td><td class="pts">' + r.points + "</td></tr>";
@@ -641,6 +653,8 @@
     }
     const gd = event.target.closest("[data-gdate]");
     if (gd) { predDate = gd.dataset.gdate; render(); return; }
+    const sortTh = event.target.closest("[data-rank-sort]");
+    if (sortTh) { rankSort = sortTh.dataset.rankSort; render(); return; }
     if (event.target.id === "gShare") {
       const rows = WC.scoring.buildLeaderboard(data.profiles, data.predictions, data.picks, matches());
       const me = rows.find(function (r) { return session && r.userId === session.user.id; });
