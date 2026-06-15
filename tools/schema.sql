@@ -142,7 +142,8 @@ create table public.page_views (
   section text check (char_length(section) <= 40),
   device text check (device in ('mobile', 'desktop')),
   standalone boolean not null default false,
-  ref text check (char_length(ref) <= 80)
+  ref text check (char_length(ref) <= 80),
+  country text check (country is null or country ~ '^[A-Z]{2}$')
 );
 alter table public.page_views enable row level security;
 
@@ -158,12 +159,13 @@ alter table public.page_view_daily_quota enable row level security;
 revoke all on table public.page_view_daily_quota from public, anon, authenticated;
 
 create or replace function public.record_page_view(
-  p_session_id text, p_section text, p_device text, p_standalone boolean, p_ref text default ''
+  p_session_id text, p_section text, p_device text, p_standalone boolean,
+  p_ref text default '', p_country text default ''
 )
 returns boolean language plpgsql security definer set search_path = public, pg_temp
 set statement_timeout = '1500ms'
 as $function$
-declare v_bucket smallint; v_accepted integer;
+declare v_bucket smallint; v_accepted integer; v_country text;
 begin
   if p_session_id is null or p_session_id !~ '^[A-Za-z0-9-]{8,40}$'
     or p_section is null or p_section not in ('#inicio', '#partidos', '#equipos', '#ruta', '#quiniela', '#proyecciones')
@@ -171,6 +173,7 @@ begin
     or p_ref is null or char_length(p_ref) > 80 or p_ref !~ '^[A-Za-z0-9.-]*$' then
     return false;
   end if;
+  v_country := case when p_country ~ '^[A-Z]{2}$' then p_country else null end;
   v_bucket := (hashtextextended(p_session_id, 0) & 15)::smallint;
   insert into public.page_view_daily_quota (day, bucket, accepted)
   values ((now() at time zone 'America/Curacao')::date, v_bucket, 1)
@@ -179,14 +182,14 @@ begin
     where public.page_view_daily_quota.accepted < 2000
   returning accepted into v_accepted;
   if v_accepted is null then return false; end if;
-  insert into public.page_views (session_id, section, device, standalone, ref)
-  values (p_session_id, p_section, p_device, coalesce(p_standalone, false), p_ref);
+  insert into public.page_views (session_id, section, device, standalone, ref, country)
+  values (p_session_id, p_section, p_device, coalesce(p_standalone, false), p_ref, v_country);
   return true;
 end;
 $function$;
 revoke insert on table public.page_views from public, anon, authenticated;
-revoke all on function public.record_page_view(text, text, text, boolean, text) from public;
-grant execute on function public.record_page_view(text, text, text, boolean, text) to anon, authenticated;
+revoke all on function public.record_page_view(text, text, text, boolean, text, text) from public;
+grant execute on function public.record_page_view(text, text, text, boolean, text, text) to anon, authenticated;
 
 -- Métricas públicas agregadas; nunca devuelve session_id ni filas individuales.
 create or replace function public.analytics_rollup(since_at timestamptz default (now() - interval '62 days'))
@@ -200,7 +203,7 @@ as $function$
   bounded as (
     select (v.ts at time zone 'America/Curacao')::date as day,
       coalesce(nullif(v.section, ''), '#inicio') as section,
-      coalesce(v.device, 'unknown') as device, v.standalone, v.session_id
+      coalesce(v.device, 'unknown') as device, v.standalone, v.country, v.session_id
     from public.page_views v cross join params p
     where v.ts >= p.since_at and v.ts < now() + interval '5 minutes'
   ),
@@ -215,6 +218,8 @@ as $function$
   union all select b.day, 'section'::text, b.section::text, count(*)::bigint, count(distinct b.session_id)::bigint from bounded b group by b.day, b.section
   union all select b.day, 'device'::text, b.device::text, count(*)::bigint, count(distinct b.session_id)::bigint from bounded b group by b.day, b.device
   union all select b.day, 'standalone'::text, b.standalone::text, count(*)::bigint, count(distinct b.session_id)::bigint from bounded b group by b.day, b.standalone
+  union all select b.day, 'country'::text, b.country::text, count(*)::bigint, count(distinct b.session_id)::bigint
+    from bounded b where b.country ~ '^[A-Z]{2}$' group by b.day, b.country
   union all select null::date, 'period'::text, (p.days::text || '_' || p.kind)::text,
     count(b.session_id)::bigint, count(distinct b.session_id)::bigint
     from periods p left join bounded b on b.day between p.start_day and p.end_day group by p.days, p.kind;
@@ -224,3 +229,14 @@ revoke select on table public.page_views from anon, authenticated;
 revoke all on function public.analytics_rollup(timestamptz) from public;
 grant execute on function public.analytics_rollup(timestamptz) to anon, authenticated;
 alter function public.analytics_rollup(timestamptz) set statement_timeout = '2000ms';
+
+-- Usuarios en vivo: sesiones distintas con actividad en los últimos 5 minutos.
+create or replace function public.analytics_live()
+returns integer language sql stable security definer set search_path = public, pg_temp
+as $function$
+  select count(distinct session_id)::integer from public.page_views
+  where ts > now() - interval '5 minutes';
+$function$;
+revoke all on function public.analytics_live() from public;
+grant execute on function public.analytics_live() to anon, authenticated;
+alter function public.analytics_live() set statement_timeout = '1500ms';

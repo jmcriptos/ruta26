@@ -26,6 +26,24 @@
     }
   } catch (e) {}
 
+  // País (agregado, sin IP): Cloudflare resuelve la IP y nos da solo el código
+  // ISO-2. Lo cacheamos por sesión y lo enviamos como p_country.
+  let country = "";
+  function resolveCountry(cb) {
+    let cached = "";
+    try { cached = sessionStorage.getItem("wc26-country") || ""; } catch (e) {}
+    if (cached) { country = cached === "-" ? "" : cached; cb(); return; }
+    fetch("https://www.cloudflare.com/cdn-cgi/trace", { cache: "no-store" })
+      .then(function (r) { return r.text(); })
+      .then(function (t) {
+        const m = t.match(/^loc=([A-Z]{2})$/m);
+        country = m ? m[1] : "";
+        try { sessionStorage.setItem("wc26-country", country || "-"); } catch (e) {}
+        cb();
+      })
+      .catch(function () { cb(); });
+  }
+
   let lastSection = null;
   function track(section) {
     section = (section || "#inicio").slice(0, 40);
@@ -46,12 +64,21 @@
           p_section: section,
           p_device: device,
           p_standalone: standalone,
-          p_ref: ref
+          p_ref: ref,
+          p_country: country
         })
       }).catch(function () {});
     } catch (e) {}
   }
 
-  track(location.hash);
+  // Resolver país antes del primer registro; si tarda o falla, registrar igual.
+  let firstTracked = false;
+  function firstTrack() {
+    if (firstTracked) return;
+    firstTracked = true;
+    track(location.hash);
+  }
+  resolveCountry(firstTrack);
+  setTimeout(firstTrack, 1500);
   window.addEventListener("hashchange", function () { track(location.hash); });
 })();

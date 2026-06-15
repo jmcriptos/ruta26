@@ -27,6 +27,16 @@
   function esc(s) {
     return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   }
+  function codeToFlag(code) {
+    if (!/^[A-Z]{2}$/.test(code)) return "";
+    return String.fromCodePoint(0x1f1e6 + code.charCodeAt(0) - 65, 0x1f1e6 + code.charCodeAt(1) - 65);
+  }
+  var regionNames = null;
+  try { regionNames = new Intl.DisplayNames(["es"], { type: "region" }); } catch (e) {}
+  function countryName(code) {
+    if (regionNames) { try { var n = regionNames.of(code); if (n && n !== code) return n; } catch (e) {} }
+    return code;
+  }
   function dayKey(iso) {
     var d = new Date(iso);
     return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
@@ -116,6 +126,22 @@
   $("refreshBtn").addEventListener("click", load);
   setInterval(load, 5 * 60000); /* auto-refresh cada 5 min */
 
+  /* Usuarios en vivo: sesiones activas en los últimos 5 min. Refresco ~45 s.
+     Si la RPC no está desplegada (404), se muestra "—" sin romper nada. */
+  var liveValue = null;
+  function refreshLive() {
+    rpc("analytics_live").then(function (n) {
+      liveValue = Array.isArray(n) ? (Number(n[0]) || 0) : (Number(n) || 0);
+      var el = $("liveCount");
+      if (el) el.textContent = num.format(liveValue);
+    }).catch(function () {
+      var el = $("liveCount");
+      if (el && liveValue == null) el.textContent = "—";
+    });
+  }
+  refreshLive();
+  setInterval(refreshLive, 45000);
+
   /* ── Agregación ───────────────────────────────────── */
   function aggregate() {
     var now = Date.now();
@@ -124,7 +150,7 @@
     var inRange = {};
     dayKeys.forEach(function (k) { inRange[k] = true; });
 
-    var vDay = {}, sessByDay = {}, vSec = {}, dev = { mobile: 0, desktop: 0 }, pwa = 0, periods = {};
+    var vDay = {}, sessByDay = {}, vSec = {}, dev = { mobile: 0, desktop: 0 }, pwa = 0, periods = {}, vCountry = {};
     raw.views.forEach(function (v) {
       var views = Number(v.views) || 0;
       var sessions = Number(v.sessions) || 0;
@@ -144,6 +170,8 @@
         dev[v.value] += views;
       } else if (v.dimension === "standalone" && v.value === "true") {
         pwa += views;
+      } else if (v.dimension === "country" && /^[A-Z]{2}$/.test(v.value)) {
+        vCountry[v.value] = (vCountry[v.value] || 0) + sessions;
       }
     });
     var current = periods[range + "_current"] || { views: 0, sessions: 0 };
@@ -183,6 +211,9 @@
     var sections = Object.keys(vSec).sort(function (a, b) { return vSec[b] - vSec[a]; }).slice(0, 8)
       .map(function (s) { return { label: s, n: vSec[s] }; });
 
+    var countries = Object.keys(vCountry).sort(function (a, b) { return vCountry[b] - vCountry[a]; }).slice(0, 12)
+      .map(function (c) { return { label: codeToFlag(c) + " " + countryName(c), n: vCountry[c] }; });
+
     var todayK = dayKey(new Date().toISOString());
 
     return {
@@ -198,6 +229,7 @@
       viewsToday: vDay[todayK] || 0,
       sessToday: sessByDay[todayK] || 0,
       sections: sections, devices: dev, pwa: pwa,
+      countries: countries,
       champions: champions, matchPicks: matchPicks
     };
   }
@@ -377,7 +409,8 @@
       '<main class="dz-main">' +
       '<div class="dz-controls">' +
       '<div class="dz-tabs" role="tablist" aria-label="Rango de fechas">' + tabs + "</div>" +
-      '<span class="dz-status"><span class="dot"></span> Datos en vivo</span>' +
+      '<span class="dz-status" title="Sesiones activas en los últimos 5 minutos"><span class="dot"></span> <span id="liveCount">' +
+      (liveValue == null ? "—" : num.format(liveValue)) + "</span> en vivo</span>" +
       '<span class="dz-kicker" style="margin-left:auto">Hoy: ' + num.format(a.viewsToday) + " vistas · " + num.format(a.sessToday) + " sesiones</span>" +
       "</div>" +
 
@@ -413,6 +446,9 @@
       card("Secciones más vistas",
         a.sections.length ? barList(a.sections, SECOND) : '<p class="dz-empty">Sin visitas en este rango.</p>',
         { aside: "últimos " + range + " días" }) +
+      (a.countries.length
+        ? card("Países", barList(a.countries, ACCENT), { aside: "sesiones · " + range + " días" })
+        : "") +
       card("Picks por partido",
         (a.matchPicks.length ? barList(a.matchPicks, ACCENT) : '<p class="dz-empty">Aún no inicia ningún partido.</p>') +
         '<p class="dz-note">Solo partidos ya iniciados — antes del kickoff los picks son privados.</p>') +
