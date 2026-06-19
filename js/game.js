@@ -27,6 +27,7 @@
   let session = null;
   let profile = null;
   let data = { profiles: [], predictions: [], picks: [], captains: [] };
+  let captainErr = {}; // matchId → mensaje de error del capitán (se limpia al reintentar)
   let mine = {};            // match_id → {hg, ag, state, error}
   let myPick = null;        // team_id
   let predDate = null;      // jornada activa: clave YYYY-MM-DD
@@ -162,17 +163,27 @@
     if (!m) return;
     const day = matchDay(m);
     const yaEra = data.captains.some(function (c) { return c.user_id === uid && c.match_id === matchId; });
-    // Quitar el capitán anterior de ese día (incluye este si es toggle-off)
     const previos = data.captains.filter(function (c) { return c.user_id === uid && captainMatchDay(c) === day; });
-    for (const c of previos) {
-      await client.from("captain_picks").delete().eq("user_id", uid).eq("match_id", c.match_id);
-    }
+    delete captainErr[matchId];
+    // Actualización optimista para feedback inmediato; si la persistencia falla,
+    // captainFail() resincroniza con el servidor (verdad) y muestra el error.
     data.captains = data.captains.filter(function (c) { return !(c.user_id === uid && captainMatchDay(c) === day); });
-    if (yaEra) { render(); return; } // era toggle-off: ya quedó sin capitán ese día
+    if (!yaEra) data.captains.push({ user_id: uid, match_id: matchId });
+    render();
+    for (const c of previos) {
+      const del = await client.from("captain_picks").delete().eq("user_id", uid).eq("match_id", c.match_id);
+      if (del.error) return captainFail(matchId, del.error);
+    }
+    if (yaEra) return; // toggle-off completado
     const res = await client.from("captain_picks").upsert({
       user_id: uid, match_id: matchId, match_day: day, updated_at: new Date().toISOString()
     });
-    if (!res.error) data.captains.push({ user_id: uid, match_id: matchId });
+    if (res.error) return captainFail(matchId, res.error);
+  }
+
+  async function captainFail(matchId, err) {
+    captainErr[matchId] = /policy|row-level|violates/i.test((err && err.message) || "") ? "Este partido ya cerró" : "No se pudo guardar el capitán";
+    await loadAll(); // resincroniza data.captains con la verdad del servidor (revierte cambios parciales)
     render();
   }
 
@@ -416,8 +427,9 @@
         (v ? "" : " disabled") + ' aria-pressed="' + (starOn ? "true" : "false") +
         '" title="Capitán del día: este partido vale ×3">⭐ Capitán' + (starOn ? " ✓" : "") + "</button>"
       : "";
+    const capMsg = (showStar && captainErr[m.id]) ? '<span class="cap-msg">' + esc(captainErr[m.id]) + "</span>" : "";
     return '<div class="pick-card" data-match="' + m.id + '" data-type="' + type + '">' + head +
-      controls + star +
+      controls + star + capMsg +
       '<span class="pick-state ' + st.cls + '">' + st.text + "</span></div>";
   }
 
