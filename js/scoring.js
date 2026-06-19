@@ -56,9 +56,11 @@
     return pick.team_id === final.winner ? POINTS.champion : 0;
   }
 
-  function buildLeaderboard(profiles, predictions, picks, matches) {
+  function buildLeaderboard(profiles, predictions, picks, matches, captains) {
     const matchById = {};
     matches.forEach(function (m) { matchById[m.id] = m; });
+    const captainSet = {};
+    (captains || []).forEach(function (c) { captainSet[c.user_id + "|" + c.match_id] = true; });
     const rowByUser = {};
     const rows = profiles.map(function (p) {
       const row = { userId: p.id, username: p.username, points: 0, exact: 0, outcome: 0, bonus: 0, predicted: 0, decided: 0 };
@@ -71,7 +73,8 @@
       if (!row || !match) return;
       row.predicted++;
       const s = scoreMatch({ hg: pr.hg, ag: pr.ag, pens: pr.pens }, match);
-      row.points += s.points;
+      const isCap = captainSet[pr.user_id + "|" + pr.match_id];
+      row.points += isCap ? captainTotal(s, match) : s.points;
       if (s.kind === "exact") row.exact++;
       if (s.kind === "outcome") row.outcome++;
       // decided = picks de partidos ya resueltos (acierto o fallo); excluye pendientes/sin pick
@@ -113,9 +116,9 @@
 
   // Ranking provisional: igual que el oficial pero con los partidos en vivo congelados.
   // Cada fila trae además livePoints (puntos que ganaría hoy) y delta (posiciones que sube/baja).
-  function buildLiveLeaderboard(profiles, predictions, picks, matches) {
-    const official = buildLeaderboard(profiles, predictions, picks, matches);
-    const rows = buildLeaderboard(profiles, predictions, picks, matches.map(freezeLive));
+  function buildLiveLeaderboard(profiles, predictions, picks, matches, captains) {
+    const official = buildLeaderboard(profiles, predictions, picks, matches, captains);
+    const rows = buildLeaderboard(profiles, predictions, picks, matches.map(freezeLive), captains);
     const offByUser = {};
     official.forEach(function (r) { offByUser[r.userId] = r; });
     rows.forEach(function (r) {

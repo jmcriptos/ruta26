@@ -254,3 +254,29 @@ test("capitán: en grupos no aplica (queda igual a la base)", () => {
   const s = sc.scoreMatch({ hg: 1, ag: 0 }, m);
   assert.strictEqual(sc.captainTotal(s, m), 1);
 });
+
+test("ranking: el capitán multiplica el partido elegido (1 → 3)", () => {
+  const profiles = [{ id: "u1", username: "ana" }];
+  const matches = [played("r16", 2, 1, "H")]; // id "m1"
+  const preds = [{ user_id: "u1", match_id: "m1", hg: 1, ag: 0, pens: false }];
+  const sinCap = sc.buildLeaderboard(profiles, preds, [], matches, []);
+  assert.strictEqual(sinCap[0].points, 1);
+  const conCap = sc.buildLeaderboard(profiles, preds, [], matches, [{ user_id: "u1", match_id: "m1" }]);
+  assert.strictEqual(conCap[0].points, 3);
+});
+
+test("ranking: un capitán en grupos no cambia el acumulado", () => {
+  const profiles = [{ id: "u1", username: "ana" }];
+  const matches = [played("group", 2, 1)]; // id "m1"
+  const preds = [{ user_id: "u1", match_id: "m1", hg: 1, ag: 0 }];
+  const r = sc.buildLeaderboard(profiles, preds, [], matches, [{ user_id: "u1", match_id: "m1" }]);
+  assert.strictEqual(r[0].points, 1);
+});
+
+test("ranking en vivo: respeta el capitán", () => {
+  const profiles = [{ id: "u1", username: "ana" }];
+  const matches = [played("r16", 2, 1, "H")]; // id "m1"
+  const preds = [{ user_id: "u1", match_id: "m1", hg: 1, ag: 0 }];
+  const rows = sc.buildLiveLeaderboard(profiles, preds, [], matches, [{ user_id: "u1", match_id: "m1" }]);
+  assert.strictEqual(rows[0].points, 3);
+});
