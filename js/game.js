@@ -456,8 +456,10 @@
       "<tr><td>Eliminatorias: + acertar que fue por penales</td><td>+1 pt</td></tr>" +
       "<tr><td>Final: marcador exacto</td><td>3 pts</td></tr>" +
       "<tr><td>Final: solo el resultado</td><td>1 pt</td></tr>" +
-      "<tr><td>Campeón</td><td>15 pts</td></tr></table>" +
+      "<tr><td>Campeón</td><td>15 pts</td></tr>" +
+      "<tr><td>⭐ Capitán de eliminatorias: tu partido del día vale ×3</td><td>×3 base</td></tr></table>" +
       "<p>Cada partido cierra a su hora de inicio. El bonus de penales solo cuenta si además aciertas quién avanza. " +
+      "Desde octavos puedes marcar un partido por día como Capitán ⭐: sus puntos base valen ×3 (el +1 de penales no se multiplica). Solo suma, nunca resta. " +
       "Los picks de los demás se revelan cuando el partido empieza. ¿Olvidaste tu contraseña? Escríbele a JM.</p></details>";
   }
 
