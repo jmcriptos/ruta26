@@ -493,7 +493,7 @@ Y añadir una frase al `<p>` final:
 
 ```javascript
       "<p>Cada partido cierra a su hora de inicio. El bonus de penales solo cuenta si además aciertas quién avanza. " +
-      "Desde octavos puedes marcar un partido por día como Capitán ⭐: sus puntos base valen ×3 (el +1 de penales no se multiplica). Solo suma, nunca resta. " +
+      "En la fase eliminatoria (desde los dieciseisavos) puedes marcar un partido por día como Capitán ⭐: sus puntos base valen ×3 (el +1 de penales no se multiplica). Solo suma, nunca resta. " +
       "Los picks de los demás se revelan cuando el partido empieza. ¿Olvidaste tu contraseña? Escríbele a JM.</p></details>";
 ```
 

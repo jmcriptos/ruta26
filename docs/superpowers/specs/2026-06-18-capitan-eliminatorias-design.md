@@ -32,7 +32,7 @@ filosofía del juego: simple, accesible y **nadie pierde puntos ya ganados**.
 
 ## La mecánica
 
-Desde **octavos de final (28 jun 2026)** en adelante:
+Desde el inicio de la **fase eliminatoria — dieciseisavos / Ronda de 32 (`r32`, ~28 jun 2026)** — y en todas las rondas siguientes (octavos, cuartos, semis, final y el partido por el 3er lugar):
 
 - Cada **día de partidos** de eliminatoria, el jugador marca **un** partido como
   su **Capitán ⭐**.
