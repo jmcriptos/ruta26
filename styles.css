@@ -726,6 +726,14 @@ html { scroll-padding-top: calc(84px + env(safe-area-inset-top)); }
 .pick-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; border-top: 1px solid var(--line); padding-top: 10px; }
 .pick-foot small { color: var(--muted); font-size: 12px; }
 
+/* Capitán de eliminatorias */
+.cap-star { display: block; width: 100%; min-height: 40px; margin-top: 10px; padding: 8px 12px; border: 1px solid var(--line); background: white; border-radius: 999px; font-size: 13px; font-weight: 700; color: var(--ink); cursor: pointer; }
+.cap-star:hover:not(:disabled) { border-color: #e3c25a; }
+.cap-star.on { background: #f2c200; border-color: #f2c200; color: var(--ink); }
+.cap-star:disabled { opacity: .5; cursor: not-allowed; }
+.cap-tag { display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: 999px; background: #fbeec2; color: #7a5b00; font-size: 11px; font-weight: 700; }
+.cap-msg { display: block; text-align: right; margin-top: 8px; font-size: 11px; font-weight: 700; color: #a83a22; }
+
 /* medallas y bandera del campeón en el ranking */
 .rank-table td.pos { font-size: 18px; text-align: center; width: 30px; }
 .rank-table td.pos .num { font: 800 16px "League Spartan", sans-serif; color: var(--muted); }
