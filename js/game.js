@@ -26,7 +26,7 @@
 
   let session = null;
   let profile = null;
-  let data = { profiles: [], predictions: [], picks: [] };
+  let data = { profiles: [], predictions: [], picks: [], captains: [] };
   let mine = {};            // match_id → {hg, ag, state, error}
   let myPick = null;        // team_id
   let predDate = null;      // jornada activa: clave YYYY-MM-DD
@@ -91,12 +91,14 @@
         // limit explícito: el default de Supabase son 1000 filas y el torneo
         // completo supera eso (jugadores × 104 partidos) — el ranking quedaría corto
         client.from("predictions").select("user_id, match_id, hg, ag, pens").limit(20000),
-        client.from("champion_picks").select("user_id, team_id")
+        client.from("champion_picks").select("user_id, team_id"),
+        client.from("captain_picks").select("user_id, match_id").limit(20000)
       ]);
       if (results.some(function (r) { return r.error; })) { loadError = true; return; }
       data.profiles = results[0].data || [];
       data.predictions = results[1].data || [];
       data.picks = results[2].data || [];
+      data.captains = results[3].data || [];
       if (session) {
         const uid = session.user.id;
         mine = {};
@@ -480,7 +482,7 @@
   function liveRankingHtml() {
     const liveMs = matches().filter(function (m) { return m.status === "live"; });
     if (!liveMs.length) return "";
-    const rows = WC.scoring.buildLiveLeaderboard(data.profiles, data.predictions, data.picks, matches());
+    const rows = WC.scoring.buildLiveLeaderboard(data.profiles, data.predictions, data.picks, matches(), data.captains);
     if (!rows.length) return "";
     const uid = session ? session.user.id : null;
     const table = rows.map(function (r) {
@@ -541,7 +543,7 @@
   function accValue(r) { return r.decided > 0 ? (r.exact + r.outcome) / r.decided : -1; }
 
   function rankingHtml() {
-    const rows = WC.scoring.buildLeaderboard(data.profiles, data.predictions, data.picks, matches());
+    const rows = WC.scoring.buildLeaderboard(data.profiles, data.predictions, data.picks, matches(), data.captains);
     const uid = session ? session.user.id : null;
     // las medallas (tier) y el número (pos) son del ranking oficial de Pts;
     // ordenar por % solo cambia el orden de aparición, no el podio.
@@ -680,7 +682,7 @@
     const sortTh = event.target.closest("[data-rank-sort]");
     if (sortTh) { rankSort = sortTh.dataset.rankSort; render(); return; }
     if (event.target.id === "gShare") {
-      const rows = WC.scoring.buildLeaderboard(data.profiles, data.predictions, data.picks, matches());
+      const rows = WC.scoring.buildLeaderboard(data.profiles, data.predictions, data.picks, matches(), data.captains);
       const me = rows.find(function (r) { return session && r.userId === session.user.id; });
       const url = location.origin + location.pathname + "#quiniela";
       const text = me
