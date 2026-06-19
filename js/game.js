@@ -168,6 +168,32 @@
     return "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
   }
 
+  function localTimeZone() {
+    try {
+      const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      return /^[A-Za-z0-9_+./-]{1,64}$/.test(zone || "") ? zone : null;
+    } catch (e) { return null; }
+  }
+
+  async function savePushSubscription(sub) {
+    const j = sub.toJSON();
+    const row = {
+      user_id: session.user.id,
+      endpoint: sub.endpoint,
+      p256dh: j.keys.p256dh,
+      auth: j.keys.auth
+    };
+    const zone = localTimeZone();
+    if (zone) row.timezone = zone;
+    let res = await client.from("push_subscriptions").upsert(row);
+    // Compatibilidad mientras se despliega la columna timezone en Supabase.
+    if (res.error && zone && /timezone|schema cache|column/i.test(res.error.message || "")) {
+      delete row.timezone;
+      res = await client.from("push_subscriptions").upsert(row);
+    }
+    return res;
+  }
+
   // venimos de tocar una notificación con la app ya abierta: ir a la quiniela
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker.addEventListener("message", function (event) {
@@ -199,6 +225,7 @@
       const got = await client.from("push_subscriptions").select("endpoint")
         .eq("user_id", session.user.id).eq("endpoint", sub.endpoint);
       pushStatus = got.data && got.data.length ? "on" : "off";
+      if (pushStatus === "on") savePushSubscription(sub).catch(function () {});
     } catch (e) { pushStatus = "off"; }
   }
 
@@ -212,10 +239,7 @@
         userVisibleOnly: true,
         applicationServerKey: urlB64ToBytes(cfg.VAPID_PUBLIC_KEY)
       });
-      const j = sub.toJSON();
-      const res = await client.from("push_subscriptions").upsert({
-        user_id: session.user.id, endpoint: sub.endpoint, p256dh: j.keys.p256dh, auth: j.keys.auth
-      });
+      const res = await savePushSubscription(sub);
       pushStatus = res.error ? "off" : "on";
     } catch (e) { pushStatus = "off"; }
     render();

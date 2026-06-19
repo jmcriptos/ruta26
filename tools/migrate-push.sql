@@ -8,6 +8,7 @@ create table public.push_subscriptions (
   endpoint text not null check (char_length(endpoint) between 1 and 2048 and endpoint ~ '^https://'),
   p256dh text not null check (char_length(p256dh) between 1 and 256),
   auth text not null check (char_length(auth) between 1 and 256),
+  timezone text check (timezone is null or (char_length(timezone) between 1 and 64 and timezone ~ '^[A-Za-z0-9_+./-]+$')),
   created_at timestamptz not null default now(),
   primary key (user_id, endpoint)
 );
