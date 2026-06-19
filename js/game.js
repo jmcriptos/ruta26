@@ -95,11 +95,14 @@
         client.from("champion_picks").select("user_id, team_id"),
         client.from("captain_picks").select("user_id, match_id").limit(20000)
       ]);
-      if (results.some(function (r) { return r.error; })) { loadError = true; return; }
+      // captain_picks (results[3]) es NO esencial: si la tabla aún no existe o
+      // falla, la quiniela debe seguir funcionando (sin bonus de capitán), así
+      // que se excluye del chequeo de error fatal y degrada a lista vacía.
+      if (results.slice(0, 3).some(function (r) { return r.error; })) { loadError = true; return; }
       data.profiles = results[0].data || [];
       data.predictions = results[1].data || [];
       data.picks = results[2].data || [];
-      data.captains = results[3].data || [];
+      data.captains = results[3].error ? [] : (results[3].data || []);
       if (session) {
         const uid = session.user.id;
         mine = {};
