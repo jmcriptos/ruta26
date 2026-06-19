@@ -9,6 +9,18 @@
   };
   const CHAMPION_LOCK = "2026-06-28T19:00:00Z";
 
+  const CAPTAIN_MULT = 3;
+
+  // Total de un partido capitaneado: multiplica SOLO la base (acertar quién
+  // avanza, o el marcador de la final). El bonus de penales (+1) se suma sin
+  // multiplicar. Grupos no se capitanean: si llega uno, devuelve la base sin tocar.
+  function captainTotal(s, match) {
+    if (!s || s.points <= 0 || match.stage === "group") return s ? s.points : 0;
+    const base = match.stage === "final" ? s.points : POINTS.match;
+    const pensBonus = s.points - base;
+    return base * CAPTAIN_MULT + pensBonus;
+  }
+
   function sign(n) { return n > 0 ? 1 : (n < 0 ? -1 : 0); }
 
   // pred = {hg, ag, pens}. Codificación: grupos/final marcador real o canónico
@@ -114,7 +126,7 @@
     return rows;
   }
 
-  const scoring = { POINTS: POINTS, CHAMPION_LOCK: CHAMPION_LOCK, scoreMatch: scoreMatch, scoreChampion: scoreChampion, buildLeaderboard: buildLeaderboard, freezeLive: freezeLive, buildLiveLeaderboard: buildLiveLeaderboard };
+  const scoring = { POINTS: POINTS, CAPTAIN_MULT: CAPTAIN_MULT, CHAMPION_LOCK: CHAMPION_LOCK, scoreMatch: scoreMatch, captainTotal: captainTotal, scoreChampion: scoreChampion, buildLeaderboard: buildLeaderboard, freezeLive: freezeLive, buildLiveLeaderboard: buildLiveLeaderboard };
   root.WC = root.WC || {};
   root.WC.scoring = scoring;
   if (typeof module !== "undefined" && module.exports) module.exports = scoring;

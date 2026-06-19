@@ -221,3 +221,36 @@ test("buildLiveLeaderboard: final en vivo reparte campeón provisional", () => {
   assert.strictEqual(ana.livePoints, 15);
   assert.strictEqual(beto.livePoints, 0);
 });
+
+/* ---------- capitán ---------- */
+
+test("capitán: eliminatoria acertada se multiplica x3 (1 → 3)", () => {
+  const m = played("r16", 2, 1, "H");
+  const s = sc.scoreMatch({ hg: 1, ag: 0 }, m);
+  assert.strictEqual(sc.captainTotal(s, m), 3);
+});
+
+test("capitán: el bonus de penales NO se multiplica (base 1×3=3 + 1 = 4)", () => {
+  const m = played("r16", 1, 1, "H", { hp: 4, ap: 2 });
+  const s = sc.scoreMatch({ hg: 1, ag: 0, pens: true }, m);
+  assert.strictEqual(s.points, 2);
+  assert.strictEqual(sc.captainTotal(s, m), 4);
+});
+
+test("capitán: final exacto x3 (3 → 9) y solo-resultado x3 (1 → 3)", () => {
+  const mf = played("final", 2, 1, "H");
+  assert.strictEqual(sc.captainTotal(sc.scoreMatch({ hg: 2, ag: 1 }, mf), mf), 9);
+  assert.strictEqual(sc.captainTotal(sc.scoreMatch({ hg: 3, ag: 0 }, mf), mf), 3);
+});
+
+test("capitán: fallar no suma ni resta (0)", () => {
+  const m = played("qf", 0, 1, "A");
+  const s = sc.scoreMatch({ hg: 1, ag: 0 }, m); // pred avanza local pero ganó visitante → falla
+  assert.strictEqual(sc.captainTotal(s, m), 0);
+});
+
+test("capitán: en grupos no aplica (queda igual a la base)", () => {
+  const m = played("group", 2, 1);
+  const s = sc.scoreMatch({ hg: 1, ag: 0 }, m);
+  assert.strictEqual(sc.captainTotal(s, m), 1);
+});
