@@ -155,6 +155,27 @@
     }
   }
 
+  async function saveCaptain(matchId) {
+    if (!session) return;
+    const uid = session.user.id;
+    const m = WC.state.matches.find(function (x) { return x.id === matchId; });
+    if (!m) return;
+    const day = matchDay(m);
+    const yaEra = data.captains.some(function (c) { return c.user_id === uid && c.match_id === matchId; });
+    // Quitar el capitán anterior de ese día (incluye este si es toggle-off)
+    const previos = data.captains.filter(function (c) { return c.user_id === uid && captainMatchDay(c) === day; });
+    for (const c of previos) {
+      await client.from("captain_picks").delete().eq("user_id", uid).eq("match_id", c.match_id);
+    }
+    data.captains = data.captains.filter(function (c) { return !(c.user_id === uid && captainMatchDay(c) === day); });
+    if (yaEra) { render(); return; } // era toggle-off: ya quedó sin capitán ese día
+    const res = await client.from("captain_picks").upsert({
+      user_id: uid, match_id: matchId, match_day: day, updated_at: new Date().toISOString()
+    });
+    if (!res.error) data.captains.push({ user_id: uid, match_id: matchId });
+    render();
+  }
+
   /* ---------- notificaciones push (recordatorio si falta el pick) ---------- */
   let pushStatus = null; // "on" | "off" | "denied" | "ios-install" | "unsupported" | "busy" | null (sin sesión)
 
@@ -298,6 +319,20 @@
 
   function predType(m) { return m.stage === "final" ? "score" : (m.stage === "group" ? "1x2" : "ko"); }
 
+  // Día calendario del partido en Curazao (UTC-4, sin DST) → "YYYY-MM-DD".
+  function matchDay(m) {
+    return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Curacao", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(m.date));
+  }
+  function captainMatchDay(c) {
+    const m = WC.state.matches.find(function (x) { return x.id === c.match_id; });
+    return m ? matchDay(m) : null;
+  }
+  function isCaptain(matchId) {
+    if (!session) return false;
+    const uid = session.user.id;
+    return data.captains.some(function (c) { return c.user_id === uid && c.match_id === matchId; });
+  }
+
   // Produce HTML (se interpola en innerHTML): todo string de equipo debe pasar por esc().
   function pickLabel(m, v) {
     if (!v) return "sin pick";
@@ -341,8 +376,10 @@
         : s.kind === "pending" ? '<span class="pts-chip pending">En juego</span>'
         : s.points > 0 ? '<span class="pts-chip win">+' + s.points + " " + (s.points === 1 ? "punto" : "puntos") + "</span>"
         : '<span class="pts-chip zero">0 puntos</span>';
+      const wasCap = m.stage !== "group" && isCaptain(m.id);
+      const capTag = wasCap ? ' <span class="cap-tag">⭐ Capitán ×3</span>' : "";
       return '<div class="pick-card locked" data-match="' + m.id + '">' + head +
-        '<div class="pick-foot"><small>Tu pick: ' + pickLabel(m, v) + " · Real: " + real + "</small>" + chip + "</div></div>";
+        '<div class="pick-foot"><small>Tu pick: ' + pickLabel(m, v) + " · Real: " + real + capTag + "</small>" + chip + "</div></div>";
     }
     const type = predType(m);
     let controls;
@@ -372,8 +409,15 @@
         '<button type="button" data-pens class="pens ' + (v && v.pens ? "on" : "") + '">⚽ Por penales</button></div>';
     }
     const st = stateLabel(v);
+    const showStar = m.stage !== "group";
+    const starOn = showStar && isCaptain(m.id);
+    const star = showStar
+      ? '<button type="button" class="cap-star' + (starOn ? " on" : "") + '" data-captain="' + m.id + '"' +
+        (v ? "" : " disabled") + ' aria-pressed="' + (starOn ? "true" : "false") +
+        '" title="Capitán del día: este partido vale ×3">⭐ Capitán' + (starOn ? " ✓" : "") + "</button>"
+      : "";
     return '<div class="pick-card" data-match="' + m.id + '" data-type="' + type + '">' + head +
-      controls +
+      controls + star +
       '<span class="pick-state ' + st.cls + '">' + st.text + "</span></div>";
   }
 
@@ -632,6 +676,12 @@
 
   /* ---------- eventos (delegación) ---------- */
   rootEl.addEventListener("click", async function (event) {
+    const capBtn = event.target.closest("[data-captain]");
+    if (capBtn) {
+      if (capBtn.disabled) return;
+      saveCaptain(capBtn.dataset.captain);
+      return;
+    }
     const b1x2 = event.target.closest("[data-1x2]");
     if (b1x2 && session) {
       const row = b1x2.closest("[data-match]");
