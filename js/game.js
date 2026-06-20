@@ -811,10 +811,13 @@
     if (oppBtn) {
       trackEvent("opportunity_cta_clicked", { reason: oppBtn.dataset.oppReason });
       // CTA de Oportunidad: scroll/focus al pronóstico relevante (sin modal).
-      const card = rootEl.querySelector('[data-match="' + (window.CSS && CSS.escape ? CSS.escape(oppBtn.dataset.oppTarget) : oppBtn.dataset.oppTarget) + '"]');
-      if (card) {
-        card.scrollIntoView({ behavior: "smooth", block: "center" });
-        const btn = card.querySelector("button");
+      // El value va entre comillas, así que solo se escapan " y \ (no CSS.escape,
+      // que rompería un id numérico como 400021450 → \34 00021450).
+      const id = (oppBtn.dataset.oppTarget || "").replace(/["\\]/g, "\\$&");
+      const target = (id && rootEl.querySelector('[data-match="' + id + '"]')) || rootEl.querySelector(".pick-card");
+      if (target) {
+        target.scrollIntoView({ behavior: "smooth", block: "center" });
+        const btn = target.querySelector("button");
         if (btn) btn.focus();
       }
       return;
