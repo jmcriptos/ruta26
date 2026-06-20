@@ -58,7 +58,7 @@ menor diferencia de puntos → `match_id` estable.
 
 ```js
 {
-  state: "personal"|"group"|"fallback",
+  state: "personal"|"group"|"frozen"|"fallback",
   message,                             // copy: impacto personal, o grupal si no hay personal
   me: { pos, delta, livePoints } | null,
   rows: [ { username, pos, delta, livePoints, isMe } ]  // tabla provisional
@@ -66,6 +66,9 @@ menor diferencia de puntos → `match_id` estable.
 ```
 
 - Prioriza impacto personal; usa fallback grupal si no hay impacto personal.
+- `frozen` (`live_frozen`): hay partido en juego (`snapshot.matches` con `status:"live"`)
+  pero nadie suma ni se mueve (p. ej. sorpresa: todos al favorito y va perdiendo).
+  Evita el silencio total; si no hay partido en juego → `fallback`.
 - Feed live stale/incompleto (ver PD4) → `state:"fallback"` sin copy dramático,
   Ranking Oficial sigue visible.
 - No recalcula puntos/posiciones: usa `official`/`live` de scoring.
@@ -96,9 +99,14 @@ menor diferencia de puntos → `match_id` estable.
 ```
 
 - **Movimiento relevante (PD5):** sube/baja ≥1 posición, pasa a un amigo, un amigo lo
-  pasa, o gana puntos que cambian una Meta Cercana. Si nada de eso → `null` o fallback
-  neutral (sin ruido artificial).
+  pasa, o **gana puntos** (aunque no cambie de posición). Solo si no hay nada de eso
+  (0 puntos y 0 movimiento) → `null` (sin ruido artificial).
+- Ganó puntos sin cambiar de puesto → `movement:"none"`, `social` = línea de puntos
+  (`post_points`); en ese caso `points` va vacío para no repetir.
 - Si bajó → tono de revancha / Meta Cercana (nunca culpa).
+- El caller (`game.js`) calcula `beforeRows` neutralizando **todos los partidos
+  terminados de la última jornada** (día calendario en Curazao), no solo el último,
+  para reflejar el impacto acumulado del día.
 
 ## 5. `whatsappShare(summaryVm, snapshot)` → string | null
 
@@ -125,6 +133,7 @@ hechos visibles (nombres ya escapados al render).
 | `live_personal_up` | sube en vivo | `Vas subiendo: #{pos} (+{delta})` |
 | `live_personal_down` | baja en vivo | `Cuidado: bajas a #{pos}` |
 | `live_group` | grupal | `La tabla se mueve en vivo` |
+| `live_frozen` | en juego sin movimiento | `Tabla congelada: nadie suma… por ahora 👀` |
 | `post_up` | subió | `Subiste {n} puesto(s) 🔺` |
 | `post_down` | bajó | `Bajaste {n}, hay revancha 🔁` |
 | `post_passed` | pasó a alguien | `Pasaste a {rival}` |

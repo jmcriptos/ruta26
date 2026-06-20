@@ -28,9 +28,14 @@
       "expect": { "state": "fallback" }
     },
     {
-      "name": "fallback sin movimiento",
+      "name": "fallback sin movimiento (sin partido en juego)",
       "snapshot": { "meId": "u1", "live": [{ "userId": "u1", "username": "ana", "pos": 1, "delta": 0, "livePoints": 0 }] },
       "expect": { "state": "fallback" }
+    },
+    {
+      "name": "frozen: partido en juego pero nadie suma",
+      "snapshot": { "meId": "u1", "live": [{ "userId": "u1", "username": "ana", "pos": 1, "delta": 0, "livePoints": 0 }], "matches": [{ "id": "m1", "status": "live" }] },
+      "expect": { "state": "frozen", "mePos": 1, "meDelta": 0 }
     }
   ]
 }

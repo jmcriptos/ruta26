@@ -30,7 +30,20 @@
       "expect": { "state": "moved", "movement": "passed_by_friend", "posDelta": -1, "passedByFirst": "beto" }
     },
     {
-      "name": "sin movimiento relevante → null",
+      "name": "ganó puntos sin cambiar de puesto → moved/none",
+      "snapshot": { "meId": "u1" },
+      "before": [
+        { "userId": "u1", "username": "ana", "pos": 1, "points": 5 },
+        { "userId": "u2", "username": "beto", "pos": 2, "points": 3 }
+      ],
+      "after": [
+        { "userId": "u1", "username": "ana", "pos": 1, "points": 8 },
+        { "userId": "u2", "username": "beto", "pos": 2, "points": 3 }
+      ],
+      "expect": { "state": "moved", "movement": "none", "posDelta": 0 }
+    },
+    {
+      "name": "sin puntos ni movimiento → null",
       "snapshot": { "meId": "u1" },
       "before": [{ "userId": "u1", "username": "ana", "pos": 1, "points": 5 }],
       "after": [{ "userId": "u1", "username": "ana", "pos": 1, "points": 5 }],

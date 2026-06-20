@@ -716,7 +716,9 @@
   }
 
   // Story 1.8 — Resumen Post-Partido (bloque persistente, social primero).
-  // before = ranking neutralizando el último partido jugado; after = ranking actual.
+  // before = ranking neutralizando TODOS los partidos terminados de la última
+  // jornada (no solo el último), para reflejar el impacto acumulado del día;
+  // after = ranking actual. Así el resumen aparece tras una tanda de partidos.
   function postMatchSummaryHtml() {
     if (!session || !WC.engagement) return "";
     const ms = matches();
@@ -724,10 +726,14 @@
     if (!played.length) return "";
     let last = played[0];
     played.forEach(function (m) { if (new Date(m.date) > new Date(last.date)) last = m; });
+    const lastDay = matchDay(last); // día calendario (Curazao) del partido más reciente
+    const recent = played.filter(function (m) { return matchDay(m) === lastDay; });
+    const recentIds = {};
+    recent.forEach(function (m) { recentIds[m.id] = true; });
     const snap = engagementSnapshot();
     if (!snap) return "";
     const msBefore = ms.map(function (m) {
-      return m.id === last.id ? Object.assign({}, m, { status: "scheduled", hs: null, as: null, winner: null }) : m;
+      return recentIds[m.id] ? Object.assign({}, m, { status: "scheduled", hs: null, as: null, winner: null }) : m;
     });
     const before = WC.scoring.buildLeaderboard(data.profiles, data.predictions, data.picks, msBefore, data.captains);
     const vm = WC.engagement.postMatchSummary(snap, before, snap.official);
@@ -735,8 +741,9 @@
     trackEvent("post_match_summary_viewed", { movement: vm.movement });
     const url = location.origin + location.pathname + "#quiniela";
     const shareText = WC.engagement.whatsappShare(vm, Object.assign({}, snap, { shareUrl: url })) || "";
+    const eyebrow = recent.length > 1 ? "Resumen de la jornada" : "Resumen del partido";
     return '<div class="game-card pms-card">' +
-      '<span class="pms-eyebrow">Resumen del partido</span>' +
+      '<span class="pms-eyebrow">' + eyebrow + "</span>" +
       '<p class="pms-social">' + esc(vm.social) + "</p>" +
       (vm.points ? '<p class="pms-points">' + esc(vm.points) + "</p>" : "") +
       (shareText ? '<div class="game-actions" style="margin-top:12px"><button class="game-btn" id="pmsShare" data-share="' + esc(shareText) + '">Compartir</button></div>' : "") +

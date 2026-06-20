@@ -19,6 +19,7 @@
     live_personal_up: "Vas subiendo: #{pos} (+{delta})",
     live_personal_down: "Cuidado: bajas a #{pos}",
     live_group: "La tabla se mueve en vivo",
+    live_frozen: "Tabla congelada: nadie suma… por ahora 👀",
     post_up: "Subiste {n} puesto(s) 🔺",
     post_down: "Bajaste {n}, hay revancha 🔁",
     post_passed: "Pasaste a {rival}",
@@ -121,6 +122,12 @@
     if (rows.some(function (r) { return r.delta !== 0 || r.livePoints > 0; })) {
       return { state: "group", message: COPY.live_group, me: meRow ? { pos: meRow.pos, delta: meRow.delta, livePoints: meRow.livePoints } : null, rows: rows };
     }
+    // Sin movimiento pero con partido en juego (p. ej. sorpresa: todos predijeron al
+    // favorito y va perdiendo) → línea presente en vez de silencio total.
+    const liveInPlay = (snapshot.matches || []).some(function (m) { return m.status === "live"; });
+    if (liveInPlay) {
+      return { state: "frozen", message: COPY.live_frozen, me: meRow ? { pos: meRow.pos, delta: meRow.delta, livePoints: meRow.livePoints } : null, rows: rows };
+    }
     return fallback;
   }
 
@@ -165,16 +172,20 @@
       if (meB.pos > b.pos && meA.pos < r.pos) passed.push(r.username);       // yo pasé a r
       if (meB.pos < b.pos && meA.pos > r.pos) passedBy.push(r.username);     // r me pasó
     });
-    if (posDelta === 0 && !passed.length && !passedBy.length) return null;   // PD5: sin movimiento relevante
     const ptsGain = (meA.points || 0) - (meB.points || 0);
+    // PD5: relevante si cambia de puesto, pasa/lo pasan, o gana puntos. Sin nada de
+    // eso → null (sin ruido artificial). Ganar puntos sin moverse sí es relevante.
+    if (posDelta === 0 && !passed.length && !passedBy.length && ptsGain <= 0) return null;
     let movement, social;
     if (passed.length) { movement = "passed_friend"; social = fill(COPY.post_passed, { rival: passed[0] }); }
     else if (passedBy.length) { movement = "passed_by_friend"; social = fill(COPY.post_passed_by, { rival: passedBy[0] }); }
     else if (posDelta > 0) { movement = "up"; social = fill(COPY.post_up, { n: posDelta }); }
-    else { movement = "down"; social = fill(COPY.post_down, { n: Math.abs(posDelta) }); }
+    else if (posDelta < 0) { movement = "down"; social = fill(COPY.post_down, { n: Math.abs(posDelta) }); }
+    else { movement = "none"; social = fill(COPY.post_points, { pts: ptsGain }); } // ganó puntos sin cambiar de puesto
     return {
       state: "moved", movement: movement, social: social,
-      points: ptsGain > 0 ? fill(COPY.post_points, { pts: ptsGain }) : "",
+      // si el social ya ES la línea de puntos (movement "none"), no la repetimos abajo
+      points: movement !== "none" && ptsGain > 0 ? fill(COPY.post_points, { pts: ptsGain }) : "",
       posDelta: posDelta, passed: passed, passedBy: passedBy
     };
   }
