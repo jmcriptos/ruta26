@@ -380,18 +380,29 @@
     }).join("");
   }
 
-  // Embudo de conversión: barras descendentes, ancho relativo al primer paso.
-  function funnelView(rows) {
+  // Embudo de conversión clásico (trapecio): cada paso es un trapecio cuyo ancho
+  // arriba ∝ su valor y abajo ∝ el del paso siguiente; el último remata en punta.
+  function funnelView(rows, colors) {
+    var W = 300, segH = 54, gap = 5, padY = 6, maxW = 268;
     var top = rows[0] ? rows[0].n : 0;
-    return '<div class="dz-funnel">' + rows.map(function (r, i) {
-      var w = top > 0 ? Math.min(100, Math.round(100 * r.n / top)) : 0;
+    var widthAt = function (n) { return top > 0 ? Math.max(40, maxW * n / top) : maxW; };
+    var H = padY * 2 + rows.length * segH + (rows.length - 1) * gap;
+    var y = padY, segs = "";
+    rows.forEach(function (r, i) {
+      var wTop = widthAt(r.n);
+      var wBot = widthAt(i < rows.length - 1 ? rows[i + 1].n : r.n * 0.6);
+      var yb = y + segH, col = colors[i % colors.length];
+      segs += '<polygon points="' + ((W - wTop) / 2).toFixed(1) + "," + y + " " + ((W + wTop) / 2).toFixed(1) + "," + y +
+        " " + ((W + wBot) / 2).toFixed(1) + "," + yb + " " + ((W - wBot) / 2).toFixed(1) + "," + yb + '" fill="' + col + '"></polygon>' +
+        '<text x="' + (W / 2) + '" y="' + (y + segH / 2 + 7) + '" text-anchor="middle" font-size="22" font-weight="800" fill="#0a1512" font-family="League Spartan, sans-serif">' + num.format(r.n) + "</text>";
+      y = yb + gap;
+    });
+    var legend = rows.map(function (r, i) {
       var pctTxt = i === 0 ? "100%" : (top > 0 ? Math.round(100 * r.n / top) + "%" : "—");
-      return '<div class="dz-funnel-row">' +
-        '<div class="dz-funnel-top"><span class="lbl">' + esc(r.label) + "</span>" +
-          '<span class="nums"><strong>' + num.format(r.n) + "</strong><em>" + pctTxt + "</em></span></div>" +
-        '<div class="dz-funnel-track"><i style="width:' + Math.max(w, 2) + '%"></i></div>' +
-        "</div>";
-    }).join("") + "</div>";
+      return '<span><i style="background:' + colors[i % colors.length] + '"></i>' + esc(r.label) + " <b>" + num.format(r.n) + "</b> · " + pctTxt + "</span>";
+    }).join("");
+    return '<div class="dz-funnel"><svg viewBox="0 0 ' + W + " " + H + '" width="100%" role="img" aria-label="Embudo de conversión del loop">' +
+      segs + "</svg></div><div class=\"dz-funnel-legend\">" + legend + "</div>";
   }
 
   function donutSVG(segs, centerValue, centerLabel) {
@@ -454,7 +465,7 @@
     var funnel = funnelView([
       { label: "Vieron la oportunidad", n: oppV },
       { label: "Pronosticaron", n: pred }
-    ]) + '<p class="dz-note">Conversión del loop: <strong>' + pct(pred, oppV) + "</strong> de quienes vieron la oportunidad pronosticaron. " +
+    ], [ACCENT, "#7dd3a0"]) + '<p class="dz-note">Conversión del loop: <strong>' + pct(pred, oppV) + "</strong> de quienes vieron la oportunidad pronosticaron. " +
       "Tocaron el CTA: <strong>" + num.format(cta) + "</strong> (" + pct(cta, oppV) + " de quienes la vieron, un atajo para pronosticar).</p>";
 
     // Uso de cada momento (eventos totales en el rango)

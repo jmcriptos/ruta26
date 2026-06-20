@@ -126,14 +126,12 @@
     .dz-bar-row .bar i { display: block; height: 100%; border-radius: 4px; transition: width .6s ease; }
     .dz-bar-row .val { flex: 0 0 52px; text-align: right; font-weight: 700; font-size: 12px; font-variant-numeric: tabular-nums; }
 
-    .dz-funnel { display: flex; flex-direction: column; gap: 16px; margin-bottom: 4px; }
-    .dz-funnel-top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 6px; }
-    .dz-funnel-top .lbl { font-size: 13px; font-weight: 600; }
-    .dz-funnel-top .nums { display: flex; align-items: baseline; gap: 8px; }
-    .dz-funnel-top .nums strong { font: 800 24px/1 "League Spartan", sans-serif; letter-spacing: -.5px; }
-    .dz-funnel-top .nums em { font-style: normal; font-size: 12px; font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; }
-    .dz-funnel-track { height: 22px; background: var(--track); border-radius: 6px; overflow: hidden; }
-    .dz-funnel-track i { display: block; height: 100%; border-radius: 6px; background: linear-gradient(90deg, #68a7ff, #7dd3a0); transition: width .6s ease; }
+    .dz-funnel { margin-bottom: 6px; }
+    .dz-funnel svg { display: block; max-width: 340px; margin: 0 auto; }
+    .dz-funnel-legend { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 18px; margin-top: 10px; font-size: 13px; color: var(--muted); }
+    .dz-funnel-legend span { display: inline-flex; align-items: center; gap: 7px; }
+    .dz-funnel-legend i { width: 11px; height: 11px; border-radius: 3px; display: inline-block; }
+    .dz-funnel-legend b { color: var(--txt); font-weight: 700; font-variant-numeric: tabular-nums; }
 
     .dz-chart-wrap { position: relative; }
     .dz-chart-wrap svg { display: block; width: 100%; height: auto; }
@@ -220,6 +218,6 @@
 
   <script src="js/config.js?v=20260611k"></script>
   <script src="js/data.js?v=20260611k"></script>
-  <script src="js/stats-dashboard.js?v=20260620-engviz"></script>
+  <script src="js/stats-dashboard.js?v=20260620-engviz2"></script>
 </body>
 </html>
