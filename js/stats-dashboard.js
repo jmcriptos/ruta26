@@ -249,9 +249,18 @@
 
   function engDaySeries() {
     var byDay = aggregateEngagement().byDay, now = Date.now(), out = [];
+    // Arranca en el día más antiguo CON datos (el registro de eventos es reciente,
+    // así no se ven 13 días vacíos). Mínimo 5 columnas para que no quede una sola.
+    var firstIdx = null;
     for (var i = range - 1; i >= 0; i--) {
       var k = dayKey(new Date(now - i * MS).toISOString());
-      out.push({ label: dayLabel(k), n: byDay[k] || 0 });
+      if (byDay[k]) { firstIdx = i; break; }
+    }
+    if (firstIdx == null) firstIdx = Math.min(range - 1, 6);
+    firstIdx = Math.max(firstIdx, 4); // al menos 5 columnas de contexto
+    for (var j = firstIdx; j >= 0; j--) {
+      var kk = dayKey(new Date(now - j * MS).toISOString());
+      out.push({ label: dayLabel(kk), n: byDay[kk] || 0 });
     }
     return out;
   }
@@ -371,6 +380,20 @@
     }).join("");
   }
 
+  // Embudo de conversión: barras descendentes, ancho relativo al primer paso.
+  function funnelView(rows) {
+    var top = rows[0] ? rows[0].n : 0;
+    return '<div class="dz-funnel">' + rows.map(function (r, i) {
+      var w = top > 0 ? Math.min(100, Math.round(100 * r.n / top)) : 0;
+      var pctTxt = i === 0 ? "100%" : (top > 0 ? Math.round(100 * r.n / top) + "%" : "—");
+      return '<div class="dz-funnel-row">' +
+        '<div class="dz-funnel-top"><span class="lbl">' + esc(r.label) + "</span>" +
+          '<span class="nums"><strong>' + num.format(r.n) + "</strong><em>" + pctTxt + "</em></span></div>" +
+        '<div class="dz-funnel-track"><i style="width:' + Math.max(w, 2) + '%"></i></div>' +
+        "</div>";
+    }).join("") + "</div>";
+  }
+
   function donutSVG(segs, centerValue, centerLabel) {
     var total = segs.reduce(function (a, s) { return a + s.value; }, 0);
     var R = 52, C = 2 * Math.PI * R, acc = 0;
@@ -424,19 +447,22 @@
     var T = e.tot, S = e.sess;
     var pct = function (a, b) { return b > 0 ? Math.round(100 * a / b) + "%" : "—"; };
 
-    // Embudo por sesiones distintas (direccional)
+    // Conversión del loop (sesiones distintas): ver la oportunidad → pronosticar.
+    // El CTA es UN camino para pronosticar, no el único, así que va aparte (no en
+    // cascada — comparar pred contra cta daría >100%).
     var oppV = S.opportunity_viewed || 0, cta = S.opportunity_cta_clicked || 0, pred = S.prediction_submitted || 0;
-    var funnel =
-      kpi("Vieron Oportunidad", oppV, { sub: "sesiones" }) +
-      kpi("Tocaron el CTA", cta, { sub: pct(cta, oppV) + " de quienes la vieron" }) +
-      kpi("Pronosticaron", pred, { sub: pct(pred, cta) + " de quienes tocaron" });
+    var funnel = funnelView([
+      { label: "Vieron la oportunidad", n: oppV },
+      { label: "Pronosticaron", n: pred }
+    ]) + '<p class="dz-note">Conversión del loop: <strong>' + pct(pred, oppV) + "</strong> de quienes vieron la oportunidad pronosticaron. " +
+      "Tocaron el CTA: <strong>" + num.format(cta) + "</strong> (" + pct(cta, oppV) + " de quienes la vieron, un atajo para pronosticar).</p>";
 
     // Uso de cada momento (eventos totales en el rango)
     var moments = barList([
       { label: "Oportunidad", n: T.opportunity_viewed || 0 },
       { label: "Ranking en vivo", n: T.live_ranking_viewed || 0 },
-      { label: "Pronósticos compactos", n: T.locked_predictions_viewed || 0 },
-      { label: "Resumen post-partido", n: T.post_match_summary_viewed || 0 },
+      { label: "Pronósticos", n: T.locked_predictions_viewed || 0 },
+      { label: "Post-partido", n: T.post_match_summary_viewed || 0 },
       { label: "Compartir", n: (T.share_summary_clicked || 0) + (T.whatsapp_copy_clicked || 0) }
     ].filter(function (r) { return r.n > 0; }).sort(function (a, b) { return b.n - a.n; }), ACCENT);
 
@@ -450,7 +476,7 @@
     ].filter(function (r) { return r.n > 0; }), SECOND) +
       '<p class="dz-note">Opt-in: ' + pct(on, seen) + " · Abren desde el aviso: " + num.format(clk) + "</p>";
 
-    return card("Embudo del loop", '<section class="dz-kpis">' + funnel + "</section>",
+    return card("Embudo del loop", funnel,
         { span2: true, aside: "sesiones · " + range + " días" }) +
       card("Uso de cada momento", moments || '<p class="dz-empty">Sin eventos en el rango.</p>', { aside: "eventos" }) +
       card("Notificaciones push", push, { aside: range + " días" }) +
