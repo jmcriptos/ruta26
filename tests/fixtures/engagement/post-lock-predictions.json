@@ -1,0 +1,30 @@
+{
+  "description": "Story 1.4 — pronósticos compactos visibles tras lock/kickoff.",
+  "cases": [
+    {
+      "name": "visible: agrupa por resultado (home/draw/away)",
+      "matchId": "m1",
+      "snapshot": {
+        "matches": [{ "id": "m1", "stage": "group", "home": "MEX", "away": "KOR" }],
+        "teams": { "MEX": { "name": "México" }, "KOR": { "name": "Corea del Sur" } },
+        "visiblePredictions": [
+          { "match_id": "m1", "username": "ana", "hg": 2, "ag": 0 },
+          { "match_id": "m1", "username": "beto", "hg": 1, "ag": 1 },
+          { "match_id": "m1", "username": "caro", "hg": 0, "ag": 1 },
+          { "match_id": "m1", "username": "dani", "hg": 3, "ag": 1 }
+        ]
+      },
+      "expect": { "state": "visible", "groups": [
+        { "outcome": "home", "count": 2 },
+        { "outcome": "draw", "count": 1 },
+        { "outcome": "away", "count": 1 }
+      ] }
+    },
+    {
+      "name": "empty: sin predicciones visibles (antes del kickoff)",
+      "matchId": "m1",
+      "snapshot": { "matches": [{ "id": "m1", "stage": "group", "home": "MEX", "away": "KOR" }], "visiblePredictions": [] },
+      "expect": { "state": "empty" }
+    }
+  ]
+}

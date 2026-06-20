@@ -1,0 +1,36 @@
+{
+  "description": "Story 1.4 — tensión live. Personal > grupal > fallback.",
+  "cases": [
+    {
+      "name": "personal sube",
+      "snapshot": { "meId": "u1", "live": [
+        { "userId": "u1", "username": "ana", "pos": 2, "delta": 1, "livePoints": 3 },
+        { "userId": "u2", "username": "beto", "pos": 3, "delta": -1, "livePoints": 0 }
+      ] },
+      "expect": { "state": "personal", "mePos": 2, "meDelta": 1 }
+    },
+    {
+      "name": "personal baja",
+      "snapshot": { "meId": "u1", "live": [{ "userId": "u1", "username": "ana", "pos": 4, "delta": -2, "livePoints": 0 }] },
+      "expect": { "state": "personal", "mePos": 4, "meDelta": -2 }
+    },
+    {
+      "name": "group: otros se mueven, yo no",
+      "snapshot": { "meId": "u1", "live": [
+        { "userId": "u1", "username": "ana", "pos": 1, "delta": 0, "livePoints": 0 },
+        { "userId": "u2", "username": "beto", "pos": 2, "delta": 1, "livePoints": 3 }
+      ] },
+      "expect": { "state": "group" }
+    },
+    {
+      "name": "fallback stale (PD4)",
+      "snapshot": { "meId": "u1", "liveStale": true, "live": [{ "userId": "u1", "username": "ana", "pos": 1, "delta": 1, "livePoints": 3 }] },
+      "expect": { "state": "fallback" }
+    },
+    {
+      "name": "fallback sin movimiento",
+      "snapshot": { "meId": "u1", "live": [{ "userId": "u1", "username": "ana", "pos": 1, "delta": 0, "livePoints": 0 }] },
+      "expect": { "state": "fallback" }
+    }
+  ]
+}

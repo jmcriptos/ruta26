@@ -96,12 +96,52 @@
     return { state: "fallback", reason: null, match: null, rival: null, primaryAction: null, copy: null };
   }
 
+  // Story 1.4 — tensión live. Prioriza impacto personal; fallback grupal/neutral.
   function liveTension(snapshot) {
-    return { state: "fallback", message: null, me: null, rows: [] };
+    const fallback = { state: "fallback", message: null, me: null, rows: [] };
+    if (!snapshot || snapshot.liveStale) return fallback; // feed stale (PD4): sin drama
+    const live = snapshot.live || [];
+    if (!live.length) return fallback;
+    const rows = live.map(function (r) {
+      return { username: r.username, pos: r.pos, delta: r.delta || 0, livePoints: r.livePoints || 0, isMe: r.userId === snapshot.meId };
+    });
+    const meRow = rows.find(function (r) { return r.isMe; });
+    if (meRow && meRow.delta !== 0) {
+      const up = meRow.delta > 0;
+      return {
+        state: "personal",
+        message: fill(up ? COPY.live_personal_up : COPY.live_personal_down, { pos: meRow.pos, delta: Math.abs(meRow.delta) }),
+        me: { pos: meRow.pos, delta: meRow.delta, livePoints: meRow.livePoints },
+        rows: rows
+      };
+    }
+    if (rows.some(function (r) { return r.delta !== 0 || r.livePoints > 0; })) {
+      return { state: "group", message: COPY.live_group, me: meRow ? { pos: meRow.pos, delta: meRow.delta, livePoints: meRow.livePoints } : null, rows: rows };
+    }
+    return fallback;
   }
 
+  // Story 1.4 — pronósticos compactos (solo visibles tras lock/kickoff).
   function predictionGroups(snapshot, matchId) {
-    return { state: "empty", matchId: matchId || null, groups: [] };
+    const empty = { state: "empty", matchId: matchId || null, groups: [] };
+    if (!snapshot || !matchId) return empty;
+    const preds = (snapshot.visiblePredictions || []).filter(function (p) { return p.match_id === matchId; });
+    if (!preds.length) return empty;
+    const match = (snapshot.matches || []).find(function (m) { return m.id === matchId; });
+    const teams = snapshot.teams || {};
+    const ko = !!(match && match.stage !== "group" && match.stage !== "final");
+    const homeLabel = match ? (ko ? "Avanza " : "Gana ") + (teamName(teams, match.home) || "local") : "Local";
+    const awayLabel = match ? (ko ? "Avanza " : "Gana ") + (teamName(teams, match.away) || "visitante") : "Visitante";
+    const buckets = { home: [], draw: [], away: [] };
+    preds.forEach(function (p) {
+      const k = p.hg > p.ag ? "home" : (p.hg < p.ag ? "away" : "draw");
+      buckets[k].push(p.username);
+    });
+    const order = [["home", homeLabel], ["draw", "Empate"], ["away", awayLabel]];
+    const groups = order
+      .filter(function (o) { return buckets[o[0]].length; })
+      .map(function (o) { return { outcome: o[0], label: o[1], count: buckets[o[0]].length, usernames: buckets[o[0]] }; });
+    return { state: "visible", matchId: matchId, groups: groups };
   }
 
   function postMatchSummary(snapshot, beforeRows, afterRows) {
