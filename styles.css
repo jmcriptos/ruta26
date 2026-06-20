@@ -734,17 +734,43 @@ html { scroll-padding-top: calc(84px + env(safe-area-inset-top)); }
 .cap-tag { display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: 999px; background: #fbeec2; color: #7a5b00; font-size: 11px; font-weight: 700; }
 .cap-msg { display: block; text-align: right; margin-top: 8px; font-size: 11px; font-weight: 700; color: #a83a22; }
 
-/* Bloque de Oportunidad (engagement) */
-.opp-card { background: var(--ink-soft); color: var(--paper); display: flex; align-items: center; justify-content: space-between; gap: 14px; }
-.opp-card .opp-eyebrow { font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--lime); }
-.opp-card .opp-headline { font-size: 17px; font-weight: 700; line-height: 1.25; margin: 5px 0 0; }
-.opp-card .opp-sub { font-size: 13px; color: #b9c2bc; margin: 3px 0 0; }
-.opp-card .opp-cta { flex-shrink: 0; min-height: 44px; padding: 10px 18px; border: none; border-radius: 999px; background: var(--lime); color: var(--ink); font-weight: 800; font-size: 14px; cursor: pointer; }
-.opp-card .opp-cta:hover { background: var(--lime-deep); }
-@media (max-width: 480px) { .opp-card { flex-direction: column; align-items: stretch; } .opp-card .opp-cta { width: 100%; } }
+/* ===== Engagement (estilo broadcast, ver mockups UX) ===== */
+/* Componentes compartidos: etiqueta, tira de partido, chips, botones */
+.es-label { display: inline-flex; align-items: center; gap: 7px; margin-bottom: 11px; font-size: 11px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: #5f7a18; }
+.es-label::before { content: ""; width: 8px; height: 8px; border-radius: 999px; background: var(--lime-deep); }
+.es-label.live { color: var(--orange); }
+.es-label.live::before { background: var(--orange); }
 
-/* Ranking en vivo: mensaje social + pronósticos compactos (engagement) */
-.live-rank .lr-social { font-size: 15px; font-weight: 700; color: var(--ink); margin: 2px 0 6px; }
+.es-strip { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 10px; margin: 0 0 14px; padding: 12px; border-radius: 10px; background: var(--paper); border: 1px solid var(--line); }
+.es-team { min-width: 0; text-align: center; }
+.es-name { display: block; font-weight: 800; font-size: 13px; }
+.es-team small { display: block; margin-top: 2px; color: var(--muted); font-size: 10px; font-weight: 800; }
+.es-vs { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 999px; background: var(--lime); color: var(--ink); font: 800 12px/1 "League Spartan"; }
+.es-score { min-width: 74px; min-height: 40px; padding: 0 8px; display: grid; place-items: center; border-radius: 999px; background: var(--ink); color: var(--white); font: 800 19px/1 "League Spartan"; }
+.es-score.live { background: var(--orange); }
+
+.es-chips { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 16px; }
+.es-chip { min-height: 30px; display: inline-flex; align-items: center; padding: 0 11px; border-radius: 999px; border: 1px solid var(--line); background: var(--paper); color: var(--ink); font-size: 12px; font-weight: 700; }
+
+.es-buttons { display: grid; gap: 9px; }
+.primary-btn, .secondary-btn { min-height: 48px; width: 100%; display: grid; place-items: center; border-radius: 999px; font: 800 13px/1 "League Spartan"; text-transform: uppercase; letter-spacing: .02em; cursor: pointer; }
+.primary-btn { border: 0; background: var(--lime); color: var(--ink); }
+.primary-btn:hover { background: var(--lime-deep); }
+.secondary-btn { border: 1px solid #c6c8bd; background: transparent; color: var(--ink); }
+
+/* Bloque de Oportunidad: tarjeta oscura con barra lima superior */
+.opp-card { position: relative; overflow: hidden; background: var(--ink-soft); color: var(--white); border-color: rgba(255,255,255,.08); }
+.opp-card::before { content: ""; position: absolute; inset: 0 0 auto; height: 5px; background: var(--lime); }
+.opp-card .es-label { color: var(--lime); }
+.opp-card .es-label::before { background: currentColor; }
+.opp-card .opp-headline { margin: 0 0 8px; font: 800 27px/1 "League Spartan"; text-transform: uppercase; }
+.opp-card .opp-sub { margin: 0 0 14px; color: rgba(255,255,255,.72); font-size: 13px; font-weight: 700; }
+.opp-card .es-strip { background: rgba(255,255,255,.07); border-color: rgba(255,255,255,.08); }
+.opp-card .es-team small { color: rgba(255,255,255,.55); }
+.opp-card .es-chip { border-color: rgba(255,255,255,.14); background: rgba(255,255,255,.08); color: var(--white); }
+
+/* Ranking en vivo: titular grande + tira de marcador + pronósticos compactos */
+.live-rank .lr-social { margin: 2px 0 12px; font: 800 24px/1 "League Spartan"; text-transform: uppercase; color: var(--ink); }
 .live-rank .lr-note { font-size: 12px; color: var(--muted); margin: 0 0 10px; }
 .pg-block { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 10px; }
 .pg-block h4 { font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px; }
@@ -753,11 +779,18 @@ html { scroll-padding-top: calc(84px + env(safe-area-inset-top)); }
 .pg-chip { font-size: 12px; padding: 3px 9px; border-radius: 999px; background: var(--paper); border: 1px solid var(--line); color: var(--ink); }
 .pg-chip b { font-weight: 800; }
 
-/* Resumen post-partido (engagement) */
-.pms-card { border-left: 4px solid var(--lime); }
-.pms-card .pms-eyebrow { font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
-.pms-card .pms-social { font-size: 18px; font-weight: 800; color: var(--ink); line-height: 1.2; margin: 6px 0 0; }
-.pms-card .pms-points { font-size: 13px; color: var(--muted); margin: 4px 0 0; }
+/* Resumen post-partido: barra lima superior + grid de impacto + preview WhatsApp */
+.pms-card { padding: 0; overflow: hidden; border-top: 5px solid var(--lime); }
+.pms-main { padding: 20px 18px 18px; }
+.pms-card .pms-social { margin: 0 0 8px; font: 800 26px/1 "League Spartan"; text-transform: uppercase; color: var(--ink); line-height: 1; }
+.pms-card .pms-sub { margin: 0 0 16px; color: var(--muted); font-size: 14px; line-height: 1.4; }
+.es-impact { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 0 0 16px; }
+.es-cell { min-height: 62px; display: grid; align-content: center; gap: 3px; padding: 10px; border-radius: 10px; background: var(--paper); border: 1px solid var(--line); text-align: center; }
+.es-cell strong { font: 800 20px/1 "League Spartan"; }
+.es-cell span { color: var(--muted); font-size: 11px; font-weight: 800; text-transform: uppercase; }
+.es-share { padding: 14px 18px 16px; border-top: 1px dashed var(--line); background: rgba(215,255,67,.11); }
+.es-share h4 { margin: 0 0 9px; font: 800 16px/1 "League Spartan"; text-transform: uppercase; color: var(--ink); }
+.es-bubble { padding: 12px 14px; border-radius: 14px 14px 14px 4px; background: var(--white); border: 1px solid var(--line); color: var(--ink); font-size: 13px; line-height: 1.38; font-weight: 700; }
 
 /* medallas y bandera del campeón en el ranking */
 .rank-table td.pos { font-size: 18px; text-align: center; width: 30px; }

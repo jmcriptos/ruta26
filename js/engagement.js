@@ -11,13 +11,19 @@
     opp_pending_cta: "Pronosticar ahora",
     opp_captain: "Elige tu Capitán para {match}",
     opp_captain_cta: "Marcar Capitán",
-    opp_reachable_rival: "Estás a {gap} de {rival}",
+    opp_reachable_rival: "Hoy puedes pasar a {rival}",
     opp_rival_threat: "{rival} te pisa los talones",
     opp_win_matchday: "Hoy puedes ganar la jornada",
     opp_ready: "Listo: tu pick quedó guardado",
     opp_closed: "Este partido ya cerró",
+    opp_chip_gap: "A {gap} pts",
+    opp_chip_tied: "Empatados",
+    opp_chip_rival: "Rival: {rival}",
+    opp_chip_captain: "Capitán disponible",
     live_personal_up: "Vas subiendo: #{pos} (+{delta})",
     live_personal_down: "Cuidado: bajas a #{pos}",
+    live_pass: "Si queda así, pasas a {rival}",
+    live_passed_by: "Si queda así, {rival} te pasa",
     live_group: "La tabla se mueve en vivo",
     live_frozen: "Tabla congelada: nadie suma… por ahora 👀",
     post_up: "Subiste {n} puesto(s) 🔺",
@@ -25,6 +31,9 @@
     post_passed: "Pasaste a {rival}",
     post_passed_by: "{rival} te pasó",
     post_points: "+{pts} pts en este partido",
+    post_sub_up: "El grupo ya tiene tema.",
+    post_sub_down: "Mañana hay revancha.",
+    post_sub_points: "Sigues sumando. La tabla aún no se mueve.",
     share_text: "Voy #{pos} en la quiniela del Mundial ⚽ {move}"
   };
   const STAGE_LABEL = { group: "Grupos", r32: "Dieciseisavos", r16: "Octavos", qf: "Cuartos", sf: "Semis", final: "Final", third: "3er lugar" };
@@ -41,7 +50,7 @@
     return h && a ? h + " vs " + a : "el partido";
   }
   function matchView(m, teams) {
-    return { id: m.id, homeName: teamName(teams, m.home), awayName: teamName(teams, m.away), kickoffAt: m.kickoff_at || null, stageLabel: STAGE_LABEL[m.stage] || "" };
+    return { id: m.id, home: m.home, away: m.away, homeName: teamName(teams, m.home), awayName: teamName(teams, m.away), kickoffAt: m.kickoff_at || null, stage: m.stage, stageLabel: STAGE_LABEL[m.stage] || "" };
   }
 
   // Story 1.3 — Oportunidad pre-partido. Prioridad determinística (ver contrato).
@@ -62,10 +71,15 @@
       .sort(function (a, b) { return kickoffMs(a) - kickoffMs(b) || String(a.id).localeCompare(String(b.id)); });
 
     function vm(state, match, rival, ctaKey, headlineKey, vars) {
+      const chips = [];
+      if (rival && rival.pointsGap != null) chips.push(rival.pointsGap > 0 ? fill(COPY.opp_chip_gap, { gap: rival.pointsGap }) : COPY.opp_chip_tied);
+      if (rival && rival.username) chips.push(fill(COPY.opp_chip_rival, { rival: rival.username }));
+      const capAvail = match && match.stage !== "group" && myPreds[match.id] && !myCaps.some(function (c) { return c.match_id === match.id; });
+      if (capAvail) chips.push(COPY.opp_chip_captain);
       return {
         state: state, reason: state,
         match: match ? matchView(match, teams) : null,
-        rival: rival,
+        rival: rival, chips: chips,
         primaryAction: ctaKey && match ? { label: COPY[ctaKey], targetMatchId: match.id } : null,
         copy: { headline: fill(COPY[headlineKey], vars), sub: match ? matchName(match, teams) : "" }
       };
@@ -109,14 +123,22 @@
     const rows = live.map(function (r) {
       return { username: r.username, pos: r.pos, delta: r.delta || 0, livePoints: r.livePoints || 0, isMe: r.userId === snapshot.meId };
     });
-    const meRow = rows.find(function (r) { return r.isMe; });
+    const meIdx = rows.findIndex(function (r) { return r.isMe; });
+    const meRow = meIdx >= 0 ? rows[meIdx] : null;
     if (meRow && meRow.delta !== 0) {
       const up = meRow.delta > 0;
+      // Rival nombrado: si subes, el de justo debajo (al que pasas); si bajas, el de
+      // justo encima (que te pasa). Mensaje social estilo mockup; si no hay vecino
+      // nombrable, cae al copy por posición.
+      const rivalRow = up ? rows[meIdx + 1] : rows[meIdx - 1];
+      const rival = rivalRow ? { username: rivalRow.username, pos: rivalRow.pos } : null;
+      const message = rival
+        ? fill(up ? COPY.live_pass : COPY.live_passed_by, { rival: rival.username })
+        : fill(up ? COPY.live_personal_up : COPY.live_personal_down, { pos: meRow.pos, delta: Math.abs(meRow.delta) });
       return {
-        state: "personal",
-        message: fill(up ? COPY.live_personal_up : COPY.live_personal_down, { pos: meRow.pos, delta: Math.abs(meRow.delta) }),
+        state: "personal", message: message,
         me: { pos: meRow.pos, delta: meRow.delta, livePoints: meRow.livePoints },
-        rows: rows
+        rival: rival, rows: rows
       };
     }
     if (rows.some(function (r) { return r.delta !== 0 || r.livePoints > 0; })) {
@@ -176,17 +198,18 @@
     // PD5: relevante si cambia de puesto, pasa/lo pasan, o gana puntos. Sin nada de
     // eso → null (sin ruido artificial). Ganar puntos sin moverse sí es relevante.
     if (posDelta === 0 && !passed.length && !passedBy.length && ptsGain <= 0) return null;
-    let movement, social;
-    if (passed.length) { movement = "passed_friend"; social = fill(COPY.post_passed, { rival: passed[0] }); }
-    else if (passedBy.length) { movement = "passed_by_friend"; social = fill(COPY.post_passed_by, { rival: passedBy[0] }); }
-    else if (posDelta > 0) { movement = "up"; social = fill(COPY.post_up, { n: posDelta }); }
-    else if (posDelta < 0) { movement = "down"; social = fill(COPY.post_down, { n: Math.abs(posDelta) }); }
-    else { movement = "none"; social = fill(COPY.post_points, { pts: ptsGain }); } // ganó puntos sin cambiar de puesto
+    let movement, social, subtitle, rival = null;
+    if (passed.length) { movement = "passed_friend"; social = fill(COPY.post_passed, { rival: passed[0] }); subtitle = COPY.post_sub_up; rival = passed[0]; }
+    else if (passedBy.length) { movement = "passed_by_friend"; social = fill(COPY.post_passed_by, { rival: passedBy[0] }); subtitle = COPY.post_sub_down; rival = passedBy[0]; }
+    else if (posDelta > 0) { movement = "up"; social = fill(COPY.post_up, { n: posDelta }); subtitle = COPY.post_sub_up; }
+    else if (posDelta < 0) { movement = "down"; social = fill(COPY.post_down, { n: Math.abs(posDelta) }); subtitle = COPY.post_sub_down; }
+    else { movement = "none"; social = fill(COPY.post_points, { pts: ptsGain }); subtitle = COPY.post_sub_points; } // ganó puntos sin cambiar de puesto
     return {
-      state: "moved", movement: movement, social: social,
+      state: "moved", movement: movement, social: social, subtitle: subtitle,
       // si el social ya ES la línea de puntos (movement "none"), no la repetimos abajo
       points: movement !== "none" && ptsGain > 0 ? fill(COPY.post_points, { pts: ptsGain }) : "",
-      posDelta: posDelta, passed: passed, passedBy: passedBy
+      ptsGain: ptsGain, mePoints: meA.points || 0,
+      posDelta: posDelta, passed: passed, passedBy: passedBy, rival: rival
     };
   }
 

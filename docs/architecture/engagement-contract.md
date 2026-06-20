@@ -42,8 +42,9 @@ menor diferencia de puntos → `match_id` estable.
 {
   state: "pending_pick"|"captain"|"reachable_rival"|"rival_threat"|"win_matchday"|"ready"|"closed"|"fallback",
   reason,                              // el criterio ganador (mismo enum)
-  match: { id, homeName, awayName, kickoffAt, stageLabel } | null,
+  match: { id, home, away, homeName, awayName, kickoffAt, stage, stageLabel } | null,
   rival: { username, pos, pointsGap } | null,   // Rival/Meta Cercana
+  chips: [ "A {gap} pts", "Rival: {x}", "Capitán disponible" ], // datos para la tira de chips
   primaryAction: { label, targetMatchId } | null, // label de la allowlist; scroll/focus, sin modal
   copy: { headline, sub }              // de la allowlist
 }
@@ -61,6 +62,7 @@ menor diferencia de puntos → `match_id` estable.
   state: "personal"|"group"|"frozen"|"fallback",
   message,                             // copy: impacto personal, o grupal si no hay personal
   me: { pos, delta, livePoints } | null,
+  rival: { username, pos } | null,     // vecino que pasas/te pasa (solo en "personal")
   rows: [ { username, pos, delta, livePoints, isMe } ]  // tabla provisional
 }
 ```
@@ -92,8 +94,11 @@ menor diferencia de puntos → `match_id` estable.
 {
   state: "moved"|"fallback",
   movement: "up"|"down"|"passed_friend"|"passed_by_friend"|"none",
-  social,                              // línea social primero
-  points,                              // puntos como apoyo (secundario)
+  social,                              // titular social primero
+  subtitle,                            // línea de apoyo (tono según movimiento)
+  points,                              // "+{pts}" como apoyo; vacío si social ya lo dice
+  ptsGain, mePoints,                   // números para el grid de impacto de la tarjeta
+  rival,                               // username del rival pasado/que pasó (o null)
   posDelta, passed: [usernames], passedBy: [usernames]
 }
 ```
@@ -125,13 +130,19 @@ hechos visibles (nombres ya escapados al render).
 | `opp_pending_cta` | CTA pick | `Pronosticar ahora` |
 | `opp_captain` | capitán disponible | `Elige tu Capitán para {match}` |
 | `opp_captain_cta` | CTA capitán | `Marcar Capitán` |
-| `opp_reachable_rival` | rival alcanzable | `Estás a {gap} de {rival}` |
+| `opp_reachable_rival` | rival alcanzable | `Hoy puedes pasar a {rival}` |
 | `opp_rival_threat` | amenaza | `{rival} te pisa los talones` |
 | `opp_win_matchday` | jornada | `Hoy puedes ganar la jornada` |
 | `opp_ready` | listo | `Listo: tu pick quedó guardado` |
 | `opp_closed` | cerrado | `Este partido ya cerró` |
-| `live_personal_up` | sube en vivo | `Vas subiendo: #{pos} (+{delta})` |
-| `live_personal_down` | baja en vivo | `Cuidado: bajas a #{pos}` |
+| `opp_chip_gap` | chip de brecha | `A {gap} pts` |
+| `opp_chip_tied` | chip empate de pts | `Empatados` |
+| `opp_chip_rival` | chip de rival | `Rival: {rival}` |
+| `opp_chip_captain` | chip de capitán | `Capitán disponible` |
+| `live_personal_up` | sube en vivo (sin vecino) | `Vas subiendo: #{pos} (+{delta})` |
+| `live_personal_down` | baja en vivo (sin vecino) | `Cuidado: bajas a #{pos}` |
+| `live_pass` | pasas a vecino | `Si queda así, pasas a {rival}` |
+| `live_passed_by` | vecino te pasa | `Si queda así, {rival} te pasa` |
 | `live_group` | grupal | `La tabla se mueve en vivo` |
 | `live_frozen` | en juego sin movimiento | `Tabla congelada: nadie suma… por ahora 👀` |
 | `post_up` | subió | `Subiste {n} puesto(s) 🔺` |
@@ -139,6 +150,9 @@ hechos visibles (nombres ya escapados al render).
 | `post_passed` | pasó a alguien | `Pasaste a {rival}` |
 | `post_passed_by` | lo pasaron | `{rival} te pasó` |
 | `post_points` | puntos (apoyo) | `+{pts} pts en este partido` |
+| `post_sub_up` | subtítulo subió/pasó | `El grupo ya tiene tema.` |
+| `post_sub_down` | subtítulo bajó/lo pasaron | `Mañana hay revancha.` |
+| `post_sub_points` | subtítulo solo puntos | `Sigues sumando. La tabla aún no se mueve.` |
 | `share_text` | compartir | `Voy #{pos} en la quiniela del Mundial ⚽ {move}` |
 
 > El copy out-of-app (push) reutiliza estas keys; `tools/push-messages.js` no inventa

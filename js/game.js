@@ -578,22 +578,15 @@
     }).join("");
     lastLivePoints = {};
     rows.forEach(function (r) { lastLivePoints[r.userId] = r.livePoints; });
-    const detail = liveMs.map(function (m) {
-      const frozen = WC.scoring.freezeLive(m);
-      const gainers = data.profiles.map(function (p) {
-        const pr = data.predictions.find(function (r) { return r.user_id === p.id && r.match_id === m.id; });
-        const s = WC.scoring.scoreMatch(pr ? { hg: pr.hg, ag: pr.ag, pens: pr.pens } : null, frozen);
-        return s.points > 0 ? '<span class="lr-chip">' + esc(p.username) + " +" + s.points + "</span>" : "";
-      }).filter(Boolean);
-      const score = m.hs + "–" + m.as + (m.hp != null ? " (pen " + m.hp + "–" + m.ap + ")" : "");
-      return '<div class="lr-match"><span class="lr-score">' + teamFlag(m.home) + " " + score + " " + teamFlag(m.away) + "</span>" +
-        (gainers.length ? gainers.join("") : '<span class="lr-none">nadie suma todavía</span>') + "</div>";
-    }).join("");
-    // Story 1.7 — mensaje social (impacto personal o grupal) y pronósticos compactos
+    // Story 1.7 — bloque social (impacto personal/grupal) + tira de marcador en vivo
     const snap = engagementSnapshot();
     const tension = WC.engagement && snap ? WC.engagement.liveTension(snap) : null;
-    const socialLine = tension && tension.state !== "fallback" && tension.message
-      ? '<p class="lr-social">' + esc(tension.message) + "</p>" : "";
+    const headline = tension && tension.state !== "fallback" && tension.message ? tension.message : "";
+    const scoreStrips = liveMs.map(function (m) {
+      const score = m.hs + " - " + m.as + (m.hp != null && m.ap != null ? " (" + m.hp + "-" + m.ap + ")" : "");
+      return engMatchStrip(m.home, m.away, '<div class="es-score live">' + esc(score) + "</div>");
+    }).join("");
+    const headBlock = (headline ? '<span class="es-label live">Ranking provisional</span><h2 class="lr-social">' + esc(headline) + "</h2>" : "") + scoreStrips;
     const groupsHtml = (WC.engagement && snap ? liveMs : []).map(function (m) {
       const pg = WC.engagement.predictionGroups(snap, m.id);
       if (!pg || pg.state !== "visible" || !pg.groups.length) return "";
@@ -606,10 +599,10 @@
     trackEvent("live_ranking_viewed", { impact: tension ? tension.state : "fallback" });
     if (groupsBlock) trackEvent("locked_predictions_viewed", {});
     return '<div class="game-card live-rank" id="liveRank"><h3><span class="lr-dot"></span> Ranking en vivo</h3>' +
-      socialLine +
+      headBlock +
       '<p class="lr-note">Provisional: así quedaría si los partidos terminan como van. El oficial suma al final.</p>' +
       '<table class="rank-table"><tr><th>#</th><th></th><th></th><th>Jugador</th><th>Pts</th></tr>' + table + "</table>" +
-      '<div class="lr-detail">' + detail + "</div>" + groupsBlock + "</div>";
+      groupsBlock + "</div>";
   }
 
   // FLIP: las filas del ranking en vivo se deslizan a su nueva posición tras cada re-render
@@ -695,30 +688,46 @@
     };
   }
 
+  // Tira de partido estilo broadcast (mockups). `mid` = nodo central (VS o marcador).
+  function engGroupSmall(id) {
+    const t = WC.state.teams[id];
+    return t && t.group ? '<small>Grupo ' + esc(t.group) + "</small>" : "";
+  }
+  function engMatchStrip(homeId, awayId, mid, cls) {
+    const tn = function (id, fb) { const t = WC.state.teams[id]; return esc(t && t.name ? t.name : fb); };
+    return '<div class="es-strip' + (cls ? " " + cls : "") + '">' +
+      '<div class="es-team"><span class="es-name">' + teamFlag(homeId) + " " + tn(homeId, "Local") + "</span>" + engGroupSmall(homeId) + "</div>" +
+      mid +
+      '<div class="es-team"><span class="es-name">' + teamFlag(awayId) + " " + tn(awayId, "Visitante") + "</span>" + engGroupSmall(awayId) + "</div>" +
+      "</div>";
+  }
+
   // Story 1.6 — Bloque de Oportunidad (antes de Ranking y Pronósticos).
   function opportunityHtml() {
     if (!session || !WC.engagement) return "";
     const opp = WC.engagement.opportunity(engagementSnapshot());
     if (!opp || opp.state === "fallback" || !opp.copy || !opp.copy.headline) return "";
     trackEvent("opportunity_viewed", { state: opp.state, reason: opp.reason });
-    let sub = "";
-    if (opp.match) {
-      const vs = opp.match.homeName && opp.match.awayName ? opp.match.homeName + " vs " + opp.match.awayName : "";
-      sub = [opp.match.stageLabel, vs].filter(Boolean).join(" · ");
-    }
+    const m = opp.match;
+    const strip = m && m.home && m.away ? engMatchStrip(m.home, m.away, '<div class="es-vs">VS</div>') : "";
+    const chips = (opp.chips || []).map(function (c) { return '<span class="es-chip">' + esc(c) + "</span>"; }).join("");
+    const sub = m && m.stageLabel ? m.stageLabel : "";
     const cta = opp.primaryAction && opp.primaryAction.targetMatchId
-      ? '<button class="opp-cta" data-opp-target="' + esc(opp.primaryAction.targetMatchId) + '" data-opp-reason="' + esc(opp.reason) + '">' + esc(opp.primaryAction.label) + "</button>"
+      ? '<button class="primary-btn opp-cta" data-opp-target="' + esc(opp.primaryAction.targetMatchId) + '" data-opp-reason="' + esc(opp.reason) + '">' + esc(opp.primaryAction.label) + "</button>"
       : "";
     return '<div class="game-card opp-card opp-' + esc(opp.state) + '">' +
-      '<div class="opp-body"><span class="opp-eyebrow">Tu oportunidad</span>' +
-      '<p class="opp-headline">' + esc(opp.copy.headline) + "</p>" +
-      (sub ? '<p class="opp-sub">' + esc(sub) + "</p>" : "") + "</div>" + cta + "</div>";
+      '<span class="es-label">Tu oportunidad</span>' +
+      '<h2 class="opp-headline">' + esc(opp.copy.headline) + "</h2>" +
+      (sub ? '<p class="opp-sub">' + esc(sub) + "</p>" : "") +
+      strip +
+      (chips ? '<div class="es-chips">' + chips + "</div>" : "") +
+      cta + "</div>";
   }
 
   // Story 1.8 — Resumen Post-Partido (bloque persistente, social primero).
-  // before = ranking neutralizando TODOS los partidos terminados de la última
-  // jornada (no solo el último), para reflejar el impacto acumulado del día;
-  // after = ranking actual. Así el resumen aparece tras una tanda de partidos.
+  // before = ranking neutralizando el último partido terminado; after = ranking
+  // actual. Tarjeta estilo broadcast (mockup): titular + tira de marcador + grid
+  // de impacto + preview de WhatsApp. Aparece tras cada partido (incl. solo puntos).
   function postMatchSummaryHtml() {
     if (!session || !WC.engagement) return "";
     const ms = matches();
@@ -726,14 +735,10 @@
     if (!played.length) return "";
     let last = played[0];
     played.forEach(function (m) { if (new Date(m.date) > new Date(last.date)) last = m; });
-    const lastDay = matchDay(last); // día calendario (Curazao) del partido más reciente
-    const recent = played.filter(function (m) { return matchDay(m) === lastDay; });
-    const recentIds = {};
-    recent.forEach(function (m) { recentIds[m.id] = true; });
     const snap = engagementSnapshot();
     if (!snap) return "";
     const msBefore = ms.map(function (m) {
-      return recentIds[m.id] ? Object.assign({}, m, { status: "scheduled", hs: null, as: null, winner: null }) : m;
+      return m.id === last.id ? Object.assign({}, m, { status: "scheduled", hs: null, as: null, winner: null }) : m;
     });
     const before = WC.scoring.buildLeaderboard(data.profiles, data.predictions, data.picks, msBefore, data.captains);
     const vm = WC.engagement.postMatchSummary(snap, before, snap.official);
@@ -741,12 +746,28 @@
     trackEvent("post_match_summary_viewed", { movement: vm.movement });
     const url = location.origin + location.pathname + "#quiniela";
     const shareText = WC.engagement.whatsappShare(vm, Object.assign({}, snap, { shareUrl: url })) || "";
-    const eyebrow = recent.length > 1 ? "Resumen de la jornada" : "Resumen del partido";
+    const score = last.hs + " - " + last.as + (last.hp != null && last.ap != null ? " (" + last.hp + "-" + last.ap + ")" : "");
+    const strip = engMatchStrip(last.home, last.away, '<div class="es-score">' + esc(score) + "</div>");
+    const posTxt = vm.posDelta > 0 ? "+" + vm.posDelta : (vm.posDelta < 0 ? String(vm.posDelta) : "=");
+    const impact = '<div class="es-impact">' +
+      '<div class="es-cell"><strong>' + posTxt + "</strong><span>Puesto</span></div>" +
+      '<div class="es-cell"><strong>' + esc(vm.mePoints) + "</strong><span>Puntos</span></div>" +
+      '<div class="es-cell"><strong>' + esc(vm.rival || "—") + "</strong><span>Rival</span></div>" +
+      "</div>";
+    const buttons = shareText
+      ? '<div class="es-buttons">' +
+          '<button class="primary-btn" id="pmsShare" data-share="' + esc(shareText) + '">Compartir</button>' +
+          '<button class="secondary-btn" id="pmsCopy" data-share="' + esc(shareText) + '">Copiar texto</button>' +
+        "</div>" : "";
+    const bubbleText = vm.social + (vm.subtitle ? " " + vm.subtitle : "");
+    const bubble = '<div class="es-share"><h4>Texto para WhatsApp</h4><div class="es-bubble">' + esc(bubbleText) + "</div></div>";
     return '<div class="game-card pms-card">' +
-      '<span class="pms-eyebrow">' + eyebrow + "</span>" +
-      '<p class="pms-social">' + esc(vm.social) + "</p>" +
-      (vm.points ? '<p class="pms-points">' + esc(vm.points) + "</p>" : "") +
-      (shareText ? '<div class="game-actions" style="margin-top:12px"><button class="game-btn" id="pmsShare" data-share="' + esc(shareText) + '">Compartir</button></div>' : "") +
+      '<div class="pms-main">' +
+        '<span class="es-label">Resumen</span>' +
+        '<h2 class="pms-social">' + esc(vm.social) + "</h2>" +
+        (vm.subtitle ? '<p class="pms-sub">' + esc(vm.subtitle) + "</p>" : "") +
+        strip + impact + buttons +
+      "</div>" + bubble +
       "</div>";
   }
 
@@ -900,6 +921,13 @@
       if (navigator.share) { navigator.share({ title: "Quiniela Ruta 26", text: text }).catch(function () {}); trackEvent("share_summary_clicked", { channel: "native" }); }
       else if (navigator.clipboard) { navigator.clipboard.writeText(text).then(function () { event.target.textContent = "Texto copiado ✓"; }).catch(function () { window.prompt("Copia tu resumen:", text); }); trackEvent("whatsapp_copy_clicked", {}); }
       else { window.prompt("Copia tu resumen:", text); trackEvent("whatsapp_copy_clicked", {}); }
+      return;
+    }
+    if (event.target.id === "pmsCopy") {
+      const text = event.target.dataset.share || "";
+      if (navigator.clipboard) { navigator.clipboard.writeText(text).then(function () { event.target.textContent = "Texto copiado ✓"; }).catch(function () { window.prompt("Copia tu resumen:", text); }); }
+      else { window.prompt("Copia tu resumen:", text); }
+      trackEvent("whatsapp_copy_clicked", {});
       return;
     }
     if (event.target.id === "pushOn") { enablePush(); return; }

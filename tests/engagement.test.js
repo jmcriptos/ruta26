@@ -99,3 +99,57 @@ test("opportunity: ignora partidos sin equipos definidos (r32 con cruce por defi
   // sin partido nombrable ni rival cercano → fallback (no nudge "el partido")
   assert.strictEqual(eng.opportunity(snapshot).state, "fallback");
 });
+
+/* ---------- enriquecimiento estilo broadcast (mockups) ---------- */
+
+test("liveTension: nombra al rival vecino (pasas a / te pasa)", () => {
+  // subo: el de justo debajo es a quien paso
+  const up = eng.liveTension({ meId: "u1", matches: [{ id: "m1", status: "live" }], live: [
+    { userId: "u1", username: "ana", pos: 2, delta: 1, livePoints: 3 },
+    { userId: "u2", username: "beto", pos: 3, delta: -1, livePoints: 0 }
+  ] });
+  assert.strictEqual(up.state, "personal");
+  assert.ok(up.rival && up.rival.username === "beto", "rival = vecino de abajo");
+  assert.ok(up.message.indexOf("beto") >= 0 && up.message.indexOf("pasas") >= 0, "copy nombra al rival");
+  // bajo: el de justo encima es quien me pasa
+  const down = eng.liveTension({ meId: "u1", matches: [{ id: "m1", status: "live" }], live: [
+    { userId: "u2", username: "beto", pos: 1, delta: 1, livePoints: 3 },
+    { userId: "u1", username: "ana", pos: 2, delta: -1, livePoints: 0 }
+  ] });
+  assert.strictEqual(down.rival.username, "beto");
+  assert.ok(down.message.indexOf("te pasa") >= 0, "copy de te pasa");
+});
+
+test("postMatchSummary: expone subtítulo, rival y puntos para la tarjeta", () => {
+  const vm = eng.postMatchSummary(
+    { meId: "u1" },
+    [{ userId: "u0", username: "lider", pos: 1, points: 10 }, { userId: "u1", username: "ana", pos: 2, points: 5 }],
+    [{ userId: "u1", username: "ana", pos: 1, points: 12 }, { userId: "u0", username: "lider", pos: 2, points: 10 }]
+  );
+  assert.strictEqual(vm.movement, "passed_friend");
+  assert.strictEqual(vm.rival, "lider");
+  assert.ok(vm.subtitle && vm.subtitle.length, "subtítulo presente");
+  assert.strictEqual(vm.mePoints, 12);
+  // ganó puntos sin moverse → subtítulo de "sigues sumando"
+  const flat = eng.postMatchSummary(
+    { meId: "u1" },
+    [{ userId: "u1", username: "ana", pos: 1, points: 5 }, { userId: "u2", username: "b", pos: 2, points: 3 }],
+    [{ userId: "u1", username: "ana", pos: 1, points: 8 }, { userId: "u2", username: "b", pos: 2, points: 3 }]
+  );
+  assert.strictEqual(flat.movement, "none");
+  assert.ok(flat.subtitle && flat.subtitle.length, "subtítulo en movement none");
+});
+
+test("opportunity: arma chips (gap, rival, capitán) desde datos", () => {
+  const snapshot = {
+    now: 0, meId: "u1",
+    matches: [{ id: "m1", stage: "group", status: "scheduled", kickoff_at: "2026-06-28T22:00:00Z", home: "t1", away: "t2" }],
+    myPredictions: { m1: { hg: 1, ag: 0 } }, myCaptains: [],
+    official: [{ userId: "u0", username: "lider", points: 7, pos: 1 }, { userId: "u1", username: "ana", points: 5, pos: 2 }],
+    teams: { t1: { name: "Brasil", group: "A" }, t2: { name: "España", group: "B" } }
+  };
+  const vm = eng.opportunity(snapshot);
+  assert.strictEqual(vm.state, "reachable_rival");
+  assert.ok(Array.isArray(vm.chips) && vm.chips.length >= 2, "tiene chips");
+  assert.ok(vm.chips.some(function (c) { return c.indexOf("lider") >= 0; }), "chip con rival");
+});
