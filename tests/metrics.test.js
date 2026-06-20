@@ -46,7 +46,7 @@ async function runMetrics(opts) {
   // Dejar correr la resolución del país y el primer track.
   await new Promise(function (r) { setImmediate(r); });
   await new Promise(function (r) { setImmediate(r); });
-  return { calls: calls, traceCalls: traceCalls };
+  return { calls: calls, traceCalls: traceCalls, WC: context.WC };
 }
 
 test("metrics registra mediante el RPC limitado, no con INSERT directo", async () => {
@@ -80,4 +80,40 @@ test("metrics respeta Do Not Track", async () => {
   const { calls, traceCalls } = await runMetrics({ dnt: "1" });
   assert.strictEqual(calls.length, 0);
   assert.strictEqual(traceCalls, 0);
+});
+
+/* ---------- eventos de engagement (Story 1.9) ---------- */
+
+test("engagement: sanitizeEvent solo deja campos allowlisted; evento desconocido = null", async () => {
+  const { WC } = await runMetrics();
+  assert.deepStrictEqual(
+    JSON.parse(JSON.stringify(WC.metrics.sanitizeEvent("opportunity_viewed", { state: "pending_pick", reason: "captain", evil: "PII" }))),
+    { event: "opportunity_viewed", fields: { state: "pending_pick", reason: "captain" } }
+  );
+  assert.strictEqual(WC.metrics.sanitizeEvent("evento_inventado", { x: 1 }), null);
+});
+
+test("engagement: track postea al RPC validado con campos saneados", async () => {
+  const r = await runMetrics();
+  const before = r.calls.length;
+  r.WC.metrics.track("opportunity_cta_clicked", { reason: "captain", leak: "no" });
+  const ev = r.calls.slice(before).find(function (c) { return /record_engagement_event/.test(c.url); });
+  assert.ok(ev, "debe postear a record_engagement_event");
+  const body = JSON.parse(ev.init.body);
+  assert.strictEqual(body.p_event, "opportunity_cta_clicked");
+  assert.deepStrictEqual(body.p_fields, { reason: "captain" });
+});
+
+test("engagement: eventos de vista no se repiten en el mismo contexto", async () => {
+  const r = await runMetrics();
+  const before = r.calls.length;
+  r.WC.metrics.track("opportunity_viewed", { state: "pending_pick", reason: "pending_pick" });
+  r.WC.metrics.track("opportunity_viewed", { state: "pending_pick", reason: "pending_pick" });
+  const views = r.calls.slice(before).filter(function (c) { return /record_engagement_event/.test(c.url); });
+  assert.strictEqual(views.length, 1);
+});
+
+test("engagement: bajo Do Not Track no se expone WC.metrics", async () => {
+  const { WC } = await runMetrics({ dnt: "1" });
+  assert.strictEqual(WC.metrics, undefined);
 });

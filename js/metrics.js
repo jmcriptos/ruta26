@@ -15,6 +15,54 @@
     }
   } catch (e) { sid = "fallback-" + String(Math.random()).slice(2, 24); }
 
+  // ---- Eventos de engagement (allowlist, sin PII, no bloqueante) ----
+  // Cada evento solo admite los campos listados (enums cortos); nada de nombres,
+  // texto libre ni pronósticos. Ver docs/architecture/data-contracts.md.
+  const ALLOWED_EVENTS = {
+    opportunity_viewed: ["state", "reason"],
+    opportunity_cta_clicked: ["reason"],
+    prediction_submitted: ["stage"],
+    locked_predictions_viewed: [],
+    live_ranking_viewed: ["impact"],
+    post_match_summary_viewed: ["movement"],
+    share_summary_clicked: ["channel"],
+    whatsapp_copy_clicked: [],
+    push_prompt_seen: [], push_enabled: [], push_dismissed: [], push_reminder_clicked: ["reason"]
+  };
+  function sanitizeEvent(event, fields) {
+    const allowed = ALLOWED_EVENTS[event];
+    if (!allowed) return null;
+    const out = {};
+    if (fields && typeof fields === "object") {
+      allowed.forEach(function (k) {
+        if (fields[k] != null) out[k] = String(fields[k]).slice(0, 40);
+      });
+    }
+    return { event: event, fields: out };
+  }
+  const sentViews = {};
+  function trackEvent(event, fields) {
+    try {
+      if (navigator.doNotTrack === "1") return;
+      if (!cfg.SUPABASE_URL || String(cfg.SUPABASE_URL).indexOf("http") !== 0) return;
+      const ev = sanitizeEvent(event, fields);
+      if (!ev) return;
+      // los eventos de "vista" se mandan una sola vez por contexto (evita spam en re-render)
+      if (/_viewed$|_seen$/.test(event)) {
+        const key = event + ":" + JSON.stringify(ev.fields);
+        if (sentViews[key]) return;
+        sentViews[key] = true;
+      }
+      fetch(cfg.SUPABASE_URL + "/rest/v1/rpc/record_engagement_event", {
+        method: "POST", keepalive: true,
+        headers: { apikey: cfg.SUPABASE_ANON_KEY, Authorization: "Bearer " + cfg.SUPABASE_ANON_KEY, "Content-Type": "application/json", Prefer: "return=minimal" },
+        body: JSON.stringify({ p_session_id: sid, p_event: ev.event, p_fields: ev.fields })
+      }).catch(function () {});
+    } catch (e) {}
+  }
+  window.WC = window.WC || {};
+  window.WC.metrics = { track: trackEvent, sanitizeEvent: sanitizeEvent, ALLOWED_EVENTS: ALLOWED_EVENTS };
+
   const device = window.matchMedia && window.matchMedia("(pointer: coarse)").matches ? "mobile" : "desktop";
   const standalone = window.navigator.standalone === true ||
     (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches);

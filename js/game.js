@@ -136,6 +136,8 @@
         const idx = data.predictions.findIndex(function (r) { return r.user_id === uid && r.match_id === matchId; });
         const row = { user_id: uid, match_id: matchId, hg: v.hg, ag: v.ag, pens: !!v.pens };
         if (idx >= 0) data.predictions[idx] = row; else data.predictions.push(row);
+        const sm = WC.state.matches.find(function (x) { return x.id === matchId; });
+        trackEvent("prediction_submitted", { stage: sm ? sm.stage : "" });
       }
       paintRow(matchId);
     }, 600);
@@ -597,6 +599,8 @@
       return '<div class="pg-row"><span class="pg-vs">' + teamFlag(m.home) + " " + teamFlag(m.away) + "</span>" + chips + "</div>";
     }).filter(Boolean).join("");
     const groupsBlock = groupsHtml ? '<div class="pg-block"><h4>Cómo se reparte la quiniela</h4>' + groupsHtml + "</div>" : "";
+    trackEvent("live_ranking_viewed", { impact: tension ? tension.state : "fallback" });
+    if (groupsBlock) trackEvent("locked_predictions_viewed", {});
     return '<div class="game-card live-rank" id="liveRank"><h3><span class="lr-dot"></span> Ranking en vivo</h3>' +
       socialLine +
       '<p class="lr-note">Provisional: así quedaría si los partidos terminan como van. El oficial suma al final.</p>' +
@@ -657,6 +661,11 @@
       "</div>";
   }
 
+  // Eventos de engagement (Story 1.9): no bloqueante, degrada si metrics falla.
+  function trackEvent(event, fields) {
+    try { if (WC.metrics && WC.metrics.track) WC.metrics.track(event, fields); } catch (e) {}
+  }
+
   // Snapshot para js/engagement.js: mapea datos de la app al contrato
   // (kickoff_at, snake_case). game.js orquesta; engagement.js deriva view models.
   function engagementSnapshot() {
@@ -687,13 +696,14 @@
     if (!session || !WC.engagement) return "";
     const opp = WC.engagement.opportunity(engagementSnapshot());
     if (!opp || opp.state === "fallback" || !opp.copy || !opp.copy.headline) return "";
+    trackEvent("opportunity_viewed", { state: opp.state, reason: opp.reason });
     let sub = "";
     if (opp.match) {
       const vs = opp.match.homeName && opp.match.awayName ? opp.match.homeName + " vs " + opp.match.awayName : "";
       sub = [opp.match.stageLabel, vs].filter(Boolean).join(" · ");
     }
     const cta = opp.primaryAction && opp.primaryAction.targetMatchId
-      ? '<button class="opp-cta" data-opp-target="' + esc(opp.primaryAction.targetMatchId) + '">' + esc(opp.primaryAction.label) + "</button>"
+      ? '<button class="opp-cta" data-opp-target="' + esc(opp.primaryAction.targetMatchId) + '" data-opp-reason="' + esc(opp.reason) + '">' + esc(opp.primaryAction.label) + "</button>"
       : "";
     return '<div class="game-card opp-card opp-' + esc(opp.state) + '">' +
       '<div class="opp-body"><span class="opp-eyebrow">Tu oportunidad</span>' +
@@ -718,6 +728,7 @@
     const before = WC.scoring.buildLeaderboard(data.profiles, data.predictions, data.picks, msBefore, data.captains);
     const vm = WC.engagement.postMatchSummary(snap, before, snap.official);
     if (!vm) return "";
+    trackEvent("post_match_summary_viewed", { movement: vm.movement });
     const url = location.origin + location.pathname + "#quiniela";
     const shareText = WC.engagement.whatsappShare(vm, Object.assign({}, snap, { shareUrl: url })) || "";
     return '<div class="game-card pms-card">' +
@@ -794,6 +805,7 @@
   rootEl.addEventListener("click", async function (event) {
     const oppBtn = event.target.closest("[data-opp-target]");
     if (oppBtn) {
+      trackEvent("opportunity_cta_clicked", { reason: oppBtn.dataset.oppReason });
       // CTA de Oportunidad: scroll/focus al pronóstico relevante (sin modal).
       const card = rootEl.querySelector('[data-match="' + (window.CSS && CSS.escape ? CSS.escape(oppBtn.dataset.oppTarget) : oppBtn.dataset.oppTarget) + '"]');
       if (card) {
@@ -871,9 +883,9 @@
     }
     if (event.target.id === "pmsShare") {
       const text = event.target.dataset.share || "";
-      if (navigator.share) navigator.share({ title: "Quiniela Ruta 26", text: text }).catch(function () {});
-      else if (navigator.clipboard) navigator.clipboard.writeText(text).then(function () { event.target.textContent = "Texto copiado ✓"; }).catch(function () { window.prompt("Copia tu resumen:", text); });
-      else window.prompt("Copia tu resumen:", text);
+      if (navigator.share) { navigator.share({ title: "Quiniela Ruta 26", text: text }).catch(function () {}); trackEvent("share_summary_clicked", { channel: "native" }); }
+      else if (navigator.clipboard) { navigator.clipboard.writeText(text).then(function () { event.target.textContent = "Texto copiado ✓"; }).catch(function () { window.prompt("Copia tu resumen:", text); }); trackEvent("whatsapp_copy_clicked", {}); }
+      else { window.prompt("Copia tu resumen:", text); trackEvent("whatsapp_copy_clicked", {}); }
       return;
     }
     if (event.target.id === "pushOn") { enablePush(); return; }
