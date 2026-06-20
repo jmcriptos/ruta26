@@ -184,7 +184,13 @@ function snapshot() {
   const hasCaptain = new Set((caps || []).map(function (c) { return c.user_id + "|" + c.match_id; }));
   const wasSent = new Set(sent.map(function (s) { return s.user_id + "|" + s.match_id; }));
 
-  // agrupar suscripciones por usuario; un push por usuario y por ventana
+  // Guardrails que SÍ corren aquí: opt-out (solo suscriptores), token inválido
+  // (404/410 borra), dedupe por partido (push_sent) y "1 push por usuario por
+  // ventana" (se manda un solo aviso agrupado con la oportunidad más fuerte como
+  // razón). El límite duro "máx 2/día" y el modelo 1-push-por-oportunidad viven en
+  // push-messages.js (applyGuardrails/buildOpportunityPush, testeados) y se
+  // cablearán cuando el envío pase de "lote por ventana" a "por oportunidad"
+  // (requiere un log de pushes por usuario/día, no las filas por-partido de push_sent).
   const byUser = {};
   subs.forEach(function (s) {
     const userSubs = byUser[s.user_id] = byUser[s.user_id] || [];
