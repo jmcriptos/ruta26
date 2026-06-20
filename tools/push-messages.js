@@ -78,4 +78,83 @@ function buildPush(matches, teams, tallies, missingPick) {
   return { title: title, body: body };
 }
 
-module.exports = { tallyByMatch: tallyByMatch, matchSummary: matchSummary, matchLine: matchLine, buildPush: buildPush, horaTxt: horaTxt, MIN_PICKS: MIN_PICKS };
+/* ---------- Story 2.1: guardrails de push (puro, testeable) ---------- */
+// Prioridad de "Oportunidad más fuerte" (PD3 / engagement-contract.md).
+const REASON_PRIORITY = { pending_pick: 5, captain: 4, reachable_rival: 3, rival_threat: 2, win_matchday: 1 };
+
+// Bloque horario (PD1): hora local Curaçao del kickoff → "YYYY-MM-DDTHH".
+function blockHourKey(iso) {
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return "";
+  const p = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Curacao", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", hour12: false }).formatToParts(d);
+  const g = function (t) { return (p.find(function (x) { return x.type === t; }) || {}).value || ""; };
+  return g("year") + "-" + g("month") + "-" + g("day") + "T" + g("hour");
+}
+function matchDayKey(iso) { return blockHourKey(iso).slice(0, 10); }
+
+// Aplica guardrails a candidatos de push de un proceso.
+// candidates: [{userId, matchId, reason, kickoffAt, suppressed?}]
+// opts: { alreadySent: Set("user|match|reason" enviados <24h), sentTodayCount: {userId:n} }
+// Reglas: descarta suprimidos y ya-enviados; 1 por bloque horario (mayor prioridad);
+// máximo 2 por jugador por día (contando los ya enviados hoy).
+function applyGuardrails(candidates, opts) {
+  opts = opts || {};
+  const alreadySent = opts.alreadySent || new Set();
+  const sentToday = opts.sentTodayCount || {};
+  const DAILY_LIMIT = 2;
+  const pri = function (r) { return REASON_PRIORITY[r] || 0; };
+  const cands = (candidates || []).filter(function (c) {
+    return c && !c.suppressed && !alreadySent.has(c.userId + "|" + c.matchId + "|" + c.reason);
+  });
+  // 1 por (usuario, bloque horario): el de mayor prioridad (empate → kickoff más cercano)
+  const byBlock = {};
+  cands.forEach(function (c) {
+    const k = c.userId + "|" + blockHourKey(c.kickoffAt);
+    const cur = byBlock[k];
+    if (!cur || pri(c.reason) > pri(cur.reason) ||
+      (pri(c.reason) === pri(cur.reason) && new Date(c.kickoffAt) < new Date(cur.kickoffAt))) byBlock[k] = c;
+  });
+  const winners = Object.keys(byBlock).map(function (k) { return byBlock[k]; });
+  winners.sort(function (a, b) { return pri(b.reason) - pri(a.reason) || new Date(a.kickoffAt) - new Date(b.kickoffAt); });
+  // límite diario por usuario
+  const used = {}, out = [];
+  winners.forEach(function (c) {
+    const total = (sentToday[c.userId] || 0) + (used[c.userId] || 0);
+    if (total >= DAILY_LIMIT) return; // suprimido por intensidad segura
+    used[c.userId] = (used[c.userId] || 0) + 1;
+    out.push(c);
+  });
+  return out;
+}
+
+/* ---------- Story 2.2: copy del push de Oportunidad (puro, testeable) ---------- */
+// Lista cerrada de copy seguro (≤3 líneas, sin culpa/humillación). {x}=placeholder.
+const OPP_PUSH_COPY = {
+  pending_pick: "👉 Aún te falta tu pick de {match}",
+  captain: "⭐ Elige tu Capitán para {match}",
+  reachable_rival: "Estás a {gap} de {rival}",
+  rival_threat: "{rival} te pisa los talones",
+  win_matchday: "Hoy puedes ganar la jornada"
+};
+// opp: view model de WC.engagement.opportunity (reason, match{id,name}, rival{username,pointsGap}).
+// Devuelve {title, body, data} con metadata allowlisted para atribución, o null.
+function buildOpportunityPush(opp, hora) {
+  if (!opp || !OPP_PUSH_COPY[opp.reason]) return null;
+  const matchName = opp.match && opp.match.name ? opp.match.name : "el partido";
+  const body = OPP_PUSH_COPY[opp.reason]
+    .replace("{match}", matchName)
+    .replace("{gap}", opp.rival ? opp.rival.pointsGap : "")
+    .replace("{rival}", opp.rival ? opp.rival.username : "");
+  return {
+    title: "⚽ Tu quiniela" + (hora ? " · " + hora : ""),
+    body: body,
+    data: { reason: opp.reason, matchId: opp.match ? opp.match.id : "", blockHour: opp.match ? blockHourKey(opp.match.kickoffAt) : "", campaign: "opportunity" }
+  };
+}
+
+module.exports = {
+  tallyByMatch: tallyByMatch, matchSummary: matchSummary, matchLine: matchLine, buildPush: buildPush,
+  horaTxt: horaTxt, MIN_PICKS: MIN_PICKS,
+  REASON_PRIORITY: REASON_PRIORITY, blockHourKey: blockHourKey, matchDayKey: matchDayKey,
+  applyGuardrails: applyGuardrails, buildOpportunityPush: buildOpportunityPush
+};

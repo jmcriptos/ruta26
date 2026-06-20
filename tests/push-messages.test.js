@@ -80,3 +80,60 @@ test("buildPush: partido sin equipos definidos usa texto genérico", () => {
   assert.ok(p.title.includes("El partido"));
   assert.strictEqual(p.body, "¡Sé de los primeros en pronosticar!");
 });
+
+/* ---------- Epic 2: guardrails (Story 2.1) ---------- */
+
+test("applyGuardrails: descarta opt-out/suprimidos y ya-enviados (match+reason)", () => {
+  const cands = [
+    { userId: "u1", matchId: "m1", reason: "pending_pick", kickoffAt: "2026-06-28T22:00:00Z" },
+    { userId: "u1", matchId: "m2", reason: "captain", kickoffAt: "2026-06-29T22:00:00Z", suppressed: true },
+    { userId: "u2", matchId: "m1", reason: "pending_pick", kickoffAt: "2026-06-28T22:00:00Z" }
+  ];
+  const out = pm.applyGuardrails(cands, { alreadySent: new Set(["u2|m1|pending_pick"]) });
+  const keys = out.map(function (c) { return c.userId + "|" + c.matchId; });
+  assert.deepStrictEqual(keys, ["u1|m1"]); // u1/m2 suprimido, u2/m1 ya enviado
+});
+
+test("applyGuardrails: 1 por bloque horario, el de mayor prioridad", () => {
+  const cands = [
+    { userId: "u1", matchId: "m1", reason: "win_matchday", kickoffAt: "2026-06-28T22:00:00Z" },
+    { userId: "u1", matchId: "m2", reason: "pending_pick", kickoffAt: "2026-06-28T22:20:00Z" }
+  ];
+  const out = pm.applyGuardrails(cands, {});
+  assert.strictEqual(out.length, 1);
+  assert.strictEqual(out[0].reason, "pending_pick"); // mayor prioridad gana el bloque
+});
+
+test("applyGuardrails: máximo 2 por jugador por día", () => {
+  const cands = [
+    { userId: "u1", matchId: "m1", reason: "pending_pick", kickoffAt: "2026-06-28T18:00:00Z" },
+    { userId: "u1", matchId: "m2", reason: "captain", kickoffAt: "2026-06-28T22:00:00Z" },
+    { userId: "u1", matchId: "m3", reason: "win_matchday", kickoffAt: "2026-06-29T02:00:00Z" }
+  ];
+  const out = pm.applyGuardrails(cands, {});
+  assert.strictEqual(out.length, 2); // el tercero se suprime por límite diario
+});
+
+test("applyGuardrails: cuenta los ya enviados hoy contra el límite", () => {
+  const cands = [{ userId: "u1", matchId: "m1", reason: "pending_pick", kickoffAt: "2026-06-28T22:00:00Z" }];
+  assert.strictEqual(pm.applyGuardrails(cands, { sentTodayCount: { u1: 2 } }).length, 0);
+  assert.strictEqual(pm.applyGuardrails(cands, { sentTodayCount: { u1: 1 } }).length, 1);
+});
+
+/* ---------- Epic 2: copy de Oportunidad (Story 2.2) ---------- */
+
+test("buildOpportunityPush: pick pendiente, ≤ líneas y metadata allowlisted", () => {
+  const opp = { reason: "pending_pick", match: { id: "m1", name: "México vs Corea", kickoffAt: "2026-06-28T22:00:00Z" } };
+  const push = pm.buildOpportunityPush(opp, "6:00 p. m.");
+  assert.ok(push.body.indexOf("México vs Corea") >= 0);
+  assert.strictEqual(push.data.reason, "pending_pick");
+  assert.strictEqual(push.data.matchId, "m1");
+  assert.strictEqual(push.data.campaign, "opportunity");
+  assert.ok(!/\n.*\n.*\n/.test(push.body)); // máximo pocas líneas
+});
+
+test("buildOpportunityPush: rival y null para razón desconocida", () => {
+  const opp = { reason: "reachable_rival", match: { id: "m1", name: "X vs Y" }, rival: { username: "lider", pointsGap: 2 } };
+  assert.ok(pm.buildOpportunityPush(opp).body.indexOf("lider") >= 0);
+  assert.strictEqual(pm.buildOpportunityPush({ reason: "nada" }), null);
+});
