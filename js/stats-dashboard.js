@@ -107,9 +107,10 @@
       q("profiles?select=id,username,created_at"),
       q("champion_picks?select=user_id,team_id"),
       q("predictions?select=user_id,match_id&limit=5000"),
-      rpc("analytics_rollup", { since_at: since })
+      rpc("analytics_rollup", { since_at: since }),
+      rpc("engagement_rollup", { since_at: since }).catch(function () { return []; })
     ]).then(function (res) {
-      raw = { profiles: res[0], picks: res[1], preds: res[2], views: res[3] };
+      raw = { profiles: res[0], picks: res[1], preds: res[2], views: res[3], eng: res[4] };
       $("updated").textContent = "al " + timeFmt.format(new Date());
       render();
     }).catch(function (e) {
@@ -232,6 +233,27 @@
       countries: countries,
       champions: champions, matchPicks: matchPicks
     };
+  }
+
+  /* Engagement: deriva totales (fila day=null), sesiones por evento y serie diaria. */
+  function aggregateEngagement() {
+    var rows = (raw && raw.eng) || [];
+    var tot = {}, sess = {}, byDay = {};
+    rows.forEach(function (r) {
+      var ev = String(r.event || ""), n = Number(r.events) || 0, s = Number(r.sessions) || 0;
+      if (r.day == null) { tot[ev] = n; sess[ev] = s; }                  // total del rango
+      else { var d = String(r.day); byDay[d] = (byDay[d] || 0) + n; }    // por día (tendencia)
+    });
+    return { tot: tot, sess: sess, byDay: byDay, hasData: rows.length > 0 };
+  }
+
+  function engDaySeries() {
+    var byDay = aggregateEngagement().byDay, now = Date.now(), out = [];
+    for (var i = range - 1; i >= 0; i--) {
+      var k = dayKey(new Date(now - i * MS).toISOString());
+      out.push({ label: dayLabel(k), n: byDay[k] || 0 });
+    }
+    return out;
   }
 
   /* ── SVG builders ─────────────────────────────────── */
@@ -392,6 +414,49 @@
       (opts.aside ? '<span class="aside">' + esc(opts.aside) + "</span>" : "") + "</div>" + body + "</article>";
   }
 
+  function renderEngagement() {
+    var e = aggregateEngagement();
+    if (!e.hasData) {
+      return card("Engagement del loop",
+        '<p class="dz-empty">Aún sin datos de engagement. Aparecerán cuando se despliegue el rollup y los jugadores usen el loop.</p>',
+        { span2: true });
+    }
+    var T = e.tot, S = e.sess;
+    var pct = function (a, b) { return b > 0 ? Math.round(100 * a / b) + "%" : "—"; };
+
+    // Embudo por sesiones distintas (direccional)
+    var oppV = S.opportunity_viewed || 0, cta = S.opportunity_cta_clicked || 0, pred = S.prediction_submitted || 0;
+    var funnel =
+      kpi("Vieron Oportunidad", oppV, { sub: "sesiones" }) +
+      kpi("Tocaron el CTA", cta, { sub: pct(cta, oppV) + " de quienes la vieron" }) +
+      kpi("Pronosticaron", pred, { sub: pct(pred, cta) + " de quienes tocaron" });
+
+    // Uso de cada momento (eventos totales en el rango)
+    var moments = barList([
+      { label: "Oportunidad", n: T.opportunity_viewed || 0 },
+      { label: "Ranking en vivo", n: T.live_ranking_viewed || 0 },
+      { label: "Pronósticos compactos", n: T.locked_predictions_viewed || 0 },
+      { label: "Resumen post-partido", n: T.post_match_summary_viewed || 0 },
+      { label: "Compartir", n: (T.share_summary_clicked || 0) + (T.whatsapp_copy_clicked || 0) }
+    ].filter(function (r) { return r.n > 0; }).sort(function (a, b) { return b.n - a.n; }), ACCENT);
+
+    // Push
+    var seen = T.push_prompt_seen || 0, on = T.push_enabled || 0, off = T.push_dismissed || 0, clk = T.push_reminder_clicked || 0;
+    var push = barList([
+      { label: "Avisos vistos", n: seen },
+      { label: "Activados", n: on },
+      { label: "Descartados", n: off },
+      { label: "Abiertos desde push", n: clk }
+    ].filter(function (r) { return r.n > 0; }), SECOND) +
+      '<p class="dz-note">Opt-in: ' + pct(on, seen) + " · Abren desde el aviso: " + num.format(clk) + "</p>";
+
+    return card("Embudo del loop", '<section class="dz-kpis">' + funnel + "</section>",
+        { span2: true, aside: "sesiones · " + range + " días" }) +
+      card("Uso de cada momento", moments || '<p class="dz-empty">Sin eventos en el rango.</p>', { aside: "eventos" }) +
+      card("Notificaciones push", push, { aside: range + " días" }) +
+      card("Engagement por día", columnSVG(engDaySeries(), ACCENT), { span2: true, aside: "eventos del loop por día" });
+  }
+
   function render() {
     if (!raw) return;
     var a = aggregate();
@@ -453,7 +518,9 @@
         (a.matchPicks.length ? barList(a.matchPicks, ACCENT) : '<p class="dz-empty">Aún no inicia ningún partido.</p>') +
         '<p class="dz-note">Solo partidos ya iniciados — antes del kickoff los picks son privados.</p>') +
       card("Registros por día", columnSVG(a.regsSeries, SECOND), { span2: true, aside: "+" + a.regsInRange + " en el rango" }) +
-      "</section></main>";
+      "</section>" +
+      '<section class="dz-grid">' + renderEngagement() + "</section>" +
+      "</main>";
 
     bindAreaHover();
   }
