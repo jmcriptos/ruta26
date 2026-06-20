@@ -107,9 +107,10 @@
       q("profiles?select=id,username,created_at"),
       q("champion_picks?select=user_id,team_id"),
       q("predictions?select=user_id,match_id&limit=5000"),
-      rpc("analytics_rollup", { since_at: since })
+      rpc("analytics_rollup", { since_at: since }),
+      rpc("engagement_rollup", { since_at: since }).catch(function () { return []; })
     ]).then(function (res) {
-      raw = { profiles: res[0], picks: res[1], preds: res[2], views: res[3] };
+      raw = { profiles: res[0], picks: res[1], preds: res[2], views: res[3], eng: res[4] };
       $("updated").textContent = "al " + timeFmt.format(new Date());
       render();
     }).catch(function (e) {
