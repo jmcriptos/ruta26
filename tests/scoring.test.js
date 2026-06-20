@@ -319,3 +319,30 @@ test("ranking en vivo: respeta el bono del capitán", () => {
   const rows = sc.buildLiveLeaderboard(profiles, preds, [], matches, [{ user_id: "u1", match_id: "m1" }]);
   assert.strictEqual(rows[0].points, 3); // 1 + 2
 });
+
+/* ---------- contrato de Capitán (fixture, Story 1.1) ---------- */
+const capitanContract = require("./fixtures/scoring/capitan-contract.json");
+
+test("fixture capitan-contract: scoreMatch cumple el contrato", () => {
+  capitanContract.scoreMatch.forEach(function (c) {
+    assert.deepStrictEqual(sc.scoreMatch(c.pred, c.match), c.expect, c.name);
+  });
+});
+
+test("fixture capitan-contract: captainBonus cumple el contrato", () => {
+  capitanContract.captainBonus.forEach(function (c) {
+    assert.strictEqual(sc.captainBonus(c.match, c.pCorrect), c.expect, c.name);
+  });
+});
+
+test("fixture capitan-contract: captainTotal cumple el contrato", () => {
+  capitanContract.captainTotal.forEach(function (c) {
+    assert.strictEqual(sc.captainTotal(c.s, c.match, c.pCorrect), c.expect, c.name);
+  });
+});
+
+test("fixture capitan-contract: tie-break de ranking por username", () => {
+  const t = capitanContract.leaderboardTieBreak;
+  const rows = sc.buildLeaderboard(t.profiles, t.predictions, [], t.matches, []);
+  assert.deepStrictEqual(rows.map(function (r) { return r.username; }), t.expectOrderUsernames);
+});

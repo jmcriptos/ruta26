@@ -1,0 +1,41 @@
+{
+  "description": "Contrato de scoring + Capitán contracorriente aditivo (Story 1.1). Casos representativos consumidos por tests/scoring.test.js.",
+  "scoreMatch": [
+    { "name": "grupos: resultado correcto", "pred": { "hg": 1, "ag": 0 }, "match": { "id": "m", "stage": "group", "status": "played", "hs": 2, "as": 1 }, "expect": { "points": 1, "kind": "outcome" } },
+    { "name": "grupos: fallo", "pred": { "hg": 1, "ag": 0 }, "match": { "id": "m", "stage": "group", "status": "played", "hs": 0, "as": 2 }, "expect": { "points": 0, "kind": "miss" } },
+    { "name": "grupos: empate acertado", "pred": { "hg": 0, "ag": 0 }, "match": { "id": "m", "stage": "group", "status": "played", "hs": 1, "as": 1 }, "expect": { "points": 1, "kind": "outcome" } },
+    { "name": "final: marcador exacto", "pred": { "hg": 2, "ag": 1 }, "match": { "id": "m", "stage": "final", "status": "played", "hs": 2, "as": 1 }, "expect": { "points": 3, "kind": "exact" } },
+    { "name": "final: solo resultado", "pred": { "hg": 3, "ag": 0 }, "match": { "id": "m", "stage": "final", "status": "played", "hs": 2, "as": 1 }, "expect": { "points": 1, "kind": "outcome" } },
+    { "name": "eliminatoria: acierta avance", "pred": { "hg": 1, "ag": 0 }, "match": { "id": "m", "stage": "r16", "status": "played", "hs": 2, "as": 1, "home": "H", "away": "A", "winner": "H" }, "expect": { "points": 1, "kind": "outcome" } },
+    { "name": "eliminatoria: avance + penales", "pred": { "hg": 1, "ag": 0, "pens": true }, "match": { "id": "m", "stage": "r16", "status": "played", "hs": 1, "as": 1, "home": "H", "away": "A", "winner": "H", "hp": 4, "ap": 2 }, "expect": { "points": 2, "kind": "outcome" } },
+    { "name": "eliminatoria: fallo de avance", "pred": { "hg": 1, "ag": 0 }, "match": { "id": "m", "stage": "qf", "status": "played", "hs": 0, "as": 1, "home": "H", "away": "A", "winner": "A" }, "expect": { "points": 0, "kind": "miss" } },
+    { "name": "partido sin resultado (pendiente)", "pred": { "hg": 1, "ag": 0 }, "match": { "id": "m", "stage": "r16", "status": "scheduled", "hs": null }, "expect": { "points": 0, "kind": "pending" } },
+    { "name": "sin pronóstico", "pred": null, "match": { "id": "m", "stage": "group", "status": "played", "hs": 1, "as": 0 }, "expect": { "points": 0, "kind": "none" } }
+  ],
+  "captainBonus": [
+    { "name": "r32 batacazo (<20%)", "match": { "stage": "r32" }, "pCorrect": 0.10, "expect": 4 },
+    { "name": "r32 pocos (20-35%)", "match": { "stage": "r32" }, "pCorrect": 0.25, "expect": 3 },
+    { "name": "r32 mitad (35-60%)", "match": { "stage": "r32" }, "pCorrect": 0.50, "expect": 2 },
+    { "name": "r32 obvio (>=60%)", "match": { "stage": "r32" }, "pCorrect": 0.80, "expect": 1 },
+    { "name": "octavos fijo", "match": { "stage": "r16" }, "pCorrect": 0.5, "expect": 2 },
+    { "name": "final fijo", "match": { "stage": "final" }, "pCorrect": 0.5, "expect": 2 },
+    { "name": "tercer lugar fijo", "match": { "stage": "third" }, "pCorrect": 0.5, "expect": 2 },
+    { "name": "grupos sin bono", "match": { "stage": "group" }, "pCorrect": 0.1, "expect": 0 }
+  ],
+  "captainTotal": [
+    { "name": "capitán r32 batacazo acierto (1+4)", "s": { "points": 1 }, "match": { "stage": "r32" }, "pCorrect": 0.1, "expect": 5 },
+    { "name": "capitán octavos acierto (1+2)", "s": { "points": 1 }, "match": { "stage": "r16" }, "pCorrect": 0.5, "expect": 3 },
+    { "name": "capitán inactivo (fallo) no suma", "s": { "points": 0 }, "match": { "stage": "r32" }, "pCorrect": 0.1, "expect": 0 },
+    { "name": "capitán en grupos no aplica", "s": { "points": 1 }, "match": { "stage": "group" }, "pCorrect": 0.1, "expect": 1 }
+  ],
+  "leaderboardTieBreak": {
+    "description": "mismo puntaje y exactos se rompe por username (es)",
+    "profiles": [{ "id": "u1", "username": "beto" }, { "id": "u2", "username": "ana" }],
+    "matches": [{ "id": "f", "stage": "final", "status": "played", "hs": 2, "as": 1, "home": "H", "away": "A", "winner": "H" }],
+    "predictions": [
+      { "user_id": "u1", "match_id": "f", "hg": 3, "ag": 0 },
+      { "user_id": "u2", "match_id": "f", "hg": 3, "ag": 0 }
+    ],
+    "expectOrderUsernames": ["ana", "beto"]
+  }
+}
