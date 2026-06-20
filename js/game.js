@@ -642,6 +642,50 @@
       "</div>";
   }
 
+  // Snapshot para js/engagement.js: mapea datos de la app al contrato
+  // (kickoff_at, snake_case). game.js orquesta; engagement.js deriva view models.
+  function engagementSnapshot() {
+    if (!session) return null;
+    const ms = matches();
+    const uid = session.user.id;
+    const userById = {};
+    data.profiles.forEach(function (p) { userById[p.id] = p.username; });
+    return {
+      now: Date.now(),
+      meId: uid,
+      official: WC.scoring.buildLeaderboard(data.profiles, data.predictions, data.picks, ms, data.captains),
+      live: WC.scoring.buildLiveLeaderboard(data.profiles, data.predictions, data.picks, ms, data.captains),
+      matches: ms.map(function (m) {
+        return { id: m.id, stage: m.stage, status: m.status, kickoff_at: m.date, home: m.home, away: m.away, winner: m.winner };
+      }),
+      myPredictions: mine,
+      myCaptains: data.captains.filter(function (c) { return c.user_id === uid; }),
+      visiblePredictions: data.predictions.map(function (pr) {
+        return { match_id: pr.match_id, username: userById[pr.user_id], hg: pr.hg, ag: pr.ag };
+      }),
+      teams: WC.state.teams
+    };
+  }
+
+  // Story 1.6 — Bloque de Oportunidad (antes de Ranking y Pronósticos).
+  function opportunityHtml() {
+    if (!session || !WC.engagement) return "";
+    const opp = WC.engagement.opportunity(engagementSnapshot());
+    if (!opp || opp.state === "fallback" || !opp.copy || !opp.copy.headline) return "";
+    let sub = "";
+    if (opp.match) {
+      const vs = opp.match.homeName && opp.match.awayName ? opp.match.homeName + " vs " + opp.match.awayName : "";
+      sub = [opp.match.stageLabel, vs].filter(Boolean).join(" · ");
+    }
+    const cta = opp.primaryAction && opp.primaryAction.targetMatchId
+      ? '<button class="opp-cta" data-opp-target="' + esc(opp.primaryAction.targetMatchId) + '">' + esc(opp.primaryAction.label) + "</button>"
+      : "";
+    return '<div class="game-card opp-card opp-' + esc(opp.state) + '">' +
+      '<div class="opp-body"><span class="opp-eyebrow">Tu oportunidad</span>' +
+      '<p class="opp-headline">' + esc(opp.copy.headline) + "</p>" +
+      (sub ? '<p class="opp-sub">' + esc(sub) + "</p>" : "") + "</div>" + cta + "</div>";
+  }
+
   function closeUserMenu() {
     const drop = document.getElementById("userDropdown");
     const chip = document.getElementById("userChip");
@@ -697,7 +741,7 @@
       return;
     }
     rootEl.innerHTML =
-      championHtml() + remindersHtml("top") + liveRankingHtml() + rankingHtml() + predictionsHtml() + remindersHtml("bottom") + rulesHtml();
+      championHtml() + remindersHtml("top") + opportunityHtml() + liveRankingHtml() + rankingHtml() + predictionsHtml() + remindersHtml("bottom") + rulesHtml();
     animateLiveRows(prevLiveRows);
     const strip = document.getElementById("gDates");
     const active = strip && strip.querySelector(".active");
@@ -706,6 +750,17 @@
 
   /* ---------- eventos (delegación) ---------- */
   rootEl.addEventListener("click", async function (event) {
+    const oppBtn = event.target.closest("[data-opp-target]");
+    if (oppBtn) {
+      // CTA de Oportunidad: scroll/focus al pronóstico relevante (sin modal).
+      const card = rootEl.querySelector('[data-match="' + (window.CSS && CSS.escape ? CSS.escape(oppBtn.dataset.oppTarget) : oppBtn.dataset.oppTarget) + '"]');
+      if (card) {
+        card.scrollIntoView({ behavior: "smooth", block: "center" });
+        const btn = card.querySelector("button");
+        if (btn) btn.focus();
+      }
+      return;
+    }
     const capBtn = event.target.closest("[data-captain]");
     if (capBtn) {
       if (capBtn.disabled) return;

@@ -734,6 +734,15 @@ html { scroll-padding-top: calc(84px + env(safe-area-inset-top)); }
 .cap-tag { display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: 999px; background: #fbeec2; color: #7a5b00; font-size: 11px; font-weight: 700; }
 .cap-msg { display: block; text-align: right; margin-top: 8px; font-size: 11px; font-weight: 700; color: #a83a22; }
 
+/* Bloque de Oportunidad (engagement) */
+.opp-card { background: var(--ink-soft); color: var(--paper); display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+.opp-card .opp-eyebrow { font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--lime); }
+.opp-card .opp-headline { font-size: 17px; font-weight: 700; line-height: 1.25; margin: 5px 0 0; }
+.opp-card .opp-sub { font-size: 13px; color: #b9c2bc; margin: 3px 0 0; }
+.opp-card .opp-cta { flex-shrink: 0; min-height: 44px; padding: 10px 18px; border: none; border-radius: 999px; background: var(--lime); color: var(--ink); font-weight: 800; font-size: 14px; cursor: pointer; }
+.opp-card .opp-cta:hover { background: var(--lime-deep); }
+@media (max-width: 480px) { .opp-card { flex-direction: column; align-items: stretch; } .opp-card .opp-cta { width: 100%; } }
+
 /* medallas y bandera del campeón en el ranking */
 .rank-table td.pos { font-size: 18px; text-align: center; width: 30px; }
 .rank-table td.pos .num { font: 800 16px "League Spartan", sans-serif; color: var(--muted); }
