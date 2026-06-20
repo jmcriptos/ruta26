@@ -153,7 +153,11 @@ hechos visibles (nombres ya escapados al render).
 | `post_sub_up` | subtítulo subió/pasó | `El grupo ya tiene tema.` |
 | `post_sub_down` | subtítulo bajó/lo pasaron | `Mañana hay revancha.` |
 | `post_sub_points` | subtítulo solo puntos | `Sigues sumando. La tabla aún no se mueve.` |
-| `share_text` | compartir | `Voy #{pos} en la quiniela del Mundial ⚽ {move}` |
+| `share_passed` | compartir: pasó a alguien | `Le pasé a {rival} en la quiniela del Mundial ⚽😎 ¿quién sigue?` |
+| `share_passed_by` | compartir: lo pasaron | `{rival} me pasó… disfrútalo que mañana hay revancha 😏 quiniela del Mundial ⚽` |
+| `share_up` | compartir: subió | `Subí {n} puesto(s) en la quiniela del Mundial 🔥 a ver quién me alcanza` |
+| `share_down` | compartir: bajó | `Tropecé pero esto no acabó 🔁 los espero arriba en la quiniela del Mundial ⚽` |
+| `share_default` | compartir: genérico/reto | `Voy #{pos} en la quiniela del Mundial ⚽ ¿te le mides?` |
 
 > El copy out-of-app (push) reutiliza estas keys; `tools/push-messages.js` no inventa
 > texto nuevo fuera de esta lista.

@@ -759,7 +759,8 @@
           '<button class="primary-btn" id="pmsShare" data-share="' + esc(shareText) + '">Compartir</button>' +
           '<button class="secondary-btn" id="pmsCopy" data-share="' + esc(shareText) + '">Copiar texto</button>' +
         "</div>" : "";
-    const bubbleText = vm.social + (vm.subtitle ? " " + vm.subtitle : "");
+    // El preview muestra EXACTAMENTE el mensaje que se comparte (sin la URL).
+    const bubbleText = WC.engagement.whatsappShare(vm, snap) || (vm.social + (vm.subtitle ? " " + vm.subtitle : ""));
     const bubble = '<div class="es-share"><h4>Texto para WhatsApp</h4><div class="es-bubble">' + esc(bubbleText) + "</div></div>";
     return '<div class="game-card pms-card">' +
       '<div class="pms-main">' +

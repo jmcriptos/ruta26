@@ -34,7 +34,12 @@
     post_sub_up: "El grupo ya tiene tema.",
     post_sub_down: "Mañana hay revancha.",
     post_sub_points: "Sigues sumando. La tabla aún no se mueve.",
-    share_text: "Voy #{pos} en la quiniela del Mundial ⚽ {move}"
+    // Compartir: tono picante (joda amistosa), primera persona, sin {url} (lo añade la función)
+    share_passed: "Le pasé a {rival} en la quiniela del Mundial ⚽😎 ¿quién sigue?",
+    share_passed_by: "{rival} me pasó… disfrútalo que mañana hay revancha 😏 quiniela del Mundial ⚽",
+    share_up: "Subí {n} puesto(s) en la quiniela del Mundial 🔥 a ver quién me alcanza",
+    share_down: "Tropecé pero esto no acabó 🔁 los espero arriba en la quiniela del Mundial ⚽",
+    share_default: "Voy #{pos} en la quiniela del Mundial ⚽ ¿te le mides?"
   };
   const STAGE_LABEL = { group: "Grupos", r32: "Dieciseisavos", r16: "Octavos", qf: "Cuartos", sf: "Semis", final: "Final", third: "3er lugar" };
   // Brecha (pts) considerada alcanzable/amenaza con los partidos del día. Afinable.
@@ -213,11 +218,19 @@
     };
   }
 
-  // Story 1.5 — texto compartible. Solo hechos visibles + copy allowlisted.
+  // Story 1.5 — texto compartible (joda amistosa). Copy según el movimiento; solo
+  // hechos visibles + allowlist. Sin shareUrl devuelve el mensaje pelado (preview).
   function whatsappShare(summaryVm, snapshot) {
     if (!summaryVm || !snapshot) return null;
     const me = (snapshot.official || []).find(function (r) { return r.userId === snapshot.meId; });
-    const text = fill(COPY.share_text, { pos: me ? me.pos : "?", move: summaryVm.social || "" });
+    const pos = me ? me.pos : "?";
+    const mv = summaryVm.movement, rival = summaryVm.rival;
+    let text;
+    if (mv === "passed_friend" && rival) text = fill(COPY.share_passed, { rival: rival });
+    else if (mv === "passed_by_friend" && rival) text = fill(COPY.share_passed_by, { rival: rival });
+    else if (mv === "up") text = fill(COPY.share_up, { n: summaryVm.posDelta });
+    else if (mv === "down") text = fill(COPY.share_down, { n: Math.abs(summaryVm.posDelta) });
+    else text = fill(COPY.share_default, { pos: pos });
     return snapshot.shareUrl ? text + " " + snapshot.shareUrl : text;
   }
 
