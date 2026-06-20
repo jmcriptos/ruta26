@@ -1,0 +1,73 @@
+{
+  "description": "Story 1.3 — modelo de Oportunidad. Prioridad determinística.",
+  "cases": [
+    {
+      "name": "pending_pick: próximo partido sin pick gana la prioridad",
+      "snapshot": {
+        "now": 0,
+        "meId": "u1",
+        "matches": [{ "id": "m1", "stage": "r16", "status": "scheduled", "kickoff_at": "2026-06-28T22:00:00Z", "home": "MEX", "away": "KOR" }],
+        "myPredictions": {},
+        "myCaptains": [],
+        "official": [{ "userId": "u1", "username": "ana", "points": 5, "pos": 1 }],
+        "teams": { "MEX": { "name": "México" }, "KOR": { "name": "Corea del Sur" } }
+      },
+      "expect": { "state": "pending_pick", "reason": "pending_pick", "matchId": "m1", "actionLabel": "Pronosticar ahora" }
+    },
+    {
+      "name": "captain: eliminatoria con pick y sin capitán",
+      "snapshot": {
+        "now": 0,
+        "meId": "u1",
+        "matches": [{ "id": "m1", "stage": "r16", "status": "scheduled", "kickoff_at": "2026-06-28T22:00:00Z", "home": "MEX", "away": "KOR" }],
+        "myPredictions": { "m1": { "hg": 1, "ag": 0 } },
+        "myCaptains": [],
+        "official": [{ "userId": "u1", "username": "ana", "points": 5, "pos": 1 }],
+        "teams": { "MEX": { "name": "México" }, "KOR": { "name": "Corea del Sur" } }
+      },
+      "expect": { "state": "captain", "reason": "captain", "matchId": "m1", "actionLabel": "Marcar Capitán" }
+    },
+    {
+      "name": "reachable_rival: rival arriba dentro de la brecha",
+      "snapshot": {
+        "now": 0,
+        "meId": "u1",
+        "matches": [{ "id": "m1", "stage": "group", "status": "scheduled", "kickoff_at": "2026-06-28T22:00:00Z", "home": "MEX", "away": "KOR" }],
+        "myPredictions": { "m1": { "hg": 1, "ag": 0 } },
+        "myCaptains": [],
+        "official": [
+          { "userId": "u0", "username": "lider", "points": 7, "pos": 1 },
+          { "userId": "u1", "username": "ana", "points": 5, "pos": 2 }
+        ],
+        "teams": { "MEX": { "name": "México" }, "KOR": { "name": "Corea del Sur" } }
+      },
+      "expect": { "state": "reachable_rival", "reason": "reachable_rival", "matchId": "m1", "rivalUsername": "lider" }
+    },
+    {
+      "name": "win_matchday: sin rival cercano pero hay partido",
+      "snapshot": {
+        "now": 0,
+        "meId": "u1",
+        "matches": [{ "id": "m1", "stage": "group", "status": "scheduled", "kickoff_at": "2026-06-28T22:00:00Z", "home": "MEX", "away": "KOR" }],
+        "myPredictions": { "m1": { "hg": 1, "ag": 0 } },
+        "myCaptains": [],
+        "official": [{ "userId": "u1", "username": "ana", "points": 5, "pos": 1 }],
+        "teams": { "MEX": { "name": "México" }, "KOR": { "name": "Corea del Sur" } }
+      },
+      "expect": { "state": "win_matchday", "reason": "win_matchday", "matchId": "m1" }
+    },
+    {
+      "name": "fallback: sin partidos próximos",
+      "snapshot": {
+        "now": 0,
+        "meId": "u1",
+        "matches": [{ "id": "m1", "stage": "group", "status": "played", "kickoff_at": "2026-06-10T22:00:00Z", "home": "MEX", "away": "KOR" }],
+        "myPredictions": { "m1": { "hg": 1, "ag": 0 } },
+        "myCaptains": [],
+        "official": [{ "userId": "u1", "username": "ana", "points": 5, "pos": 1 }],
+        "teams": { "MEX": { "name": "México" }, "KOR": { "name": "Corea del Sur" } }
+      },
+      "expect": { "state": "fallback" }
+    }
+  ]
+}

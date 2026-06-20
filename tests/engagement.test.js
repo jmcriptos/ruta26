@@ -18,3 +18,18 @@ test("engagement: degrada seguro ante datos faltantes", () => {
   assert.strictEqual(eng.postMatchSummary({}), null);
   assert.strictEqual(eng.whatsappShare(null, {}), null);
 });
+
+/* ---------- Oportunidad pre-partido (Story 1.3) ---------- */
+const oppFixture = require("./fixtures/engagement/pre-match-opportunity.json");
+
+test("opportunity: prioridad determinística (fixture pre-match-opportunity)", () => {
+  oppFixture.cases.forEach(function (c) {
+    const vm = eng.opportunity(c.snapshot);
+    const e = c.expect;
+    assert.strictEqual(vm.state, e.state, c.name + " · state");
+    if (e.reason != null) assert.strictEqual(vm.reason, e.reason, c.name + " · reason");
+    if (e.matchId != null) assert.strictEqual(vm.match && vm.match.id, e.matchId, c.name + " · matchId");
+    if (e.actionLabel != null) assert.strictEqual(vm.primaryAction && vm.primaryAction.label, e.actionLabel, c.name + " · action");
+    if (e.rivalUsername != null) assert.strictEqual(vm.rival && vm.rival.username, e.rivalUsername, c.name + " · rival");
+  });
+});
