@@ -222,47 +222,86 @@ test("buildLiveLeaderboard: final en vivo reparte campeón provisional", () => {
   assert.strictEqual(beto.livePoints, 0);
 });
 
-/* ---------- capitán ---------- */
+/* ---------- capitán contracorriente (aditivo) ---------- */
 
-test("capitán: eliminatoria acertada se multiplica x3 (1 → 3)", () => {
-  const m = played("r16", 2, 1, "H");
-  const s = sc.scoreMatch({ hg: 1, ag: 0 }, m);
-  assert.strictEqual(sc.captainTotal(s, m), 3);
+test("capitán: octavos→final suma bono fijo +2", () => {
+  assert.strictEqual(sc.captainBonus(played("r16", 0, 0, "H"), 0.5), 2);
+  assert.strictEqual(sc.captainBonus(played("qf", 0, 0, "H"), 0.1), 2);
+  assert.strictEqual(sc.captainBonus(played("sf", 0, 0, "H"), 0.9), 2);
+  assert.strictEqual(sc.captainBonus(played("final", 0, 0, "H"), 0.5), 2);
+  assert.strictEqual(sc.captainBonus(played("third", 0, 0, "H"), 0.5), 2);
 });
 
-test("capitán: el bonus de penales NO se multiplica (base 1×3=3 + 1 = 4)", () => {
-  const m = played("r16", 1, 1, "H", { hp: 4, ap: 2 });
-  const s = sc.scoreMatch({ hg: 1, ag: 0, pens: true }, m);
-  assert.strictEqual(s.points, 2);
-  assert.strictEqual(sc.captainTotal(s, m), 4);
+test("capitán: r32 por escalón de rareza (pCorrect) y fronteras", () => {
+  const m = played("r32", 2, 1, "H");
+  assert.strictEqual(sc.captainBonus(m, 0.10), 4); // batacazo
+  assert.strictEqual(sc.captainBonus(m, 0.25), 3);
+  assert.strictEqual(sc.captainBonus(m, 0.50), 2);
+  assert.strictEqual(sc.captainBonus(m, 0.80), 1); // obvio
+  assert.strictEqual(sc.captainBonus(m, 0.20), 3); // <0.20→4, [0.20,0.35)→3
+  assert.strictEqual(sc.captainBonus(m, 0.35), 2);
+  assert.strictEqual(sc.captainBonus(m, 0.60), 1);
 });
 
-test("capitán: final exacto x3 (3 → 9) y solo-resultado x3 (1 → 3)", () => {
+test("capitán: grupos sin bono", () => {
+  assert.strictEqual(sc.captainBonus(played("group", 2, 1), 0.1), 0);
+});
+
+test("captainTotal: suma el bono al acierto (octavos +2; final exacto +2; r32 batacazo +4)", () => {
+  const m16 = played("r16", 2, 1, "H");
+  assert.strictEqual(sc.captainTotal(sc.scoreMatch({ hg: 1, ag: 0 }, m16), m16, 0.5), 3); // 1+2
   const mf = played("final", 2, 1, "H");
-  assert.strictEqual(sc.captainTotal(sc.scoreMatch({ hg: 2, ag: 1 }, mf), mf), 9);
-  assert.strictEqual(sc.captainTotal(sc.scoreMatch({ hg: 3, ag: 0 }, mf), mf), 3);
+  assert.strictEqual(sc.captainTotal(sc.scoreMatch({ hg: 2, ag: 1 }, mf), mf, 0.5), 5); // 3+2 exacto
+  const m32 = played("r32", 2, 1, "H");
+  assert.strictEqual(sc.captainTotal(sc.scoreMatch({ hg: 1, ag: 0 }, m32), m32, 0.10), 5); // 1+4
 });
 
-test("capitán: fallar no suma ni resta (0)", () => {
+test("captainTotal: el bono de penales se conserva y el del capitán se suma aparte", () => {
+  const m = played("r16", 1, 1, "H", { hp: 4, ap: 2 });
+  const s = sc.scoreMatch({ hg: 1, ag: 0, pens: true }, m); // 1 avance + 1 penales = 2
+  assert.strictEqual(s.points, 2);
+  assert.strictEqual(sc.captainTotal(s, m, 0.5), 4); // 2 + 2 fijo
+});
+
+test("captainTotal: fallar no suma ni resta (0)", () => {
   const m = played("qf", 0, 1, "A");
   const s = sc.scoreMatch({ hg: 1, ag: 0 }, m); // pred avanza local pero ganó visitante → falla
-  assert.strictEqual(sc.captainTotal(s, m), 0);
+  assert.strictEqual(sc.captainTotal(s, m, 0.1), 0);
 });
 
-test("capitán: en grupos no aplica (queda igual a la base)", () => {
+test("captainTotal: en grupos no aplica (queda igual a la base)", () => {
   const m = played("group", 2, 1);
   const s = sc.scoreMatch({ hg: 1, ag: 0 }, m);
-  assert.strictEqual(sc.captainTotal(s, m), 1);
+  assert.strictEqual(sc.captainTotal(s, m, 0.1), 1);
 });
 
-test("ranking: el capitán multiplica el partido elegido (1 → 3)", () => {
+test("ranking: capitán en octavos suma +2 al partido elegido (1 → 3)", () => {
   const profiles = [{ id: "u1", username: "ana" }];
   const matches = [played("r16", 2, 1, "H")]; // id "m1"
   const preds = [{ user_id: "u1", match_id: "m1", hg: 1, ag: 0, pens: false }];
-  const sinCap = sc.buildLeaderboard(profiles, preds, [], matches, []);
-  assert.strictEqual(sinCap[0].points, 1);
+  assert.strictEqual(sc.buildLeaderboard(profiles, preds, [], matches, [])[0].points, 1);
   const conCap = sc.buildLeaderboard(profiles, preds, [], matches, [{ user_id: "u1", match_id: "m1" }]);
   assert.strictEqual(conCap[0].points, 3);
+});
+
+test("ranking: capitán en r32 con batacazo suma +4 (pCorrect bajo)", () => {
+  // 6 jugadores predicen el mismo r32; solo u1 (capitán) acierta → pCorrect = 1/6 ≈ 0.17 → +4
+  const profiles = [1, 2, 3, 4, 5, 6].map(function (n) { return { id: "u" + n, username: "j" + n }; });
+  const matches = [played("r32", 2, 1, "H")]; // id "m1", avanza local (H)
+  const preds = [{ user_id: "u1", match_id: "m1", hg: 1, ag: 0 }]
+    .concat([2, 3, 4, 5, 6].map(function (n) { return { user_id: "u" + n, match_id: "m1", hg: 0, ag: 1 }; }));
+  const rows = sc.buildLeaderboard(profiles, preds, [], matches, [{ user_id: "u1", match_id: "m1" }]);
+  assert.strictEqual(rows.find(function (r) { return r.userId === "u1"; }).points, 5); // 1 + 4
+});
+
+test("ranking: capitán en r32 con favorito obvio suma +1 (pCorrect alto)", () => {
+  // 5 jugadores; 4 aciertan → pCorrect = 4/5 = 0.8 → +1
+  const profiles = [1, 2, 3, 4, 5].map(function (n) { return { id: "u" + n, username: "j" + n }; });
+  const matches = [played("r32", 2, 1, "H")];
+  const preds = [1, 2, 3, 4].map(function (n) { return { user_id: "u" + n, match_id: "m1", hg: 1, ag: 0 }; })
+    .concat([{ user_id: "u5", match_id: "m1", hg: 0, ag: 1 }]);
+  const rows = sc.buildLeaderboard(profiles, preds, [], matches, [{ user_id: "u1", match_id: "m1" }]);
+  assert.strictEqual(rows.find(function (r) { return r.userId === "u1"; }).points, 2); // 1 + 1
 });
 
 test("ranking: un capitán en grupos no cambia el acumulado", () => {
@@ -273,10 +312,10 @@ test("ranking: un capitán en grupos no cambia el acumulado", () => {
   assert.strictEqual(r[0].points, 1);
 });
 
-test("ranking en vivo: respeta el capitán", () => {
+test("ranking en vivo: respeta el bono del capitán", () => {
   const profiles = [{ id: "u1", username: "ana" }];
   const matches = [played("r16", 2, 1, "H")]; // id "m1"
   const preds = [{ user_id: "u1", match_id: "m1", hg: 1, ag: 0 }];
   const rows = sc.buildLiveLeaderboard(profiles, preds, [], matches, [{ user_id: "u1", match_id: "m1" }]);
-  assert.strictEqual(rows[0].points, 3);
+  assert.strictEqual(rows[0].points, 3); // 1 + 2
 });

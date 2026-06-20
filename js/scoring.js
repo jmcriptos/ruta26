@@ -9,16 +9,36 @@
   };
   const CHAMPION_LOCK = "2026-06-28T19:00:00Z";
 
-  const CAPTAIN_MULT = 3;
+  // Capitán contracorriente (aditivo). El capitán SUMA un bono a lo ganado en el
+  // partido, solo si acierta (puntos > 0); nunca resta. En dieciseisavos (r32) el
+  // bono premia ir contracorriente según qué tan acompañado estuvo el acierto
+  // (pCorrect = fracción de la liga que acertó el avance). De octavos en adelante
+  // (incl. 3er lugar) es un bono fijo. Grupos no se capitanean.
+  const CAPTAIN_FIXED_BONUS = 2;
+  // Escalones r32: pCorrect < maxP → bono. Ordenados del más raro al más común.
+  const CAPTAIN_R32_TIERS = [
+    { maxP: 0.20, bonus: 4 },
+    { maxP: 0.35, bonus: 3 },
+    { maxP: 0.60, bonus: 2 },
+    { maxP: Infinity, bonus: 1 }
+  ];
 
-  // Total de un partido capitaneado: multiplica SOLO la base (acertar quién
-  // avanza, o el marcador de la final). El bonus de penales (+1) se suma sin
-  // multiplicar. Grupos no se capitanean: si llega uno, devuelve la base sin tocar.
-  function captainTotal(s, match) {
+  // Bono aditivo del capitán para un partido (0 en grupos). pCorrect (0..1) solo
+  // se usa en r32; sin dato válido se asume el escalón más común.
+  function captainBonus(match, pCorrect) {
+    if (!match || match.stage === "group") return 0;
+    if (match.stage !== "r32") return CAPTAIN_FIXED_BONUS;
+    const p = (typeof pCorrect === "number" && pCorrect >= 0) ? pCorrect : 1;
+    for (let i = 0; i < CAPTAIN_R32_TIERS.length; i++) {
+      if (p < CAPTAIN_R32_TIERS[i].maxP) return CAPTAIN_R32_TIERS[i].bonus;
+    }
+    return 1;
+  }
+
+  // Total de un partido capitaneado: lo ganado + el bono (solo si acertó).
+  function captainTotal(s, match, pCorrect) {
     if (!s || s.points <= 0 || match.stage === "group") return s ? s.points : 0;
-    const base = match.stage === "final" ? s.points : POINTS.match;
-    const pensBonus = s.points - base;
-    return base * CAPTAIN_MULT + pensBonus;
+    return s.points + captainBonus(match, pCorrect);
   }
 
   function sign(n) { return n > 0 ? 1 : (n < 0 ? -1 : 0); }
@@ -61,6 +81,20 @@
     matches.forEach(function (m) { matchById[m.id] = m; });
     const captainSet = {};
     (captains || []).forEach(function (c) { captainSet[c.user_id + "|" + c.match_id] = true; });
+    // Tally del avance por partido: pCorrect = % de la liga que acertó quién avanzó
+    // (insumo del bono contracorriente del capitán en r32).
+    const tallyByMatch = {};
+    predictions.forEach(function (pr) {
+      const match = matchById[pr.match_id];
+      if (!match) return;
+      const t = tallyByMatch[pr.match_id] || (tallyByMatch[pr.match_id] = { total: 0, correct: 0 });
+      t.total++;
+      if (match.winner && (pr.hg > pr.ag ? match.home : match.away) === match.winner) t.correct++;
+    });
+    function pCorrectFor(matchId) {
+      const t = tallyByMatch[matchId];
+      return t && t.total > 0 ? t.correct / t.total : 1;
+    }
     const rowByUser = {};
     const rows = profiles.map(function (p) {
       const row = { userId: p.id, username: p.username, points: 0, exact: 0, outcome: 0, bonus: 0, predicted: 0, decided: 0 };
@@ -74,7 +108,7 @@
       row.predicted++;
       const s = scoreMatch({ hg: pr.hg, ag: pr.ag, pens: pr.pens }, match);
       const isCap = captainSet[pr.user_id + "|" + pr.match_id];
-      row.points += isCap ? captainTotal(s, match) : s.points;
+      row.points += isCap ? captainTotal(s, match, pCorrectFor(pr.match_id)) : s.points;
       if (s.kind === "exact") row.exact++;
       if (s.kind === "outcome") row.outcome++;
       // decided = picks de partidos ya resueltos (acierto o fallo); excluye pendientes/sin pick
@@ -129,7 +163,7 @@
     return rows;
   }
 
-  const scoring = { POINTS: POINTS, CAPTAIN_MULT: CAPTAIN_MULT, CHAMPION_LOCK: CHAMPION_LOCK, scoreMatch: scoreMatch, captainTotal: captainTotal, scoreChampion: scoreChampion, buildLeaderboard: buildLeaderboard, freezeLive: freezeLive, buildLiveLeaderboard: buildLiveLeaderboard };
+  const scoring = { POINTS: POINTS, CAPTAIN_FIXED_BONUS: CAPTAIN_FIXED_BONUS, CAPTAIN_R32_TIERS: CAPTAIN_R32_TIERS, CHAMPION_LOCK: CHAMPION_LOCK, scoreMatch: scoreMatch, captainBonus: captainBonus, captainTotal: captainTotal, scoreChampion: scoreChampion, buildLeaderboard: buildLeaderboard, freezeLive: freezeLive, buildLiveLeaderboard: buildLiveLeaderboard };
   root.WC = root.WC || {};
   root.WC.scoring = scoring;
   if (typeof module !== "undefined" && module.exports) module.exports = scoring;

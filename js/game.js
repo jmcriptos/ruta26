@@ -346,6 +346,17 @@
     const uid = session.user.id;
     return data.captains.some(function (c) { return c.user_id === uid && c.match_id === matchId; });
   }
+  // Bono del capitán para un partido resuelto: pCorrect = % de la liga que acertó
+  // el avance (de las predicciones cargadas), pasado a scoring.captainBonus.
+  function captainBonusFor(m) {
+    let total = 0, correct = 0;
+    data.predictions.forEach(function (pr) {
+      if (pr.match_id !== m.id) return;
+      total++;
+      if (m.winner && (pr.hg > pr.ag ? m.home : m.away) === m.winner) correct++;
+    });
+    return WC.scoring.captainBonus(m, total > 0 ? correct / total : 1);
+  }
 
   // Produce HTML (se interpola en innerHTML): todo string de equipo debe pasar por esc().
   function pickLabel(m, v) {
@@ -391,7 +402,8 @@
         : s.points > 0 ? '<span class="pts-chip win">+' + s.points + " " + (s.points === 1 ? "punto" : "puntos") + "</span>"
         : '<span class="pts-chip zero">0 puntos</span>';
       const wasCap = m.stage !== "group" && isCaptain(m.id);
-      const capTag = wasCap ? ' <span class="cap-tag">⭐ Capitán ×3</span>' : "";
+      const capBonus = wasCap && s.points > 0 ? captainBonusFor(m) : 0;
+      const capTag = wasCap ? ' <span class="cap-tag">⭐ Capitán' + (capBonus > 0 ? " +" + capBonus : "") + "</span>" : "";
       return '<div class="pick-card locked" data-match="' + m.id + '">' + head +
         '<div class="pick-foot"><small>Tu pick: ' + pickLabel(m, v) + " · Real: " + real + capTag + "</small>" + chip + "</div></div>";
     }
@@ -460,9 +472,10 @@
       "<tr><td>Final: marcador exacto</td><td>3 pts</td></tr>" +
       "<tr><td>Final: solo el resultado</td><td>1 pt</td></tr>" +
       "<tr><td>Campeón</td><td>15 pts</td></tr>" +
-      "<tr><td>⭐ Capitán de eliminatorias: tu partido del día vale ×3</td><td>×3 base</td></tr></table>" +
+      "<tr><td>⭐ Capitán en 16vos: mientras menos gente lo tenía, más suma</td><td>+1 a +4</td></tr>" +
+      "<tr><td>⭐ Capitán de octavos a la final</td><td>+2</td></tr></table>" +
       "<p>Cada partido cierra a su hora de inicio. El bonus de penales solo cuenta si además aciertas quién avanza. " +
-      "En la fase eliminatoria (desde los dieciseisavos) puedes marcar un partido por día como Capitán ⭐: sus puntos base valen ×3 (el +1 de penales no se multiplica). Solo suma, nunca resta. " +
+      "En la fase eliminatoria marcas un partido por día como Capitán ⭐ (solo suma si aciertas, nunca resta). En dieciseisavos premia la valentía: +1 si tu acierto lo tenía la mayoría, hasta +4 si casi nadie lo tenía. De octavos a la final, +2 fijo. " +
       "Los picks de los demás se revelan cuando el partido empieza. ¿Olvidaste tu contraseña? Escríbele a JM.</p></details>";
   }
 
