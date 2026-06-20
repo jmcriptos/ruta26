@@ -237,6 +237,7 @@
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker.addEventListener("message", function (event) {
       if (event.data && event.data.type === "open-quiniela") {
+        trackEvent("push_reminder_clicked", { reason: event.data.reason });
         // salto directo (sin smooth): el scroll animado durante la reanudación
         // de la app agrava la desincronización del viewport en iOS
         const sec = document.getElementById("quiniela");
@@ -280,6 +281,7 @@
       });
       const res = await savePushSubscription(sub);
       pushStatus = res.error ? "off" : "on";
+      if (pushStatus === "on") trackEvent("push_enabled", {});
     } catch (e) { pushStatus = "off"; }
     render();
   }
@@ -296,6 +298,7 @@
       }
     } catch (e) {}
     pushStatus = "off";
+    trackEvent("push_dismissed", {});
     render();
   }
 
@@ -320,6 +323,7 @@
     } else if (pushStatus === "denied") {
       inner = "<p>Las notificaciones están bloqueadas para este sitio. Actívalas en la configuración de tu navegador y recarga.</p>";
     } else {
+      trackEvent("push_prompt_seen", {});
       inner = "<p>Recibe un aviso con tiempo antes de cada partido si aún no pusiste tu predicción.</p>" +
         '<div class="game-actions"><button class="game-btn" id="pushOn">Activar avisos 🔔</button></div>';
     }

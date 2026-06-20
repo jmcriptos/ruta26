@@ -25,7 +25,7 @@ self.addEventListener("push", function (event) {
     icon: "favicon.png",
     badge: "favicon.png",
     lang: "es",
-    data: { url: safeNavigationUrl(n.navigate || n.url) }
+    data: { url: safeNavigationUrl(n.navigate || n.url), reason: (n.data && n.data.reason) || data.reason || n.reason || "" }
   }));
 });
 
@@ -37,7 +37,7 @@ self.addEventListener("notificationclick", function (event) {
       if ("focus" in list[i]) {
         // app ya abierta: avisarle a la página para que se desplace a la quiniela
         // (navigate() desde el SW no es confiable en iOS standalone)
-        list[i].postMessage({ type: "open-quiniela" });
+        list[i].postMessage({ type: "open-quiniela", reason: event.notification.data && event.notification.data.reason });
         return list[i].focus();
       }
     }
