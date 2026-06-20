@@ -12,9 +12,20 @@ create table if not exists public.engagement_events (
 alter table public.engagement_events enable row level security;
 create index if not exists engagement_events_ts_idx on public.engagement_events (ts);
 
--- RPC: valida el nombre del evento contra la allowlist y reusa la cuota diaria
--- por bucket de page_views como anti-abuso. Los campos llegan ya saneados desde
--- el cliente (solo enums cortos allowlisted); se guardan tal cual en jsonb.
+-- Cuota diaria PROPIA por bucket (no comparte la de page_views: los eventos del
+-- loop son mucho más frecuentes y agotarían el contador de visitas). Cap alto.
+create table if not exists public.engagement_event_daily_quota (
+  day date not null,
+  bucket smallint not null check (bucket between 0 and 15),
+  accepted integer not null check (accepted between 0 and 20000),
+  primary key (day, bucket)
+);
+alter table public.engagement_event_daily_quota enable row level security;
+revoke all on table public.engagement_event_daily_quota from public, anon, authenticated;
+
+-- RPC: valida nombre del evento contra la allowlist y el tamaño de p_fields
+-- (anti-abuso server-side, no solo cliente), con cuota diaria propia. Los campos
+-- llegan saneados desde el cliente (enums cortos allowlisted); se guardan en jsonb.
 create or replace function public.record_engagement_event(
   p_session_id text, p_event text, p_fields jsonb default '{}'::jsonb
 )
@@ -29,15 +40,19 @@ begin
       'locked_predictions_viewed', 'live_ranking_viewed', 'post_match_summary_viewed',
       'share_summary_clicked', 'whatsapp_copy_clicked',
       'push_prompt_seen', 'push_enabled', 'push_dismissed', 'push_reminder_clicked'
-    ) then
+    )
+    or (p_fields is not null and (
+      pg_column_size(p_fields) > 400
+      or (select count(*) from jsonb_object_keys(p_fields)) > 6
+    )) then
     return false;
   end if;
   v_bucket := (hashtextextended(p_session_id, 0) & 15)::smallint;
-  insert into public.page_view_daily_quota (day, bucket, accepted)
+  insert into public.engagement_event_daily_quota (day, bucket, accepted)
   values ((now() at time zone 'America/Curacao')::date, v_bucket, 1)
   on conflict (day, bucket) do update
-    set accepted = public.page_view_daily_quota.accepted + 1
-    where public.page_view_daily_quota.accepted < 2000
+    set accepted = public.engagement_event_daily_quota.accepted + 1
+    where public.engagement_event_daily_quota.accepted < 20000
   returning accepted into v_accepted;
   if v_accepted is null then return false; end if;
   insert into public.engagement_events (session_id, event, fields)

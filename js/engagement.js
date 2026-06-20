@@ -137,7 +137,8 @@
       const k = p.hg > p.ag ? "home" : (p.hg < p.ag ? "away" : "draw");
       buckets[k].push(p.username);
     });
-    const order = [["home", homeLabel], ["draw", "Empate"], ["away", awayLabel]];
+    // en eliminatoria no hay empate posible (la UI solo escribe avanza local/visitante)
+    const order = ko ? [["home", homeLabel], ["away", awayLabel]] : [["home", homeLabel], ["draw", "Empate"], ["away", awayLabel]];
     const groups = order
       .filter(function (o) { return buckets[o[0]].length; })
       .map(function (o) { return { outcome: o[0], label: o[1], count: buckets[o[0]].length, usernames: buckets[o[0]] }; });

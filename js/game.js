@@ -446,7 +446,7 @@
     const star = showStar
       ? '<button type="button" class="cap-star' + (starOn ? " on" : "") + '" data-captain="' + m.id + '"' +
         (v ? "" : " disabled") + ' aria-pressed="' + (starOn ? "true" : "false") +
-        '" title="Capitán del día: este partido vale ×3">⭐ Capitán' + (starOn ? " ✓" : "") + "</button>"
+        '" title="Capitán del día: suma puntos extra si aciertas (más si pocos lo tenían)">⭐ Capitán' + (starOn ? " ✓" : "") + "</button>"
       : "";
     const capMsg = (showStar && captainErr[m.id]) ? '<span class="cap-msg">' + esc(captainErr[m.id]) + "</span>" : "";
     return '<div class="pick-card" data-match="' + m.id + '" data-type="' + type + '">' + head +
