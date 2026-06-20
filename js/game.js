@@ -583,10 +583,25 @@
       return '<div class="lr-match"><span class="lr-score">' + teamFlag(m.home) + " " + score + " " + teamFlag(m.away) + "</span>" +
         (gainers.length ? gainers.join("") : '<span class="lr-none">nadie suma todavía</span>') + "</div>";
     }).join("");
+    // Story 1.7 — mensaje social (impacto personal o grupal) y pronósticos compactos
+    const snap = engagementSnapshot();
+    const tension = WC.engagement && snap ? WC.engagement.liveTension(snap) : null;
+    const socialLine = tension && tension.state !== "fallback" && tension.message
+      ? '<p class="lr-social">' + esc(tension.message) + "</p>" : "";
+    const groupsHtml = (WC.engagement && snap ? liveMs : []).map(function (m) {
+      const pg = WC.engagement.predictionGroups(snap, m.id);
+      if (!pg || pg.state !== "visible" || !pg.groups.length) return "";
+      const chips = pg.groups.map(function (g) {
+        return '<span class="pg-chip">' + esc(g.label) + " <b>" + g.count + "</b></span>";
+      }).join("");
+      return '<div class="pg-row"><span class="pg-vs">' + teamFlag(m.home) + " " + teamFlag(m.away) + "</span>" + chips + "</div>";
+    }).filter(Boolean).join("");
+    const groupsBlock = groupsHtml ? '<div class="pg-block"><h4>Cómo se reparte la quiniela</h4>' + groupsHtml + "</div>" : "";
     return '<div class="game-card live-rank" id="liveRank"><h3><span class="lr-dot"></span> Ranking en vivo</h3>' +
-      "<p>Así quedaría si los partidos terminan como van. Se actualiza solo; el oficial suma al final.</p>" +
+      socialLine +
+      '<p class="lr-note">Provisional: así quedaría si los partidos terminan como van. El oficial suma al final.</p>' +
       '<table class="rank-table"><tr><th>#</th><th></th><th></th><th>Jugador</th><th>Pts</th></tr>' + table + "</table>" +
-      '<div class="lr-detail">' + detail + "</div></div>";
+      '<div class="lr-detail">' + detail + "</div>" + groupsBlock + "</div>";
   }
 
   // FLIP: las filas del ranking en vivo se deslizan a su nueva posición tras cada re-render
