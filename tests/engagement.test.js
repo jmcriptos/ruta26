@@ -87,3 +87,15 @@ test("whatsappShare: hechos visibles + enlace, null sin resumen (fixture)", () =
     });
   });
 });
+
+test("opportunity: ignora partidos sin equipos definidos (r32 con cruce por definir)", () => {
+  const snapshot = {
+    now: 0, meId: "u1",
+    matches: [{ id: "r1", stage: "r32", status: "scheduled", kickoff_at: "2026-06-28T22:00:00Z", home: null, away: null }],
+    myPredictions: {}, myCaptains: [],
+    official: [{ userId: "u1", username: "ana", points: 5, pos: 1 }],
+    teams: {}
+  };
+  // sin partido nombrable ni rival cercano → fallback (no nudge "el partido")
+  assert.strictEqual(eng.opportunity(snapshot).state, "fallback");
+});

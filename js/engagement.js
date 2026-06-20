@@ -53,8 +53,11 @@
     const official = snapshot.official || [];
     const teams = snapshot.teams || {};
 
+    // Solo partidos accionables ahora: no jugados, futuros y con equipos definidos.
+    // Los partidos de eliminatoria con cruce por definir (r32 con home/away nulos)
+    // no son pronosticables ni nombrables, así que no generan una Oportunidad.
     const upcoming = matches
-      .filter(function (m) { return m.status !== "played" && kickoffMs(m) > now; })
+      .filter(function (m) { return m.status !== "played" && kickoffMs(m) > now && teams[m.home] && teams[m.away]; })
       .sort(function (a, b) { return kickoffMs(a) - kickoffMs(b) || String(a.id).localeCompare(String(b.id)); });
 
     function vm(state, match, rival, ctaKey, headlineKey, vars) {
