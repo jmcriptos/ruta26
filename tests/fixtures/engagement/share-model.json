@@ -1,0 +1,17 @@
+{
+  "description": "Story 1.5 — texto compartible (solo hechos visibles + copy allowlisted).",
+  "cases": [
+    {
+      "name": "con resumen: incluye posición, movimiento y enlace",
+      "summary": { "state": "moved", "movement": "passed_friend", "social": "Pasaste a lider" },
+      "snapshot": { "meId": "u1", "official": [{ "userId": "u1", "username": "ana", "pos": 1 }], "shareUrl": "https://jmcriptos.github.io/ruta26/#quiniela" },
+      "expectContains": ["Voy #1", "Pasaste a lider", "https://jmcriptos.github.io/ruta26/#quiniela"]
+    },
+    {
+      "name": "sin resumen → null",
+      "summary": null,
+      "snapshot": { "meId": "u1", "official": [] },
+      "expectNull": true
+    }
+  ]
+}

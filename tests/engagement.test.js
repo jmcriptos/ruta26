@@ -61,3 +61,29 @@ test("predictionGroups: agrupa visibles, empty si no (fixture)", () => {
     }
   });
 });
+
+/* ---------- resumen post-partido + share (Story 1.5) ---------- */
+const postFixture = require("./fixtures/engagement/post-match-summary.json");
+const shareFixture = require("./fixtures/engagement/share-model.json");
+
+test("postMatchSummary: movimiento social y null si nada relevante (fixture)", () => {
+  postFixture.cases.forEach(function (c) {
+    const vm = eng.postMatchSummary(c.snapshot, c.before, c.after);
+    if (c.expect.null) { assert.strictEqual(vm, null, c.name); return; }
+    assert.strictEqual(vm.state, c.expect.state, c.name + " · state");
+    assert.strictEqual(vm.movement, c.expect.movement, c.name + " · movement");
+    assert.strictEqual(vm.posDelta, c.expect.posDelta, c.name + " · posDelta");
+    if (c.expect.passedFirst) assert.strictEqual(vm.passed[0], c.expect.passedFirst, c.name + " · passed");
+    if (c.expect.passedByFirst) assert.strictEqual(vm.passedBy[0], c.expect.passedByFirst, c.name + " · passedBy");
+  });
+});
+
+test("whatsappShare: hechos visibles + enlace, null sin resumen (fixture)", () => {
+  shareFixture.cases.forEach(function (c) {
+    const text = eng.whatsappShare(c.summary, c.snapshot);
+    if (c.expectNull) { assert.strictEqual(text, null, c.name); return; }
+    c.expectContains.forEach(function (frag) {
+      assert.ok(text.indexOf(frag) >= 0, c.name + " · contiene «" + frag + "»");
+    });
+  });
+});

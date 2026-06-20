@@ -144,12 +144,43 @@
     return { state: "visible", matchId: matchId, groups: groups };
   }
 
+  // Story 1.5 — resumen post-partido. Movimiento social primero, puntos como apoyo.
   function postMatchSummary(snapshot, beforeRows, afterRows) {
-    return null;
+    if (!snapshot || !snapshot.meId || !beforeRows || !afterRows) return null;
+    const byBefore = {}, byAfter = {};
+    beforeRows.forEach(function (r) { byBefore[r.userId] = r; });
+    afterRows.forEach(function (r) { byAfter[r.userId] = r; });
+    const meB = byBefore[snapshot.meId], meA = byAfter[snapshot.meId];
+    if (!meB || !meA) return null;
+    const posDelta = meB.pos - meA.pos; // + = subió
+    const passed = [], passedBy = [];
+    afterRows.forEach(function (r) {
+      if (r.userId === snapshot.meId) return;
+      const b = byBefore[r.userId];
+      if (!b) return;
+      if (meB.pos > b.pos && meA.pos < r.pos) passed.push(r.username);       // yo pasé a r
+      if (meB.pos < b.pos && meA.pos > r.pos) passedBy.push(r.username);     // r me pasó
+    });
+    if (posDelta === 0 && !passed.length && !passedBy.length) return null;   // PD5: sin movimiento relevante
+    const ptsGain = (meA.points || 0) - (meB.points || 0);
+    let movement, social;
+    if (passed.length) { movement = "passed_friend"; social = fill(COPY.post_passed, { rival: passed[0] }); }
+    else if (passedBy.length) { movement = "passed_by_friend"; social = fill(COPY.post_passed_by, { rival: passedBy[0] }); }
+    else if (posDelta > 0) { movement = "up"; social = fill(COPY.post_up, { n: posDelta }); }
+    else { movement = "down"; social = fill(COPY.post_down, { n: Math.abs(posDelta) }); }
+    return {
+      state: "moved", movement: movement, social: social,
+      points: ptsGain > 0 ? fill(COPY.post_points, { pts: ptsGain }) : "",
+      posDelta: posDelta, passed: passed, passedBy: passedBy
+    };
   }
 
+  // Story 1.5 — texto compartible. Solo hechos visibles + copy allowlisted.
   function whatsappShare(summaryVm, snapshot) {
-    return null;
+    if (!summaryVm || !snapshot) return null;
+    const me = (snapshot.official || []).find(function (r) { return r.userId === snapshot.meId; });
+    const text = fill(COPY.share_text, { pos: me ? me.pos : "?", move: summaryVm.social || "" });
+    return snapshot.shareUrl ? text + " " + snapshot.shareUrl : text;
   }
 
   const engagement = {
