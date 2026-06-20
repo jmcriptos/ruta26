@@ -701,6 +701,33 @@
       (sub ? '<p class="opp-sub">' + esc(sub) + "</p>" : "") + "</div>" + cta + "</div>";
   }
 
+  // Story 1.8 — Resumen Post-Partido (bloque persistente, social primero).
+  // before = ranking neutralizando el último partido jugado; after = ranking actual.
+  function postMatchSummaryHtml() {
+    if (!session || !WC.engagement) return "";
+    const ms = matches();
+    const played = ms.filter(function (m) { return m.status === "played" && m.hs != null; });
+    if (!played.length) return "";
+    let last = played[0];
+    played.forEach(function (m) { if (new Date(m.date) > new Date(last.date)) last = m; });
+    const snap = engagementSnapshot();
+    if (!snap) return "";
+    const msBefore = ms.map(function (m) {
+      return m.id === last.id ? Object.assign({}, m, { status: "scheduled", hs: null, as: null, winner: null }) : m;
+    });
+    const before = WC.scoring.buildLeaderboard(data.profiles, data.predictions, data.picks, msBefore, data.captains);
+    const vm = WC.engagement.postMatchSummary(snap, before, snap.official);
+    if (!vm) return "";
+    const url = location.origin + location.pathname + "#quiniela";
+    const shareText = WC.engagement.whatsappShare(vm, Object.assign({}, snap, { shareUrl: url })) || "";
+    return '<div class="game-card pms-card">' +
+      '<span class="pms-eyebrow">Resumen del partido</span>' +
+      '<p class="pms-social">' + esc(vm.social) + "</p>" +
+      (vm.points ? '<p class="pms-points">' + esc(vm.points) + "</p>" : "") +
+      (shareText ? '<div class="game-actions" style="margin-top:12px"><button class="game-btn" id="pmsShare" data-share="' + esc(shareText) + '">Compartir</button></div>' : "") +
+      "</div>";
+  }
+
   function closeUserMenu() {
     const drop = document.getElementById("userDropdown");
     const chip = document.getElementById("userChip");
@@ -756,7 +783,7 @@
       return;
     }
     rootEl.innerHTML =
-      championHtml() + remindersHtml("top") + opportunityHtml() + liveRankingHtml() + rankingHtml() + predictionsHtml() + remindersHtml("bottom") + rulesHtml();
+      postMatchSummaryHtml() + championHtml() + remindersHtml("top") + opportunityHtml() + liveRankingHtml() + rankingHtml() + predictionsHtml() + remindersHtml("bottom") + rulesHtml();
     animateLiveRows(prevLiveRows);
     const strip = document.getElementById("gDates");
     const active = strip && strip.querySelector(".active");
@@ -840,6 +867,13 @@
         : "Juega la quiniela del Mundial 2026 ⚽";
       if (navigator.share) navigator.share({ title: "Quiniela Ruta 26", text: text, url: url }).catch(function () {});
       else if (navigator.clipboard) { navigator.clipboard.writeText(text + " " + url); event.target.textContent = "Enlace copiado ✓"; }
+      return;
+    }
+    if (event.target.id === "pmsShare") {
+      const text = event.target.dataset.share || "";
+      if (navigator.share) navigator.share({ title: "Quiniela Ruta 26", text: text }).catch(function () {});
+      else if (navigator.clipboard) navigator.clipboard.writeText(text).then(function () { event.target.textContent = "Texto copiado ✓"; }).catch(function () { window.prompt("Copia tu resumen:", text); });
+      else window.prompt("Copia tu resumen:", text);
       return;
     }
     if (event.target.id === "pushOn") { enablePush(); return; }

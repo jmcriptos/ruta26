@@ -753,6 +753,12 @@ html { scroll-padding-top: calc(84px + env(safe-area-inset-top)); }
 .pg-chip { font-size: 12px; padding: 3px 9px; border-radius: 999px; background: var(--paper); border: 1px solid var(--line); color: var(--ink); }
 .pg-chip b { font-weight: 800; }
 
+/* Resumen post-partido (engagement) */
+.pms-card { border-left: 4px solid var(--lime); }
+.pms-card .pms-eyebrow { font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.pms-card .pms-social { font-size: 18px; font-weight: 800; color: var(--ink); line-height: 1.2; margin: 6px 0 0; }
+.pms-card .pms-points { font-size: 13px; color: var(--muted); margin: 4px 0 0; }
+
 /* medallas y bandera del campeón en el ranking */
 .rank-table td.pos { font-size: 18px; text-align: center; width: 30px; }
 .rank-table td.pos .num { font: 800 16px "League Spartan", sans-serif; color: var(--muted); }
