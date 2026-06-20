@@ -66,17 +66,17 @@ function validSubscriptions(subs) {
 // el sistema pinta la notificación directo del JSON (sin depender de que el service
 // worker despierte a tiempo, que era lo que mostraba el placeholder "Notificación");
 // en Chrome/Android el push handler del sw lee el mismo JSON y la muestra él.
-function pushPayload(title, body) {
-  return JSON.stringify({
-    web_push: 8030,
-    notification: {
-      title: title,
-      body: body,
-      navigate: SITE + "#quiniela",
-      lang: "es",
-      silent: false // sonido estándar del sistema (iOS no permite sonidos personalizados en web push)
-    }
-  });
+function pushPayload(title, body, reason) {
+  const notification = {
+    title: title,
+    body: body,
+    navigate: SITE + "#quiniela",
+    lang: "es",
+    silent: false // sonido estándar del sistema (iOS no permite sonidos personalizados en web push)
+  };
+  // metadata allowlisted para atribución (push_reminder_clicked); el sw reenvía data.reason
+  if (reason) notification.data = { reason: reason };
+  return JSON.stringify({ web_push: 8030, notification: notification });
 }
 
 function snapshot() {
@@ -177,8 +177,11 @@ function snapshot() {
   const ids = soon.map(function (m) { return m.id; }).join(",");
   const preds = await rest("predictions?select=user_id,match_id,hg,ag&match_id=in.(" + ids + ")");
   const sent = await rest("push_sent?select=user_id,match_id&match_id=in.(" + ids + ")");
+  // capitanes (para la oportunidad "marca tu Capitán"); degrada si la tabla falta
+  const caps = await rest("captain_picks?select=user_id,match_id&match_id=in.(" + ids + ")").catch(function () { return []; });
   const tallies = pm.tallyByMatch(preds);
   const hasPred = new Set(preds.map(function (p) { return p.user_id + "|" + p.match_id; }));
+  const hasCaptain = new Set((caps || []).map(function (c) { return c.user_id + "|" + c.match_id; }));
   const wasSent = new Set(sent.map(function (s) { return s.user_id + "|" + s.match_id; }));
 
   // agrupar suscripciones por usuario; un push por usuario y por ventana
@@ -193,9 +196,14 @@ function snapshot() {
     const pending = soon.filter(function (m) { return !wasSent.has(uid + "|" + m.id); });
     if (!pending.length) continue;
     const missingPick = pending.some(function (m) { return !hasPred.has(uid + "|" + m.id); });
+    // Oportunidad más fuerte (PD3): pick pendiente > capitán disponible > info.
+    const captainOpp = pending.some(function (m) { return m.stage !== "group" && hasPred.has(uid + "|" + m.id) && !hasCaptain.has(uid + "|" + m.id); });
+    const reason = missingPick ? "pending_pick" : (captainOpp ? "captain" : "info");
     const msg = pm.buildPush(pending, snap.teams, tallies, missingPick);
-    const payload = pushPayload(msg.title, msg.body);
-    console.log((DRY ? "[dry-run] " : "") + uid.slice(0, 8) + "… ← " + msg.title + " | " + msg.body.replace(/\n/g, " ⏎ "));
+    let body = msg.body;
+    if (captainOpp && !missingPick) body += "\n⭐ Elige tu Capitán del día";
+    const payload = pushPayload(msg.title, body, reason);
+    console.log((DRY ? "[dry-run] " : "") + uid.slice(0, 8) + "… [" + reason + "] ← " + msg.title + " | " + body.replace(/\n/g, " ⏎ "));
     if (DRY) { avisados++; continue; }
 
     let delivered = 0;
