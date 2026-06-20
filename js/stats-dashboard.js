@@ -235,6 +235,27 @@
     };
   }
 
+  /* Engagement: deriva totales (fila day=null), sesiones por evento y serie diaria. */
+  function aggregateEngagement() {
+    var rows = (raw && raw.eng) || [];
+    var tot = {}, sess = {}, byDay = {};
+    rows.forEach(function (r) {
+      var ev = String(r.event || ""), n = Number(r.events) || 0, s = Number(r.sessions) || 0;
+      if (r.day == null) { tot[ev] = n; sess[ev] = s; }                  // total del rango
+      else { var d = String(r.day); byDay[d] = (byDay[d] || 0) + n; }    // por día (tendencia)
+    });
+    return { tot: tot, sess: sess, byDay: byDay, hasData: rows.length > 0 };
+  }
+
+  function engDaySeries() {
+    var byDay = aggregateEngagement().byDay, now = Date.now(), out = [];
+    for (var i = range - 1; i >= 0; i--) {
+      var k = dayKey(new Date(now - i * MS).toISOString());
+      out.push({ label: dayLabel(k), n: byDay[k] || 0 });
+    }
+    return out;
+  }
+
   /* ── SVG builders ─────────────────────────────────── */
   var ACCENT = "#68a7ff", SECOND = "#ff7c42";
 
