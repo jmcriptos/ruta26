@@ -40,12 +40,15 @@ jobs:
           echo "Respaldo $stamp" > backup/INFO.txt
 
           rest() {
-            # $1 = tabla
-            curl -fsS "$SUPABASE_URL/rest/v1/$1?select=*" \
+            # $1 = tabla. limit alto: sin él, PostgREST/Supabase corta en 1000 filas
+            # (el service key ve todo, pero igual aplica el tope por defecto).
+            curl -fsS "$SUPABASE_URL/rest/v1/$1?select=*&limit=1000000" \
               -H "apikey: $SERVICE_KEY" \
               -H "Authorization: Bearer $SERVICE_KEY" \
               -o "backup/$1.json"
-            echo "  $1: $(grep -o '"' "backup/$1.json" | wc -l) comillas (filas exportadas)"
+            # jq valida que sea un array JSON y cuenta filas reales (no comillas).
+            rows=$(jq 'if type=="array" then length else error("'"$1"' no es un array JSON") end' "backup/$1.json")
+            echo "  $1: $rows filas"
           }
 
           echo "Exportando tablas del juego…"
@@ -64,7 +67,7 @@ jobs:
           ls -la backup/
 
       - name: Subir artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: quiniela-backup
           path: backup/
