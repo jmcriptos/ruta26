@@ -23,7 +23,7 @@
     opportunity_cta_clicked: ["reason"],
     prediction_submitted: ["stage"],
     locked_predictions_viewed: [],
-    live_ranking_viewed: ["impact"],
+    live_ranking_viewed: ["has_personal_impact"],
     post_match_summary_viewed: ["movement"],
     share_summary_clicked: ["channel"],
     whatsapp_copy_clicked: [],
@@ -35,7 +35,9 @@
     const out = {};
     if (fields && typeof fields === "object") {
       allowed.forEach(function (k) {
-        if (fields[k] != null) out[k] = String(fields[k]).slice(0, 40);
+        if (fields[k] == null) return;
+        if (typeof fields[k] === "boolean" || typeof fields[k] === "number") out[k] = fields[k];
+        else out[k] = String(fields[k]).slice(0, 40);
       });
     }
     return { event: event, fields: out };

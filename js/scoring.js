@@ -41,6 +41,25 @@
     return s.points + captainBonus(match, pCorrect);
   }
 
+  function maxCaptainBonus(match) {
+    if (!match || match.stage === "group") return 0;
+    if (match.stage === "r32") return CAPTAIN_R32_TIERS.reduce(function (max, tier) {
+      return Math.max(max, tier.bonus);
+    }, 0);
+    return CAPTAIN_FIXED_BONUS;
+  }
+
+  // Potencial máximo de puntos para un partido, usado por engagement para saber
+  // si una meta cercana es realmente alcanzable sin duplicar reglas de scoring.
+  function maxMatchPoints(match, opts) {
+    if (!match) return 0;
+    let base;
+    if (match.stage === "final") base = POINTS.finalExact;
+    else if (match.stage === "group") base = POINTS.match;
+    else base = POINTS.match + POINTS.pens;
+    return base + (opts && opts.captain ? maxCaptainBonus(match) : 0);
+  }
+
   function sign(n) { return n > 0 ? 1 : (n < 0 ? -1 : 0); }
 
   // pred = {hg, ag, pens}. Codificación: grupos/final marcador real o canónico
@@ -163,7 +182,7 @@
     return rows;
   }
 
-  const scoring = { POINTS: POINTS, CAPTAIN_FIXED_BONUS: CAPTAIN_FIXED_BONUS, CAPTAIN_R32_TIERS: CAPTAIN_R32_TIERS, CHAMPION_LOCK: CHAMPION_LOCK, scoreMatch: scoreMatch, captainBonus: captainBonus, captainTotal: captainTotal, scoreChampion: scoreChampion, buildLeaderboard: buildLeaderboard, freezeLive: freezeLive, buildLiveLeaderboard: buildLiveLeaderboard };
+  const scoring = { POINTS: POINTS, CAPTAIN_FIXED_BONUS: CAPTAIN_FIXED_BONUS, CAPTAIN_R32_TIERS: CAPTAIN_R32_TIERS, CHAMPION_LOCK: CHAMPION_LOCK, scoreMatch: scoreMatch, captainBonus: captainBonus, captainTotal: captainTotal, maxCaptainBonus: maxCaptainBonus, maxMatchPoints: maxMatchPoints, scoreChampion: scoreChampion, buildLeaderboard: buildLeaderboard, freezeLive: freezeLive, buildLiveLeaderboard: buildLiveLeaderboard };
   root.WC = root.WC || {};
   root.WC.scoring = scoring;
   if (typeof module !== "undefined" && module.exports) module.exports = scoring;

@@ -137,3 +137,30 @@ test("buildOpportunityPush: rival y null para razón desconocida", () => {
   assert.ok(pm.buildOpportunityPush(opp).body.indexOf("lider") >= 0);
   assert.strictEqual(pm.buildOpportunityPush({ reason: "nada" }), null);
 });
+
+test("buildOpportunityPush: acepta match con homeName/awayName del contrato engagement", () => {
+  const opp = { reason: "pending_pick", match: { id: "m1", homeName: "México", awayName: "Corea", kickoffAt: "2026-06-28T22:00:00Z" } };
+  assert.ok(pm.buildOpportunityPush(opp).body.indexOf("México vs Corea") >= 0);
+});
+
+test("buildOpportunityCandidates: genera solo oportunidades accionables", () => {
+  const matches = [
+    Object.assign({}, M1, { status: "scheduled", stage: "group", date: "2026-06-28T22:00:00Z" }),
+    Object.assign({}, M2, { status: "scheduled", stage: "r16", date: "2026-06-28T23:00:00Z" }),
+    { id: "m3", status: "played", stage: "group", date: "2026-06-28T20:00:00Z", home: "43911", away: "43883" },
+    { id: "m4", status: "scheduled", stage: "r32", date: "2026-06-28T23:30:00Z", home: null, away: null }
+  ];
+  const cands = pm.buildOpportunityCandidates(
+    ["u1", "u2"],
+    matches,
+    [{ user_id: "u1", match_id: "m1" }, { user_id: "u1", match_id: "m2" }, { user_id: "u2", match_id: "m2" }],
+    [{ user_id: "u2", match_id: "m2" }],
+    TEAMS,
+    new Date("2026-06-28T18:00:00Z").getTime()
+  );
+  assert.deepStrictEqual(cands.map(function (c) { return c.userId + "|" + c.matchId + "|" + c.reason; }), [
+    "u1|m2|captain",
+    "u2|m1|pending_pick"
+  ]);
+  assert.ok(cands.every(function (c) { return c.opp && c.opp.match && c.opp.match.name !== "el partido"; }));
+});

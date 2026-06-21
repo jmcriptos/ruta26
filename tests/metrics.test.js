@@ -104,6 +104,17 @@ test("engagement: track postea al RPC validado con campos saneados", async () =>
   assert.deepStrictEqual(body.p_fields, { reason: "captain" });
 });
 
+test("engagement: live_ranking_viewed usa has_personal_impact booleano", async () => {
+  const r = await runMetrics();
+  const before = r.calls.length;
+  r.WC.metrics.track("live_ranking_viewed", { has_personal_impact: true, impact: "personal" });
+  const ev = r.calls.slice(before).find(function (c) { return /record_engagement_event/.test(c.url); });
+  assert.ok(ev, "debe postear live_ranking_viewed");
+  const body = JSON.parse(ev.init.body);
+  assert.strictEqual(body.p_event, "live_ranking_viewed");
+  assert.deepStrictEqual(body.p_fields, { has_personal_impact: true });
+});
+
 test("engagement: eventos de vista no se repiten en el mismo contexto", async () => {
   const r = await runMetrics();
   const before = r.calls.length;

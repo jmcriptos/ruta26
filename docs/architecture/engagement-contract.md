@@ -16,7 +16,9 @@ Rows crudos en `snake_case`; view models en `camelCase` (ver `data-contracts.md`
   meId,                      // userId autenticado (o null)
   official,                  // buildLeaderboard(...) → filas canónicas
   live,                      // buildLiveLeaderboard(...) → filas con livePoints/delta
+  liveStale,                 // boolean — true si datos live no cumplen PD4
   matches,                   // partidos (snake_case) con kickoff_at, stage, status, winner...
+  matchPotentials,           // { matchId: max points } desde scoring.maxMatchPoints(...)
   myPredictions,             // { match_id: {hg, ag, pens} } del jugador
   myCaptains,                // [{ user_id, match_id }] del jugador
   visiblePredictions,        // predicciones AJENAS ya visibles (post-kickoff); [] si no

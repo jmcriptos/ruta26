@@ -562,6 +562,14 @@
   function liveRankingHtml() {
     const liveMs = matches().filter(function (m) { return m.status === "live"; });
     if (!liveMs.length) return "";
+    const snap = engagementSnapshot();
+    if (snap && snap.liveStale) {
+      trackEvent("live_ranking_viewed", { has_personal_impact: false });
+      return '<div class="game-card live-rank" id="liveRank"><h3><span class="lr-dot"></span> Ranking en vivo</h3>' +
+        '<span class="es-label live">Datos en vivo</span>' +
+        '<h2 class="lr-social">Ranking en Vivo no disponible ahora</h2>' +
+        '<p class="lr-note">Los datos live no están frescos. El Ranking Oficial sigue visible abajo.</p></div>';
+    }
     const rows = WC.scoring.buildLiveLeaderboard(data.profiles, data.predictions, data.picks, matches(), data.captains);
     if (!rows.length) return "";
     const uid = session ? session.user.id : null;
@@ -579,7 +587,6 @@
     lastLivePoints = {};
     rows.forEach(function (r) { lastLivePoints[r.userId] = r.livePoints; });
     // Story 1.7 — bloque social (impacto personal/grupal) + tira de marcador en vivo
-    const snap = engagementSnapshot();
     const tension = WC.engagement && snap ? WC.engagement.liveTension(snap) : null;
     const headline = tension && tension.state !== "fallback" && tension.message ? tension.message : "";
     const scoreStrips = liveMs.map(function (m) {
@@ -596,7 +603,7 @@
       return '<div class="pg-row"><span class="pg-vs">' + teamFlag(m.home) + " " + teamFlag(m.away) + "</span>" + chips + "</div>";
     }).filter(Boolean).join("");
     const groupsBlock = groupsHtml ? '<div class="pg-block"><h4>Cómo se reparte la quiniela</h4>' + groupsHtml + "</div>" : "";
-    trackEvent("live_ranking_viewed", { impact: tension ? tension.state : "fallback" });
+    trackEvent("live_ranking_viewed", { has_personal_impact: !!(tension && tension.state === "personal") });
     if (groupsBlock) trackEvent("locked_predictions_viewed", {});
     return '<div class="game-card live-rank" id="liveRank"><h3><span class="lr-dot"></span> Ranking en vivo</h3>' +
       headBlock +
@@ -671,11 +678,19 @@
     const uid = session.user.id;
     const userById = {};
     data.profiles.forEach(function (p) { userById[p.id] = p.username; });
+    const matchPotentials = {};
+    ms.forEach(function (m) {
+      matchPotentials[m.id] = WC.scoring.maxMatchPoints(m, { captain: isCaptain(m.id) });
+    });
+    const liveDataStale = ms.some(function (m) { return m.status === "live"; }) &&
+      (!WC.state.updatedAt || WC.state.source !== "live" || (Date.now() - WC.state.updatedAt) > 5 * 60 * 1000);
     return {
       now: Date.now(),
       meId: uid,
       official: WC.scoring.buildLeaderboard(data.profiles, data.predictions, data.picks, ms, data.captains),
       live: WC.scoring.buildLiveLeaderboard(data.profiles, data.predictions, data.picks, ms, data.captains),
+      liveStale: liveDataStale,
+      matchPotentials: matchPotentials,
       matches: ms.map(function (m) {
         return { id: m.id, stage: m.stage, status: m.status, kickoff_at: m.date, home: m.home, away: m.away, winner: m.winner };
       }),
@@ -737,8 +752,11 @@
     played.forEach(function (m) { if (new Date(m.date) > new Date(last.date)) last = m; });
     const snap = engagementSnapshot();
     if (!snap) return "";
+    const lastDay = matchDay(last);
     const msBefore = ms.map(function (m) {
-      return m.id === last.id ? Object.assign({}, m, { status: "scheduled", hs: null, as: null, winner: null }) : m;
+      return m.status === "played" && m.hs != null && matchDay(m) === lastDay
+        ? Object.assign({}, m, { status: "scheduled", hs: null, as: null, hp: null, ap: null, winner: null })
+        : m;
     });
     const before = WC.scoring.buildLeaderboard(data.profiles, data.predictions, data.picks, msBefore, data.captains);
     const vm = WC.engagement.postMatchSummary(snap, before, snap.official);

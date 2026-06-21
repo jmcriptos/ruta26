@@ -143,8 +143,12 @@ test("postMatchSummary: expone subtítulo, rival y puntos para la tarjeta", () =
 test("opportunity: arma chips (gap, rival, capitán) desde datos", () => {
   const snapshot = {
     now: 0, meId: "u1",
-    matches: [{ id: "m1", stage: "group", status: "scheduled", kickoff_at: "2026-06-28T22:00:00Z", home: "t1", away: "t2" }],
-    myPredictions: { m1: { hg: 1, ag: 0 } }, myCaptains: [],
+    matches: [
+      { id: "m1", stage: "group", status: "scheduled", kickoff_at: "2026-06-28T22:00:00Z", home: "t1", away: "t2" },
+      { id: "m2", stage: "group", status: "scheduled", kickoff_at: "2026-06-28T23:00:00Z", home: "t1", away: "t2" }
+    ],
+    myPredictions: { m1: { hg: 1, ag: 0 }, m2: { hg: 1, ag: 0 } }, myCaptains: [],
+    matchPotentials: { m1: 1, m2: 1 },
     official: [{ userId: "u0", username: "lider", points: 7, pos: 1 }, { userId: "u1", username: "ana", points: 5, pos: 2 }],
     teams: { t1: { name: "Brasil", group: "A" }, t2: { name: "España", group: "B" } }
   };
@@ -152,4 +156,18 @@ test("opportunity: arma chips (gap, rival, capitán) desde datos", () => {
   assert.strictEqual(vm.state, "reachable_rival");
   assert.ok(Array.isArray(vm.chips) && vm.chips.length >= 2, "tiene chips");
   assert.ok(vm.chips.some(function (c) { return c.indexOf("lider") >= 0; }), "chip con rival");
+});
+
+test("opportunity: no promete pasar a un rival fuera del potencial de la jornada", () => {
+  const snapshot = {
+    now: 0, meId: "u1",
+    matches: [{ id: "m1", stage: "group", status: "scheduled", kickoff_at: "2026-06-28T22:00:00Z", home: "t1", away: "t2" }],
+    myPredictions: { m1: { hg: 1, ag: 0 } }, myCaptains: [],
+    matchPotentials: { m1: 1 },
+    official: [{ userId: "u0", username: "lider", points: 8, pos: 1 }, { userId: "u1", username: "ana", points: 5, pos: 2 }],
+    teams: { t1: { name: "Brasil" }, t2: { name: "España" } }
+  };
+  const vm = eng.opportunity(snapshot);
+  assert.notStrictEqual(vm.state, "reachable_rival");
+  assert.notStrictEqual(vm.copy && vm.copy.headline, "Hoy puedes pasar a lider");
 });

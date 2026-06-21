@@ -275,6 +275,15 @@ test("captainTotal: en grupos no aplica (queda igual a la base)", () => {
   assert.strictEqual(sc.captainTotal(s, m, 0.1), 1);
 });
 
+test("maxMatchPoints: expone potencial máximo por partido desde scoring", () => {
+  assert.strictEqual(sc.maxMatchPoints(played("group", 2, 1)), 1);
+  assert.strictEqual(sc.maxMatchPoints(played("r16", 1, 1, "H")), 2);
+  assert.strictEqual(sc.maxMatchPoints(played("final", 2, 1, "H")), 3);
+  assert.strictEqual(sc.maxMatchPoints(played("r16", 1, 1, "H"), { captain: true }), 4);
+  assert.strictEqual(sc.maxMatchPoints(played("r32", 1, 1, "H"), { captain: true }), 6);
+  assert.strictEqual(sc.maxMatchPoints(played("group", 2, 1), { captain: true }), 1);
+});
+
 test("ranking: capitán en octavos suma +2 al partido elegido (1 → 3)", () => {
   const profiles = [{ id: "u1", username: "ana" }];
   const matches = [played("r16", 2, 1, "H")]; // id "m1"

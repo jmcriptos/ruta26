@@ -42,13 +42,35 @@
     share_default: "Voy #{pos} en la quiniela del Mundial ⚽ ¿te le mides?"
   };
   const STAGE_LABEL = { group: "Grupos", r32: "Dieciseisavos", r16: "Octavos", qf: "Cuartos", sf: "Semis", final: "Final", third: "3er lugar" };
-  // Brecha (pts) considerada alcanzable/amenaza con los partidos del día. Afinable.
-  const REACHABLE_GAP = 3, THREAT_GAP = 3;
+  // Brecha (pts) considerada amenaza cercana. "Alcanzable" se valida contra
+  // snapshot.matchPotentials para no prometer movimientos imposibles.
+  const THREAT_GAP = 3;
 
   function fill(tpl, vars) {
     return String(tpl).replace(/\{(\w+)\}/g, function (_, k) { return vars && vars[k] != null ? String(vars[k]) : ""; });
   }
   function kickoffMs(m) { const t = m && m.kickoff_at ? new Date(m.kickoff_at).getTime() : NaN; return isFinite(t) ? t : Infinity; }
+  function dayKey(m) {
+    if (!m || !m.kickoff_at) return "";
+    try {
+      const p = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Curacao", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date(m.kickoff_at));
+      const g = function (t) { return (p.find(function (x) { return x.type === t; }) || {}).value || ""; };
+      return g("year") + "-" + g("month") + "-" + g("day");
+    } catch (e) {
+      return String(m.kickoff_at).slice(0, 10);
+    }
+  }
+  function matchPotential(snapshot, match) {
+    const potentials = snapshot && snapshot.matchPotentials;
+    const value = potentials && match ? Number(potentials[match.id]) : 0;
+    return isFinite(value) && value > 0 ? value : 0;
+  }
+  function dayPotential(snapshot, upcoming, match) {
+    const key = dayKey(match);
+    return (upcoming || []).reduce(function (sum, m) {
+      return dayKey(m) === key ? sum + matchPotential(snapshot, m) : sum;
+    }, 0);
+  }
   function teamName(teams, id) { const t = teams && id != null ? teams[id] : null; return t && t.name ? t.name : null; }
   function matchName(m, teams) {
     const h = teamName(teams, m.home), a = teamName(teams, m.away);
@@ -105,7 +127,8 @@
     const nextMatch = upcoming[0] || null;
     if (meIdx >= 0) {
       const me = official[meIdx], above = official[meIdx - 1], below = official[meIdx + 1];
-      if (above && (above.points - me.points) <= REACHABLE_GAP) {
+      const potential = nextMatch ? dayPotential(snapshot, upcoming, nextMatch) : 0;
+      if (above && (above.points - me.points) > 0 && (above.points - me.points) <= potential) {
         const gap = above.points - me.points;
         return vm("reachable_rival", nextMatch, { username: above.username, pos: above.pos, pointsGap: gap }, null, "opp_reachable_rival", { gap: gap, rival: above.username });
       }

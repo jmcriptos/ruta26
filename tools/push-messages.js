@@ -60,6 +60,12 @@ function matchLine(match, teams, tally) {
   return team ? vs + ": " + pct + "% con " + team.name : vs + ": aún sin picks";
 }
 
+function matchDisplayName(match, teams) {
+  const home = teamName(teams || {}, match && match.home);
+  const away = teamName(teams || {}, match && match.away);
+  return home && away ? home.name + " vs " + away.name : "el partido";
+}
+
 // push completo {title, body} para 1..n partidos simultáneos
 function buildPush(matches, teams, tallies, missingPick) {
   const hora = horaTxt(matches[0].date);
@@ -91,6 +97,37 @@ function blockHourKey(iso) {
   return g("year") + "-" + g("month") + "-" + g("day") + "T" + g("hour");
 }
 function matchDayKey(iso) { return blockHourKey(iso).slice(0, 10); }
+
+function buildOpportunityCandidates(userIds, matches, predictions, captains, teams, nowMs) {
+  const now = typeof nowMs === "number" ? nowMs : Date.now();
+  const hasPred = new Set((predictions || []).map(function (p) { return p.user_id + "|" + p.match_id; }));
+  const hasCaptain = new Set((captains || []).map(function (c) { return c.user_id + "|" + c.match_id; }));
+  const safeMatches = (matches || []).filter(function (m) {
+    return m && m.id && m.status === "scheduled" && m.home && m.away && new Date(m.date).getTime() > now;
+  });
+  const out = [];
+  (userIds || []).forEach(function (uid) {
+    safeMatches.forEach(function (m) {
+      const key = uid + "|" + m.id;
+      let reason = null;
+      if (!hasPred.has(key)) reason = "pending_pick";
+      else if (m.stage !== "group" && !hasCaptain.has(key)) reason = "captain";
+      if (!reason) return;
+      out.push({
+        userId: uid,
+        matchId: m.id,
+        reason: reason,
+        kickoffAt: m.date,
+        opp: {
+          reason: reason,
+          match: { id: m.id, name: matchDisplayName(m, teams), kickoffAt: m.date },
+          rival: null
+        }
+      });
+    });
+  });
+  return out;
+}
 
 // Aplica guardrails a candidatos de push de un proceso.
 // candidates: [{userId, matchId, reason, kickoffAt, suppressed?}]
@@ -140,7 +177,9 @@ const OPP_PUSH_COPY = {
 // Devuelve {title, body, data} con metadata allowlisted para atribución, o null.
 function buildOpportunityPush(opp, hora) {
   if (!opp || !OPP_PUSH_COPY[opp.reason]) return null;
-  const matchName = opp.match && opp.match.name ? opp.match.name : "el partido";
+  const matchName = opp.match && opp.match.name
+    ? opp.match.name
+    : (opp.match && opp.match.homeName && opp.match.awayName ? opp.match.homeName + " vs " + opp.match.awayName : "el partido");
   const body = OPP_PUSH_COPY[opp.reason]
     .replace("{match}", matchName)
     .replace("{gap}", opp.rival ? opp.rival.pointsGap : "")
@@ -156,5 +195,6 @@ module.exports = {
   tallyByMatch: tallyByMatch, matchSummary: matchSummary, matchLine: matchLine, buildPush: buildPush,
   horaTxt: horaTxt, MIN_PICKS: MIN_PICKS,
   REASON_PRIORITY: REASON_PRIORITY, blockHourKey: blockHourKey, matchDayKey: matchDayKey,
+  buildOpportunityCandidates: buildOpportunityCandidates,
   applyGuardrails: applyGuardrails, buildOpportunityPush: buildOpportunityPush
 };

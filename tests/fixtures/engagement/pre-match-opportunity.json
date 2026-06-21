@@ -32,14 +32,18 @@
       "snapshot": {
         "now": 0,
         "meId": "u1",
-        "matches": [{ "id": "m1", "stage": "group", "status": "scheduled", "kickoff_at": "2026-06-28T22:00:00Z", "home": "MEX", "away": "KOR" }],
-        "myPredictions": { "m1": { "hg": 1, "ag": 0 } },
+        "matches": [
+          { "id": "m1", "stage": "group", "status": "scheduled", "kickoff_at": "2026-06-28T22:00:00Z", "home": "MEX", "away": "KOR" },
+          { "id": "m2", "stage": "group", "status": "scheduled", "kickoff_at": "2026-06-28T23:00:00Z", "home": "USA", "away": "CAN" }
+        ],
+        "myPredictions": { "m1": { "hg": 1, "ag": 0 }, "m2": { "hg": 1, "ag": 0 } },
         "myCaptains": [],
+        "matchPotentials": { "m1": 1, "m2": 1 },
         "official": [
           { "userId": "u0", "username": "lider", "points": 7, "pos": 1 },
           { "userId": "u1", "username": "ana", "points": 5, "pos": 2 }
         ],
-        "teams": { "MEX": { "name": "México" }, "KOR": { "name": "Corea del Sur" } }
+        "teams": { "MEX": { "name": "México" }, "KOR": { "name": "Corea del Sur" }, "USA": { "name": "Estados Unidos" }, "CAN": { "name": "Canadá" } }
       },
       "expect": { "state": "reachable_rival", "reason": "reachable_rival", "matchId": "m1", "rivalUsername": "lider" }
     },
