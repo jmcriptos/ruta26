@@ -104,20 +104,16 @@ test("applyGuardrails: 1 por bloque horario, el de mayor prioridad", () => {
   assert.strictEqual(out[0].reason, "pending_pick"); // mayor prioridad gana el bloque
 });
 
-test("applyGuardrails: máximo 2 por jugador por día", () => {
-  const cands = [
-    { userId: "u1", matchId: "m1", reason: "pending_pick", kickoffAt: "2026-06-28T18:00:00Z" },
-    { userId: "u1", matchId: "m2", reason: "captain", kickoffAt: "2026-06-28T22:00:00Z" },
-    { userId: "u1", matchId: "m3", reason: "win_matchday", kickoffAt: "2026-06-29T02:00:00Z" }
-  ];
-  const out = pm.applyGuardrails(cands, {});
-  assert.strictEqual(out.length, 2); // el tercero se suprime por límite diario
+test("applyGuardrails: máximo 5 por jugador por día", () => {
+  const cands = [];
+  for (let i = 1; i <= 6; i++) cands.push({ userId: "u1", matchId: "m" + i, reason: "summary", kind: "summary", kickoffAt: "2026-06-2" + i + "T22:00:00Z" });
+  assert.strictEqual(pm.applyGuardrails(cands, {}).length, 5); // el sexto se suprime por límite diario
 });
 
 test("applyGuardrails: cuenta los ya enviados hoy contra el límite", () => {
   const cands = [{ userId: "u1", matchId: "m1", reason: "pending_pick", kickoffAt: "2026-06-28T22:00:00Z" }];
-  assert.strictEqual(pm.applyGuardrails(cands, { sentTodayCount: { u1: 2 } }).length, 0);
-  assert.strictEqual(pm.applyGuardrails(cands, { sentTodayCount: { u1: 1 } }).length, 1);
+  assert.strictEqual(pm.applyGuardrails(cands, { sentTodayCount: { u1: 5 } }).length, 0);
+  assert.strictEqual(pm.applyGuardrails(cands, { sentTodayCount: { u1: 4 } }).length, 1);
 });
 
 /* ---------- Epic 2: copy de Oportunidad (Story 2.2) ---------- */

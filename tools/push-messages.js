@@ -162,12 +162,12 @@ function buildSummaryCandidates(userIds, soon, hasPredSet) {
 // candidates: [{userId, matchId, reason, kickoffAt, suppressed?}]
 // opts: { alreadySent: Set("user|match|reason" enviados <24h), sentTodayCount: {userId:n} }
 // Reglas: descarta suprimidos y ya-enviados; 1 por bloque horario (mayor prioridad);
-// máximo 2 por jugador por día (contando los ya enviados hoy).
+// máximo 5 por jugador por día (contando los ya enviados hoy).
 function applyGuardrails(candidates, opts) {
   opts = opts || {};
   const alreadySent = opts.alreadySent || new Set();
   const sentToday = opts.sentTodayCount || {};
-  const DAILY_LIMIT = 2;
+  const DAILY_LIMIT = 5;
   const pri = function (r) { return REASON_PRIORITY[r] || 0; };
   const cands = (candidates || []).filter(function (c) {
     return c && !c.suppressed && !alreadySent.has(c.userId + "|" + c.matchId + "|" + (c.kind || "opportunity"));
