@@ -647,8 +647,7 @@
       const score = m.hs + " - " + m.as + (m.hp != null && m.ap != null ? " (" + m.hp + "-" + m.ap + ")" : "");
       return engMatchStrip(m.home, m.away, '<div class="es-score live">' + esc(score) + "</div>");
     }).join("");
-    const status = '<div class="es-status-row"><span class="es-status live">Provisional</span></div>';
-    const headBlock = status + '<h2 class="lr-social" aria-live="polite">' + esc(headline || "La tabla se mueve en vivo") + "</h2>" + scoreStrips;
+    const headBlock = '<h2 class="lr-social" aria-live="polite">' + esc(headline || "La tabla se mueve en vivo") + "</h2>" + scoreStrips;
     const groupsHtml = (WC.engagement && snap ? liveMs : []).map(function (m) {
       const pg = WC.engagement.predictionGroups(snap, m.id);
       if (!pg || pg.state !== "visible" || !pg.groups.length) return "";
