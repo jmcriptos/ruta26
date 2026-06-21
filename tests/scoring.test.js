@@ -355,3 +355,23 @@ test("fixture capitan-contract: tie-break de ranking por username", () => {
   const rows = sc.buildLeaderboard(t.profiles, t.predictions, [], t.matches, []);
   assert.deepStrictEqual(rows.map(function (r) { return r.username; }), t.expectOrderUsernames);
 });
+
+test("buildLeaderboard: empate de puntos se ordena por % de aciertos (pos/tier por puntos)", () => {
+  const matches = [
+    played("group", 2, 1, null, { id: "g1" }),  // gana local
+    played("group", 2, 1, null, { id: "g2" })   // gana local
+  ];
+  const profiles = [{ id: "u1", username: "zoe" }, { id: "u2", username: "ana" }];
+  const predictions = [
+    { user_id: "u1", match_id: "g1", hg: 1, ag: 0 },  // zoe: 1/1 = 100%, 1 pt
+    { user_id: "u2", match_id: "g1", hg: 1, ag: 0 },  // ana: acierta g1
+    { user_id: "u2", match_id: "g2", hg: 0, ag: 1 }   // ana: falla g2 → 1/2 = 50%, 1 pt
+  ];
+  const rows = sc.buildLeaderboard(profiles, predictions, [], matches);
+  // mismo puntaje (1), pero zoe tiene mayor % → va primero, AUNQUE "ana" < "zoe" por nombre
+  assert.strictEqual(rows[0].username, "zoe");
+  assert.strictEqual(rows[1].username, "ana");
+  // empate de puntos → misma posición y medalla (tier)
+  assert.strictEqual(rows[0].pos, rows[1].pos);
+  assert.strictEqual(rows[0].tier, rows[1].tier);
+});

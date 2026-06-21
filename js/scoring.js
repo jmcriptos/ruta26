@@ -140,8 +140,9 @@
       row.points += b;
       row.bonus = b;
     });
+    function accOf(r) { return r.decided > 0 ? (r.exact + r.outcome) / r.decided : -1; }
     rows.sort(function (x, y) {
-      return y.points - x.points || y.exact - x.exact || (x.username || "").localeCompare(y.username || "", "es");
+      return y.points - x.points || accOf(y) - accOf(x) || y.exact - x.exact || (x.username || "").localeCompare(y.username || "", "es");
     });
     // pos = posición con saltos por empate; tier = nivel de puntaje distinto
     // (1 = puntaje más alto, 2 = siguiente…). Las medallas usan tier (1-3).
