@@ -593,7 +593,7 @@
       const score = m.hs + " - " + m.as + (m.hp != null && m.ap != null ? " (" + m.hp + "-" + m.ap + ")" : "");
       return engMatchStrip(m.home, m.away, '<div class="es-score live">' + esc(score) + "</div>");
     }).join("");
-    const status = '<div class="es-status-row"><span class="es-label live">Ranking provisional</span><span class="es-status live">Provisional</span></div>';
+    const status = '<div class="es-status-row"><span class="es-status live">Provisional</span></div>';
     const headBlock = status + '<h2 class="lr-social" aria-live="polite">' + esc(headline || "La tabla se mueve en vivo") + "</h2>" + scoreStrips;
     const groupsHtml = (WC.engagement && snap ? liveMs : []).map(function (m) {
       const pg = WC.engagement.predictionGroups(snap, m.id);
@@ -681,9 +681,10 @@
     const ptsTh = '<th class="sortable' + (rankSort === "pts" ? " sort-active" : "") + '" data-rank-sort="pts">Pts' + arrow("pts") + "</th>";
     const tableHtml = rest.length === 0 ? "" :
       '<table class="rank-table"><tr><th>#</th><th></th><th>Jugador</th><th class="col-x">Exactos</th><th class="col-x">Resultados</th>' + accTh + '<th class="col-x">Bonus</th>' + ptsTh + "</tr>" +
-        rest.map(function (r) {
-          // Las medallas son solo del podio; en la lista (4º+) va el número de posición.
-          const medal = '<span class="num">' + r.pos + "</span>";
+        rest.map(function (r, i) {
+          // Las medallas son solo del podio; en la lista va un número CORRELATIVO
+          // (4, 5, 6, …), sin repetidos, continuando después del podio.
+          const medal = '<span class="num">' + (top3.length + i + 1) + "</span>";
           const acc = r.decided > 0 ? Math.round((r.exact + r.outcome) / r.decided * 100) + "%" : "—";
           return "<tr" + (r.userId === uid ? ' class="me"' : "") + '><td class="pos">' + medal + '</td><td class="flag">' + champFlagFor(r.userId) + "</td><td>" + esc(r.username) + '</td><td class="col-x">' +
             r.exact + '</td><td class="col-x">' + r.outcome + '</td><td class="col-acc">' + acc + '</td><td class="col-x">' + (r.bonus || 0) + '</td><td class="pts">' + r.points + "</td></tr>";
@@ -748,25 +749,6 @@
       '<div class="es-team"><span class="es-name">' + teamFlag(awayId) + " " + tn(awayId, "Visitante") + "</span>" + engGroupSmall(awayId) + "</div>" +
       "</div>";
   }
-  function engMatchdayStrip(dayMatches) {
-    const sample = dayMatches && dayMatches[0] ? dayMatches[0].date : null;
-    let label = "ULTIMA JORNADA";
-    if (sample) {
-      label = new Intl.DateTimeFormat("es", {
-        timeZone: "America/Curacao",
-        weekday: "short",
-        day: "numeric",
-        month: "short"
-      }).format(new Date(sample)).replace(/\./g, "").toUpperCase();
-    }
-    const count = dayMatches ? dayMatches.length : 0;
-    return '<div class="es-strip es-strip-day">' +
-      '<div class="es-team"><span class="es-name">Jornada</span><small>' + esc(label) + "</small></div>" +
-      '<div class="es-score">' + esc(count) + "</div>" +
-      '<div class="es-team"><span class="es-name">' + esc(count === 1 ? "Partido" : "Partidos") + '</span><small>resumen del día</small></div>' +
-      "</div>";
-  }
-
   // Story 1.6 — Bloque de Oportunidad (antes de Ranking y Pronósticos).
   function opportunityHtml() {
     if (!session || !WC.engagement) return "";
@@ -817,42 +799,31 @@
     trackEvent("post_match_summary_viewed", { movement: vm.movement, scope: vm.scope });
     const url = location.origin + location.pathname + "#quiniela";
     const shareText = WC.engagement.whatsappShare(vm, Object.assign({}, summarySnap, { shareUrl: url })) || "";
-    const score = last.hs + " - " + last.as + (last.hp != null && last.ap != null ? " (" + last.hp + "-" + last.ap + ")" : "");
-    const strip = summaryScope === "matchday"
-      ? engMatchdayStrip(playedInLastDay)
-      : engMatchStrip(last.home, last.away, '<div class="es-score">' + esc(score) + "</div>");
-    const evidenceBits = [];
-    if (vm.points) evidenceBits.push(vm.points);
-    evidenceBits.push("Total: " + vm.mePoints + " pts");
-    evidenceBits.push(vm.scope === "matchday" ? "Jornada completa" : "Último partido");
-    const evidenceClass = "pms-evidence" + (vm.points ? " has-gain" : "");
-    const evidence = '<div class="' + evidenceClass + '">' + evidenceBits.map(function (bit) {
-      return '<span>' + esc(bit) + "</span>";
-    }).join("") + "</div>";
-    const posTxt = vm.posDelta > 0 ? "+" + vm.posDelta : (vm.posDelta < 0 ? String(vm.posDelta) : "=");
-    const rivalText = vm.rival || "Sin rival cercano";
-    const rivalLabel = vm.rival ? "Rival" : "Meta";
-    const impact = '<div class="es-impact">' +
-      '<div class="es-cell"><strong>' + posTxt + "</strong><span>Puesto</span></div>" +
-      '<div class="es-cell"><strong>' + esc(vm.mePoints) + "</strong><span>Total</span></div>" +
-      '<div class="es-cell"><strong>' + esc(rivalText) + "</strong><span>" + esc(rivalLabel) + "</span></div>" +
-      "</div>";
+    // Resumen como NARRACIÓN (texto corrido), no una tarjeta de campos.
+    const me = (snap.official || []).find(function (r) { return r.userId === snap.meId; });
+    const teams = WC.state.teams || {};
+    const homeN = (teams[last.home] || {}).name, awayN = (teams[last.away] || {}).name;
+    const lead = vm.scope === "matchday"
+      ? "Cerró la jornada"
+      : (homeN && awayN ? "Terminó " + homeN + " " + last.hs + "-" + last.as + " " + awayN : "Terminó el partido");
+    let mid;
+    if (vm.movement === "passed_friend") mid = "y pasaste a " + vm.rival;
+    else if (vm.movement === "passed_by_friend") mid = "y " + vm.rival + " te pasó";
+    else if (vm.movement === "up") mid = "y subiste " + vm.posDelta + " puesto" + (vm.posDelta > 1 ? "s" : "");
+    else if (vm.movement === "down") mid = "y bajaste " + Math.abs(vm.posDelta) + " puesto" + (Math.abs(vm.posDelta) > 1 ? "s" : "");
+    else mid = vm.ptsGain > 0 ? "y sumaste " + vm.ptsGain + " pt" + (vm.ptsGain > 1 ? "s" : "") : "y te mantuviste firme";
+    const tail = me ? "; vas " + me.pos + "º con " + me.points + " pts." : ".";
+    const narration = lead + " " + mid + tail + (vm.subtitle ? " " + vm.subtitle : "");
     const buttons = shareText
       ? '<div class="es-buttons">' +
           '<button class="primary-btn" id="pmsShare" data-share="' + esc(shareText) + '">Compartir</button>' +
           '<button class="secondary-btn" id="pmsCopy" data-share="' + esc(shareText) + '">Copiar texto</button>' +
         "</div>" : "";
-    // El preview muestra EXACTAMENTE el mensaje que se comparte (sin la URL).
-    const bubbleText = WC.engagement.whatsappShare(vm, summarySnap) || (vm.social + (vm.subtitle ? " " + vm.subtitle : ""));
-    const bubble = '<div class="es-share"><h4>Texto para WhatsApp</h4><div class="es-bubble">' + esc(bubbleText) + "</div></div>";
-    return '<div class="game-card pms-card">' +
-      '<div class="pms-main">' +
-        '<span class="es-label">' + (vm.scope === "matchday" ? "Resumen de jornada" : "Resumen") + "</span>" +
-        '<h2 class="pms-social">' + esc(vm.social) + "</h2>" +
-        (vm.subtitle ? '<p class="pms-sub">' + esc(vm.subtitle) + "</p>" : "") +
-        evidence + strip + impact + buttons +
-      "</div>" + bubble +
-      "</div>";
+    return '<div class="game-card pms-card"><div class="pms-main">' +
+      '<span class="es-label">' + (vm.scope === "matchday" ? "Resumen de la jornada" : "Resumen del partido") + "</span>" +
+      '<p class="pms-narration">' + esc(narration) + "</p>" +
+      buttons +
+      "</div></div>";
   }
 
   function closeUserMenu() {

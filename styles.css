@@ -809,6 +809,7 @@ html { scroll-padding-top: calc(84px + env(safe-area-inset-top)); }
 .pms-main { padding: 20px 18px 18px; }
 .pms-card .pms-social { margin: 0 0 8px; font: 800 26px/1 "League Spartan"; text-transform: uppercase; color: var(--ink); line-height: 1; }
 .pms-card .pms-sub { margin: 0 0 16px; color: var(--muted); font-size: 14px; line-height: 1.4; }
+.pms-card .pms-narration { margin: 8px 0 16px; font-size: 15px; line-height: 1.55; color: var(--ink); }
 .pms-evidence { display: flex; flex-wrap: wrap; gap: 7px; margin: 0 0 14px; }
 .pms-evidence span { min-height: 30px; display: inline-flex; align-items: center; padding: 0 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--paper); color: var(--ink); font-size: 12px; font-weight: 800; overflow-wrap: anywhere; }
 .pms-evidence.has-gain span:first-child { background: var(--lime); border-color: var(--lime-deep); }
