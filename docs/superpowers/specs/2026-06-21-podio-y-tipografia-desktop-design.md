@@ -24,7 +24,14 @@ La función `rankingHtml()` (en `js/game.js`) hoy pinta una `<table class="rank-
 
 ### Reglas
 - **El podio siempre refleja los puntos** (la carrera por el título). El sort por % (`rankSort === "acc"`) **solo reordena la lista de abajo**, no el podio. El podio se arma siempre desde el orden por puntos (`rows`, no `view`).
-- **Empates:** el podio toma las 3 primeras filas del orden canónico (puntos, y **% como desempate** — ver Feature 3); cada escalón muestra su **medalla real por `tier`** (dos empatados en puntos en el 1º muestran ambos 🥇, aunque el de mayor % vaya en el escalón central). El escalón (centro/izq/der) es solo orden visual.
+- **Medallas por escalón (podio clásico, decisión de JM):** la medalla y el número
+  van por **posición del escalón** — centro=1º 🥇, izquierda=2º 🥈, derecha=3º 🥉 —
+  NO por nivel de puntaje. Las medallas **viven solo en el podio**; la lista (4º+)
+  muestra solo el número de posición (sin 🥇/🥈/🥉). Trade-off aceptado: dos
+  empatados en puntos en el 1º quedan oro/plata según el escalón (el de mayor % va al
+  centro = oro); el otro muestra plata aunque comparta el puntaje.
+- El podio toma las 3 primeras filas del orden canónico (puntos, y **% como
+  desempate** — ver Feature 3).
 - **"Yo":** si el usuario logueado está en el Top 3, su escalón se resalta (borde/anillo lima, clase `.pod-me`); si está en la lista, su fila se resalta como hoy (`tr.me`).
 - Se mantienen la bandera de campeón y el botón **"Compartir mi posición"** debajo.
 
