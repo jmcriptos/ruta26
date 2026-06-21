@@ -821,13 +821,22 @@
     const url = location.origin + location.pathname + "#quiniela";
     const ctaTarget = hasOpp && opp.primaryAction ? opp.primaryAction.targetMatchId : "";
     const ctaLabel = hasOpp ? "Pronosticar ahora" : "Revisar mis pronósticos";
-    const cta = '<button class="mj-btn mj-go opp-cta" data-opp-target="' + esc(ctaTarget) + '" data-opp-reason="' + esc((opp && opp.reason) || "mijornada") + '">' + ctaLabel + ' <span class="mj-arrow" aria-hidden="true">↗</span></button>';
+    const cta = '<button class="mj-btn mj-go opp-cta" data-opp-target="' + esc(ctaTarget) + '" data-opp-reason="' + esc((opp && opp.reason) || "mijornada") + '">' + ctaLabel + "</button>";
     const teaser = narration + " " + url;
     const waIcon = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M19.05 4.91A9.82 9.82 0 0 0 12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2 22l5.25-1.38a9.9 9.9 0 0 0 4.79 1.22h.01c5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.91-7.02Zm-7.01 15.24h-.01a8.23 8.23 0 0 1-4.19-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.2 8.2 0 0 1-1.26-4.38c0-4.54 3.7-8.24 8.25-8.24a8.2 8.2 0 0 1 5.82 2.42 8.18 8.18 0 0 1 2.41 5.83c0 4.54-3.7 8.23-8.24 8.23Zm4.52-6.16c-.25-.12-1.47-.72-1.69-.81-.23-.08-.39-.12-.56.13-.16.25-.64.81-.79.97-.14.17-.29.19-.54.06-.25-.12-1.05-.39-1.99-1.23-.74-.66-1.23-1.47-1.38-1.72-.14-.25-.01-.38.11-.51.11-.11.25-.29.37-.43.12-.14.16-.25.25-.41.08-.17.04-.31-.02-.43-.06-.12-.56-1.34-.76-1.84-.2-.48-.4-.42-.56-.43h-.47c-.17 0-.43.06-.66.31-.23.25-.86.85-.86 2.07 0 1.22.89 2.4 1.01 2.57.12.17 1.75 2.67 4.23 3.74.59.26 1.05.41 1.41.52.59.19 1.13.16 1.56.1.48-.07 1.47-.6 1.68-1.18.21-.58.21-1.07.14-1.18-.06-.1-.22-.16-.47-.28Z"/></svg>';
     const share = '<button class="mj-btn mj-share" id="pmsShare" data-share="' + esc(teaser) + '">' + waIcon + "Compartir</button>";
 
+    // Resaltar el nombre del rival mencionado (ya escapado) dentro de la narración.
+    let narrationHtml = esc(narration);
+    const rivalNames = [];
+    if (recap && recap.rival && (recap.movement === "passed_friend" || recap.movement === "passed_by_friend")) rivalNames.push(recap.rival);
+    if (hasOpp && opp.rival && opp.rival.username && (opp.state === "reachable_rival" || opp.state === "rival_threat")) rivalNames.push(opp.rival.username);
+    rivalNames.filter(function (n, i, a) { return a.indexOf(n) === i; }).forEach(function (n) {
+      const e = esc(n);
+      narrationHtml = narrationHtml.split(e).join('<span class="mj-rival">' + e + "</span>");
+    });
     return '<div class="game-card mijornada-card"><h3>Mi jornada ⚽</h3>' +
-      '<p class="mj-narration">' + esc(narration) + "</p>" +
+      '<p class="mj-narration">' + narrationHtml + "</p>" +
       '<div class="mj-actions">' + cta + share + "</div>" +
       "</div>";
   }

@@ -787,9 +787,9 @@ html { scroll-padding-top: calc(84px + env(safe-area-inset-top)); }
 .mj-btn:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
 .mj-go { background: var(--lime); border-color: var(--lime-deep); color: var(--ink); box-shadow: 0 8px 22px rgba(90, 122, 30, .16); }
 .mj-go:hover { background: var(--lime-deep); box-shadow: 0 12px 28px rgba(90, 122, 30, .24); }
-.mj-go .mj-arrow { font-size: 15px; line-height: 1; }
-.mj-share { background: #25d366; border-color: #1fb457; color: #08130d; box-shadow: 0 8px 22px rgba(31, 180, 87, .18); }
+.mj-share { background: #25d366; border-color: #1fb457; color: #fff; box-shadow: 0 8px 22px rgba(31, 180, 87, .18); }
 .mj-share:hover { background: #1fb457; box-shadow: 0 12px 28px rgba(31, 180, 87, .26); }
+.mj-narration .mj-rival { font-weight: 800; background: rgba(215, 255, 67, .6); border-radius: 4px; padding: 0 4px; }
 .mj-share svg { width: 16px; height: 16px; flex: none; }
 
 /* Bloque de Oportunidad: tarjeta oscura con barra lima superior */
