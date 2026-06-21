@@ -749,81 +749,86 @@
       '<div class="es-team"><span class="es-name">' + teamFlag(awayId) + " " + tn(awayId, "Visitante") + "</span>" + engGroupSmall(awayId) + "</div>" +
       "</div>";
   }
-  // Story 1.6 — Bloque de Oportunidad (antes de Ranking y Pronósticos).
-  function opportunityHtml() {
+  // "Mi jornada": fusiona el resumen (postMatchSummary) + la oportunidad en una sola
+  // narración, con empujón psicológico a volver y revisar pronósticos. Texto crudo en
+  // las cláusulas; se escapa UNA vez al renderizar (no escapar dentro de a/b/c).
+  function miJornadaHtml() {
     if (!session || !WC.engagement) return "";
-    const opp = WC.engagement.opportunity(engagementSnapshot());
-    if (!opp || opp.state === "fallback" || !opp.copy || !opp.copy.headline) return "";
-    trackEvent("opportunity_viewed", { state: opp.state, reason: opp.reason });
-    const m = opp.match;
-    const strip = m && m.home && m.away ? engMatchStrip(m.home, m.away, '<div class="es-vs">VS</div>') : "";
-    const chips = (opp.chips || []).map(function (c) { return '<span class="es-chip">' + esc(c) + "</span>"; }).join("");
-    const sub = m && m.stageLabel ? m.stageLabel : "";
-    const cta = opp.primaryAction && opp.primaryAction.targetMatchId
-      ? '<button class="primary-btn opp-cta" data-opp-target="' + esc(opp.primaryAction.targetMatchId) + '" data-opp-reason="' + esc(opp.reason) + '">' + esc(opp.primaryAction.label) + "</button>"
-      : "";
-    return '<div class="game-card opp-card opp-' + esc(opp.state) + '">' +
-      '<span class="es-label">Tu oportunidad</span>' +
-      '<h2 class="opp-headline">' + esc(opp.copy.headline) + "</h2>" +
-      (sub ? '<p class="opp-sub">' + esc(sub) + "</p>" : "") +
-      strip +
-      (chips ? '<div class="es-chips">' + chips + "</div>" : "") +
-      cta + "</div>";
-  }
-
-  // Story 1.8 — Resumen Post-Partido (bloque persistente, social primero).
-  // before = ranking neutralizando la última jornada terminada; after = ranking
-  // actual. Tarjeta estilo broadcast (mockup): titular + tira de marcador + grid
-  // de impacto + preview de WhatsApp. Aparece tras cada partido (incl. solo puntos).
-  function postMatchSummaryHtml() {
-    if (!session || !WC.engagement) return "";
-    const ms = matches();
-    const played = ms.filter(function (m) { return m.status === "played" && m.hs != null; });
-    if (!played.length) return "";
-    let last = played[0];
-    played.forEach(function (m) { if (new Date(m.date) > new Date(last.date)) last = m; });
     const snap = engagementSnapshot();
     if (!snap) return "";
-    const lastDay = matchDay(last);
-    const playedInLastDay = played.filter(function (m) { return matchDay(m) === lastDay; });
-    const summaryScope = playedInLastDay.length > 1 ? "matchday" : "match";
-    const summarySnap = Object.assign({}, snap, { summaryScope: summaryScope });
-    const msBefore = ms.map(function (m) {
-      return m.status === "played" && m.hs != null && matchDay(m) === lastDay
-        ? Object.assign({}, m, { status: "scheduled", hs: null, as: null, hp: null, ap: null, winner: null })
-        : m;
-    });
-    const before = WC.scoring.buildLeaderboard(data.profiles, data.predictions, data.picks, msBefore, data.captains);
-    const vm = WC.engagement.postMatchSummary(summarySnap, before, snap.official);
-    if (!vm) return "";
-    trackEvent("post_match_summary_viewed", { movement: vm.movement, scope: vm.scope });
-    const url = location.origin + location.pathname + "#quiniela";
-    const shareText = WC.engagement.whatsappShare(vm, Object.assign({}, summarySnap, { shareUrl: url })) || "";
-    // Resumen como NARRACIÓN (texto corrido), no una tarjeta de campos.
     const me = (snap.official || []).find(function (r) { return r.userId === snap.meId; });
     const teams = WC.state.teams || {};
-    const homeN = (teams[last.home] || {}).name, awayN = (teams[last.away] || {}).name;
-    const lead = vm.scope === "matchday"
-      ? "Cerró la jornada"
-      : (homeN && awayN ? "Terminó " + homeN + " " + last.hs + "-" + last.as + " " + awayN : "Terminó el partido");
-    let mid;
-    if (vm.movement === "passed_friend") mid = "y pasaste a " + vm.rival;
-    else if (vm.movement === "passed_by_friend") mid = "y " + vm.rival + " te pasó";
-    else if (vm.movement === "up") mid = "y subiste " + vm.posDelta + " puesto" + (vm.posDelta > 1 ? "s" : "");
-    else if (vm.movement === "down") mid = "y bajaste " + Math.abs(vm.posDelta) + " puesto" + (Math.abs(vm.posDelta) > 1 ? "s" : "");
-    else mid = vm.ptsGain > 0 ? "y sumaste " + vm.ptsGain + " pt" + (vm.ptsGain > 1 ? "s" : "") : "y te mantuviste firme";
-    const tail = me ? "; vas " + me.pos + "º con " + me.points + " pts." : ".";
-    const narration = lead + " " + mid + tail + (vm.subtitle ? " " + vm.subtitle : "");
-    const buttons = shareText
-      ? '<div class="es-buttons">' +
-          '<button class="primary-btn" id="pmsShare" data-share="' + esc(shareText) + '">Compartir</button>' +
-          '<button class="secondary-btn" id="pmsCopy" data-share="' + esc(shareText) + '">Copiar texto</button>' +
-        "</div>" : "";
-    return '<div class="game-card pms-card"><div class="pms-main">' +
-      '<span class="es-label">' + (vm.scope === "matchday" ? "Resumen de la jornada" : "Resumen del partido") + "</span>" +
-      '<p class="pms-narration">' + esc(narration) + "</p>" +
-      buttons +
-      "</div></div>";
+
+    // recap del último partido / jornada del día (puede quedar null)
+    const ms = matches();
+    const played = ms.filter(function (m) { return m.status === "played" && m.hs != null; });
+    let recap = null, last = null;
+    if (played.length) {
+      last = played[0];
+      played.forEach(function (m) { if (new Date(m.date) > new Date(last.date)) last = m; });
+      const lastDay = matchDay(last);
+      const inDay = played.filter(function (m) { return matchDay(m) === lastDay; });
+      const scope = inDay.length > 1 ? "matchday" : "match";
+      const msBefore = ms.map(function (m) {
+        return m.status === "played" && m.hs != null && matchDay(m) === lastDay
+          ? Object.assign({}, m, { status: "scheduled", hs: null, as: null, hp: null, ap: null, winner: null })
+          : m;
+      });
+      const before = WC.scoring.buildLeaderboard(data.profiles, data.predictions, data.picks, msBefore, data.captains);
+      recap = WC.engagement.postMatchSummary(Object.assign({}, snap, { summaryScope: scope }), before, snap.official);
+    }
+
+    const opp = WC.engagement.opportunity(snap);
+    const hasOpp = !!(opp && opp.state !== "fallback" && opp.copy && opp.copy.headline);
+
+    // cláusula A — recap o posición
+    let a = "";
+    if (recap) {
+      const homeN = (teams[last.home] || {}).name, awayN = (teams[last.away] || {}).name;
+      a = recap.scope === "matchday" ? "Cerró la jornada"
+        : (homeN && awayN ? "Terminó " + homeN + " " + last.hs + "-" + last.as + " " + awayN : "Terminó el partido");
+      if (recap.movement === "passed_friend") a += " y pasaste a " + recap.rival;
+      else if (recap.movement === "passed_by_friend") a += " y " + recap.rival + " te pasó";
+      else if (recap.movement === "up") a += " y subiste " + recap.posDelta + " puesto" + (recap.posDelta > 1 ? "s" : "");
+      else if (recap.movement === "down") a += " y bajaste " + Math.abs(recap.posDelta) + " puesto" + (Math.abs(recap.posDelta) > 1 ? "s" : "");
+      else if (recap.ptsGain > 0) a += " y sumaste " + recap.ptsGain + " pt" + (recap.ptsGain > 1 ? "s" : "");
+      a += me ? ("; vas " + me.pos + "º con " + me.points + " pts.") : ".";
+    } else if (me) {
+      a = "Vas " + me.pos + "º con " + me.points + " pts.";
+    }
+
+    // cláusula B — oportunidad
+    let b = "";
+    if (hasOpp) {
+      const mn = opp.match && opp.match.homeName && opp.match.awayName ? (opp.match.homeName + " vs " + opp.match.awayName) : "tu próximo partido";
+      const rival = (opp.rival && opp.rival.username) || "tu rival";
+      if (opp.state === "pending_pick") b = "Aún te falta tu pick de " + mn + " — el que no juega no puntúa.";
+      else if (opp.state === "captain") b = "Marca tu Capitán para " + mn + " y dale más filo a tu jugada.";
+      else if (opp.state === "reachable_rival") b = "Tienes a " + rival + " a tiro: un acierto y lo pasas.";
+      else if (opp.state === "rival_threat") b = "Ojo: " + rival + " te respira en la nuca.";
+      else if (opp.state === "win_matchday") b = "Hoy puedes ganar la jornada.";
+    }
+
+    // cláusula C — empujón a volver
+    const c = hasOpp ? "Vuelve y revisa tus pronósticos antes del kickoff." : (recap ? "Mañana hay revancha." : "");
+
+    const narration = [a, b, c].filter(Boolean).join(" ");
+    if (!narration) return "";
+
+    if (recap) trackEvent("post_match_summary_viewed", { movement: recap.movement, scope: recap.scope });
+    if (hasOpp) trackEvent("opportunity_viewed", { state: opp.state, reason: opp.reason });
+
+    const url = location.origin + location.pathname + "#quiniela";
+    const ctaTarget = hasOpp && opp.primaryAction ? opp.primaryAction.targetMatchId : "";
+    const ctaLabel = hasOpp ? "Pronosticar ahora" : "Revisar mis pronósticos";
+    const cta = '<button class="primary-btn opp-cta" data-opp-target="' + esc(ctaTarget) + '" data-opp-reason="' + esc((opp && opp.reason) || "mijornada") + '">' + ctaLabel + "</button>";
+    const teaser = (a ? a + " " : "") + url;
+    const share = '<button class="secondary-btn" id="pmsShare" data-share="' + esc(teaser) + '">Compartir</button>';
+
+    return '<div class="game-card mijornada-card"><h3>Mi jornada ⚽</h3>' +
+      '<p class="mj-narration">' + esc(narration) + "</p>" +
+      '<div class="es-buttons">' + cta + share + "</div>" +
+      "</div>";
   }
 
   function closeUserMenu() {
@@ -881,7 +886,7 @@
       return;
     }
     rootEl.innerHTML =
-      postMatchSummaryHtml() + championHtml() + remindersHtml("top") + opportunityHtml() + liveRankingHtml() + rankingHtml() + predictionsHtml() + remindersHtml("bottom") + rulesHtml();
+      miJornadaHtml() + championHtml() + remindersHtml("top") + liveRankingHtml() + rankingHtml() + predictionsHtml() + remindersHtml("bottom") + rulesHtml();
     animateLiveRows(prevLiveRows);
     const strip = document.getElementById("gDates");
     const active = strip && strip.querySelector(".active");
