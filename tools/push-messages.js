@@ -86,7 +86,7 @@ function buildPush(matches, teams, tallies, missingPick) {
 
 /* ---------- Story 2.1: guardrails de push (puro, testeable) ---------- */
 // Prioridad de "Oportunidad más fuerte" (PD3 / engagement-contract.md).
-const REASON_PRIORITY = { pending_pick: 5, captain: 4, reachable_rival: 3, rival_threat: 2, win_matchday: 1 };
+const REASON_PRIORITY = { summary: 6, pending_pick: 5, captain: 4, reachable_rival: 3, rival_threat: 2, win_matchday: 1 };
 
 // Bloque horario (PD1): hora local Curaçao del kickoff → "YYYY-MM-DDTHH".
 function blockHourKey(iso) {
@@ -129,6 +129,35 @@ function buildOpportunityCandidates(userIds, matches, predictions, captains, tea
   return out;
 }
 
+// Candidatos del push "summary" (% del más votado), por (usuario, bloque horario).
+// soon: partidos en ventana; hasPredSet: Set("user|match") con los picks existentes.
+// Devuelve { userId, matchId (representativo del bloque), reason:"summary", kind:"summary",
+//            kickoffAt, blockMatches, missingPick }.
+function buildSummaryCandidates(userIds, soon, hasPredSet) {
+  const blocks = {};
+  (soon || []).forEach(function (m) {
+    const k = blockHourKey(m.date);
+    (blocks[k] = blocks[k] || []).push(m);
+  });
+  const out = [];
+  (userIds || []).forEach(function (uid) {
+    Object.keys(blocks).forEach(function (k) {
+      const ms = blocks[k];
+      const missingPick = ms.some(function (m) { return !hasPredSet.has(uid + "|" + m.id); });
+      out.push({
+        userId: uid,
+        matchId: ms[0].id,
+        reason: "summary",
+        kind: "summary",
+        kickoffAt: ms[0].date,
+        blockMatches: ms,
+        missingPick: missingPick
+      });
+    });
+  });
+  return out;
+}
+
 // Aplica guardrails a candidatos de push de un proceso.
 // candidates: [{userId, matchId, reason, kickoffAt, suppressed?}]
 // opts: { alreadySent: Set("user|match|reason" enviados <24h), sentTodayCount: {userId:n} }
@@ -141,7 +170,7 @@ function applyGuardrails(candidates, opts) {
   const DAILY_LIMIT = 2;
   const pri = function (r) { return REASON_PRIORITY[r] || 0; };
   const cands = (candidates || []).filter(function (c) {
-    return c && !c.suppressed && !alreadySent.has(c.userId + "|" + c.matchId + "|" + c.reason);
+    return c && !c.suppressed && !alreadySent.has(c.userId + "|" + c.matchId + "|" + (c.kind || "opportunity"));
   });
   // 1 por (usuario, bloque horario): el de mayor prioridad (empate → kickoff más cercano)
   const byBlock = {};
@@ -196,5 +225,6 @@ module.exports = {
   horaTxt: horaTxt, MIN_PICKS: MIN_PICKS,
   REASON_PRIORITY: REASON_PRIORITY, blockHourKey: blockHourKey, matchDayKey: matchDayKey,
   buildOpportunityCandidates: buildOpportunityCandidates,
+  buildSummaryCandidates: buildSummaryCandidates,
   applyGuardrails: applyGuardrails, buildOpportunityPush: buildOpportunityPush
 };

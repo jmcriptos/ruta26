@@ -89,7 +89,7 @@ test("applyGuardrails: descarta opt-out/suprimidos y ya-enviados (match+reason)"
     { userId: "u1", matchId: "m2", reason: "captain", kickoffAt: "2026-06-29T22:00:00Z", suppressed: true },
     { userId: "u2", matchId: "m1", reason: "pending_pick", kickoffAt: "2026-06-28T22:00:00Z" }
   ];
-  const out = pm.applyGuardrails(cands, { alreadySent: new Set(["u2|m1|pending_pick"]) });
+  const out = pm.applyGuardrails(cands, { alreadySent: new Set(["u2|m1|opportunity"]) });
   const keys = out.map(function (c) { return c.userId + "|" + c.matchId; });
   assert.deepStrictEqual(keys, ["u1|m1"]); // u1/m2 suprimido, u2/m1 ya enviado
 });
@@ -169,4 +169,37 @@ test("horaTxt: mediodía y medianoche no se imprimen como 0", () => {
   assert.strictEqual(pm.horaTxt("2026-06-21T16:00:00Z"), "12:00 p. m."); // 16:00Z = mediodía Curaçao
   assert.strictEqual(pm.horaTxt("2026-06-21T04:00:00Z"), "12:00 a. m."); // 04:00Z = medianoche Curaçao
   assert.strictEqual(pm.horaTxt("2026-06-11T19:00:00Z"), "3:00 p. m.");  // sin cambios
+});
+
+test("buildSummaryCandidates: un candidato por usuario y bloque, con missingPick", () => {
+  const soon = [M1, M2]; // mismo bloque horario (19:00Z)
+  const hasPred = new Set(["u1|m1", "u1|m2"]); // u1 tiene ambos; u2 ninguno
+  const cands = pm.buildSummaryCandidates(["u1", "u2"], soon, hasPred);
+  assert.strictEqual(cands.length, 2); // 1 por usuario (un solo bloque)
+  const u1 = cands.find(function (c) { return c.userId === "u1"; });
+  const u2 = cands.find(function (c) { return c.userId === "u2"; });
+  assert.strictEqual(u1.reason, "summary");
+  assert.strictEqual(u1.kind, "summary");
+  assert.strictEqual(u1.missingPick, false);
+  assert.strictEqual(u2.missingPick, true);
+  assert.strictEqual(u1.blockMatches.length, 2);
+});
+
+test("applyGuardrails: summary gana el bloque sobre la oportunidad", () => {
+  const cands = [
+    { userId: "u1", matchId: "m1", reason: "rival_threat", kind: "opportunity", kickoffAt: "2026-06-28T22:00:00Z" },
+    { userId: "u1", matchId: "m1", reason: "summary", kind: "summary", kickoffAt: "2026-06-28T22:00:00Z" }
+  ];
+  const out = pm.applyGuardrails(cands, {});
+  assert.strictEqual(out.length, 1);
+  assert.strictEqual(out[0].kind, "summary");
+});
+
+test("applyGuardrails: dedupe por kind (summary y opportunity no se pisan)", () => {
+  const cands = [
+    { userId: "u1", matchId: "m1", reason: "summary", kind: "summary", kickoffAt: "2026-06-28T22:00:00Z" }
+  ];
+  assert.strictEqual(pm.applyGuardrails(cands, { alreadySent: new Set(["u1|m1|summary"]) }).length, 0);
+  const opp = [{ userId: "u1", matchId: "m1", reason: "rival_threat", kind: "opportunity", kickoffAt: "2026-06-29T22:00:00Z" }];
+  assert.strictEqual(pm.applyGuardrails(opp, { alreadySent: new Set(["u1|m1|summary"]) }).length, 1);
 });
