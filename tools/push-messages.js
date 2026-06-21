@@ -6,7 +6,7 @@ const MIN_PICKS = 3;
 
 // hora local de Curaçao, p. ej. "3:00 p. m."
 function horaTxt(iso) {
-  return new Intl.DateTimeFormat("es", { hour: "numeric", minute: "2-digit", hour12: true, timeZone: "America/Curacao" })
+  return new Intl.DateTimeFormat("es", { hour: "numeric", minute: "2-digit", hourCycle: "h12", timeZone: "America/Curacao" })
     .format(new Date(iso)).replace(/\s/g, " ");
 }
 

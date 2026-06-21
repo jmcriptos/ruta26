@@ -164,3 +164,9 @@ test("buildOpportunityCandidates: genera solo oportunidades accionables", () => 
   ]);
   assert.ok(cands.every(function (c) { return c.opp && c.opp.match && c.opp.match.name !== "el partido"; }));
 });
+
+test("horaTxt: mediodía y medianoche no se imprimen como 0", () => {
+  assert.strictEqual(pm.horaTxt("2026-06-21T16:00:00Z"), "12:00 p. m."); // 16:00Z = mediodía Curaçao
+  assert.strictEqual(pm.horaTxt("2026-06-21T04:00:00Z"), "12:00 a. m."); // 04:00Z = medianoche Curaçao
+  assert.strictEqual(pm.horaTxt("2026-06-11T19:00:00Z"), "3:00 p. m.");  // sin cambios
+});
