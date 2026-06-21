@@ -67,6 +67,11 @@ jobs:
           rest champion_picks "user_id"
           rest matches "id"
 
+          # DIAGNÓSTICO TEMPORAL (Max Rows): una sola petición sin paginar.
+          diag=$(curl -fsS "$SUPABASE_URL/rest/v1/predictions?select=user_id&limit=5000" \
+            -H "apikey: $SERVICE_KEY" -H "Authorization: Bearer $SERVICE_KEY" | jq 'length')
+          echo "Diagnóstico Max Rows → predictions en 1 request: $diag (si >1000, el tope ya está elevado)"
+
           echo "Exportando usuarios de Auth (admin API)…"
           curl -fsS "$SUPABASE_URL/auth/v1/admin/users?per_page=1000" \
             -H "apikey: $SERVICE_KEY" \
