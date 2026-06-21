@@ -17,6 +17,7 @@ Rows crudos en `snake_case`; view models en `camelCase` (ver `data-contracts.md`
   official,                  // buildLeaderboard(...) → filas canónicas
   live,                      // buildLiveLeaderboard(...) → filas con livePoints/delta
   liveStale,                 // boolean — true si datos live no cumplen PD4
+  summaryScope,              // "match"|"matchday" opcional para copy post-partido
   matches,                   // partidos (snake_case) con kickoff_at, stage, status, winner...
   matchPotentials,           // { matchId: max points } desde scoring.maxMatchPoints(...)
   myPredictions,             // { match_id: {hg, ag, pens} } del jugador
@@ -96,6 +97,7 @@ menor diferencia de puntos → `match_id` estable.
 {
   state: "moved"|"fallback",
   movement: "up"|"down"|"passed_friend"|"passed_by_friend"|"none",
+  scope: "match"|"matchday",              // origen del delta resumido
   social,                              // titular social primero
   subtitle,                            // línea de apoyo (tono según movimiento)
   points,                              // "+{pts}" como apoyo; vacío si social ya lo dice
@@ -109,7 +111,8 @@ menor diferencia de puntos → `match_id` estable.
   pasa, o **gana puntos** (aunque no cambie de posición). Solo si no hay nada de eso
   (0 puntos y 0 movimiento) → `null` (sin ruido artificial).
 - Ganó puntos sin cambiar de puesto → `movement:"none"`, `social` = línea de puntos
-  (`post_points`); en ese caso `points` va vacío para no repetir.
+  (`post_points` o `post_points_day` si `summaryScope:"matchday"`); en ese caso
+  `points` va vacío para no repetir.
 - Si bajó → tono de revancha / Meta Cercana (nunca culpa).
 - El caller (`game.js`) calcula `beforeRows` neutralizando **todos los partidos
   terminados de la última jornada** (día calendario en Curazao), no solo el último,
@@ -152,6 +155,7 @@ hechos visibles (nombres ya escapados al render).
 | `post_passed` | pasó a alguien | `Pasaste a {rival}` |
 | `post_passed_by` | lo pasaron | `{rival} te pasó` |
 | `post_points` | puntos (apoyo) | `+{pts} pts en este partido` |
+| `post_points_day` | puntos de jornada (apoyo) | `+{pts} pts en esta jornada` |
 | `post_sub_up` | subtítulo subió/pasó | `El grupo ya tiene tema.` |
 | `post_sub_down` | subtítulo bajó/lo pasaron | `Mañana hay revancha.` |
 | `post_sub_points` | subtítulo solo puntos | `Sigues sumando. La tabla aún no se mueve.` |

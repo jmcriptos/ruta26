@@ -24,7 +24,7 @@
     prediction_submitted: ["stage"],
     locked_predictions_viewed: [],
     live_ranking_viewed: ["has_personal_impact"],
-    post_match_summary_viewed: ["movement"],
+    post_match_summary_viewed: ["movement", "scope"],
     share_summary_clicked: ["channel"],
     whatsapp_copy_clicked: [],
     push_prompt_seen: [], push_enabled: [], push_dismissed: [], push_reminder_clicked: ["reason"]

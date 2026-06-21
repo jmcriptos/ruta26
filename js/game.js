@@ -716,6 +716,24 @@
       '<div class="es-team"><span class="es-name">' + teamFlag(awayId) + " " + tn(awayId, "Visitante") + "</span>" + engGroupSmall(awayId) + "</div>" +
       "</div>";
   }
+  function engMatchdayStrip(dayMatches) {
+    const sample = dayMatches && dayMatches[0] ? dayMatches[0].date : null;
+    let label = "ULTIMA JORNADA";
+    if (sample) {
+      label = new Intl.DateTimeFormat("es", {
+        timeZone: "America/Curacao",
+        weekday: "short",
+        day: "numeric",
+        month: "short"
+      }).format(new Date(sample)).replace(/\./g, "").toUpperCase();
+    }
+    const count = dayMatches ? dayMatches.length : 0;
+    return '<div class="es-strip es-strip-day">' +
+      '<div class="es-team"><span class="es-name">Jornada</span><small>' + esc(label) + "</small></div>" +
+      '<div class="es-score">' + esc(count) + "</div>" +
+      '<div class="es-team"><span class="es-name">' + esc(count === 1 ? "Partido" : "Partidos") + '</span><small>resumen del día</small></div>' +
+      "</div>";
+  }
 
   // Story 1.6 — Bloque de Oportunidad (antes de Ranking y Pronósticos).
   function opportunityHtml() {
@@ -740,7 +758,7 @@
   }
 
   // Story 1.8 — Resumen Post-Partido (bloque persistente, social primero).
-  // before = ranking neutralizando el último partido terminado; after = ranking
+  // before = ranking neutralizando la última jornada terminada; after = ranking
   // actual. Tarjeta estilo broadcast (mockup): titular + tira de marcador + grid
   // de impacto + preview de WhatsApp. Aparece tras cada partido (incl. solo puntos).
   function postMatchSummaryHtml() {
@@ -753,19 +771,24 @@
     const snap = engagementSnapshot();
     if (!snap) return "";
     const lastDay = matchDay(last);
+    const playedInLastDay = played.filter(function (m) { return matchDay(m) === lastDay; });
+    const summaryScope = playedInLastDay.length > 1 ? "matchday" : "match";
+    const summarySnap = Object.assign({}, snap, { summaryScope: summaryScope });
     const msBefore = ms.map(function (m) {
       return m.status === "played" && m.hs != null && matchDay(m) === lastDay
         ? Object.assign({}, m, { status: "scheduled", hs: null, as: null, hp: null, ap: null, winner: null })
         : m;
     });
     const before = WC.scoring.buildLeaderboard(data.profiles, data.predictions, data.picks, msBefore, data.captains);
-    const vm = WC.engagement.postMatchSummary(snap, before, snap.official);
+    const vm = WC.engagement.postMatchSummary(summarySnap, before, snap.official);
     if (!vm) return "";
-    trackEvent("post_match_summary_viewed", { movement: vm.movement });
+    trackEvent("post_match_summary_viewed", { movement: vm.movement, scope: vm.scope });
     const url = location.origin + location.pathname + "#quiniela";
-    const shareText = WC.engagement.whatsappShare(vm, Object.assign({}, snap, { shareUrl: url })) || "";
+    const shareText = WC.engagement.whatsappShare(vm, Object.assign({}, summarySnap, { shareUrl: url })) || "";
     const score = last.hs + " - " + last.as + (last.hp != null && last.ap != null ? " (" + last.hp + "-" + last.ap + ")" : "");
-    const strip = engMatchStrip(last.home, last.away, '<div class="es-score">' + esc(score) + "</div>");
+    const strip = summaryScope === "matchday"
+      ? engMatchdayStrip(playedInLastDay)
+      : engMatchStrip(last.home, last.away, '<div class="es-score">' + esc(score) + "</div>");
     const posTxt = vm.posDelta > 0 ? "+" + vm.posDelta : (vm.posDelta < 0 ? String(vm.posDelta) : "=");
     const impact = '<div class="es-impact">' +
       '<div class="es-cell"><strong>' + posTxt + "</strong><span>Puesto</span></div>" +
@@ -778,11 +801,11 @@
           '<button class="secondary-btn" id="pmsCopy" data-share="' + esc(shareText) + '">Copiar texto</button>' +
         "</div>" : "";
     // El preview muestra EXACTAMENTE el mensaje que se comparte (sin la URL).
-    const bubbleText = WC.engagement.whatsappShare(vm, snap) || (vm.social + (vm.subtitle ? " " + vm.subtitle : ""));
+    const bubbleText = WC.engagement.whatsappShare(vm, summarySnap) || (vm.social + (vm.subtitle ? " " + vm.subtitle : ""));
     const bubble = '<div class="es-share"><h4>Texto para WhatsApp</h4><div class="es-bubble">' + esc(bubbleText) + "</div></div>";
     return '<div class="game-card pms-card">' +
       '<div class="pms-main">' +
-        '<span class="es-label">Resumen</span>' +
+        '<span class="es-label">' + (vm.scope === "matchday" ? "Resumen de jornada" : "Resumen") + "</span>" +
         '<h2 class="pms-social">' + esc(vm.social) + "</h2>" +
         (vm.subtitle ? '<p class="pms-sub">' + esc(vm.subtitle) + "</p>" : "") +
         strip + impact + buttons +

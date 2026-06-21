@@ -104,6 +104,14 @@ test("engagement: track postea al RPC validado con campos saneados", async () =>
   assert.deepStrictEqual(body.p_fields, { reason: "captain" });
 });
 
+test("engagement: post_match_summary_viewed permite movement y scope", async () => {
+  const { WC } = await runMetrics();
+  assert.deepStrictEqual(
+    JSON.parse(JSON.stringify(WC.metrics.sanitizeEvent("post_match_summary_viewed", { movement: "none", scope: "matchday", text: "no" }))),
+    { event: "post_match_summary_viewed", fields: { movement: "none", scope: "matchday" } }
+  );
+});
+
 test("engagement: live_ranking_viewed usa has_personal_impact booleano", async () => {
   const r = await runMetrics();
   const before = r.calls.length;

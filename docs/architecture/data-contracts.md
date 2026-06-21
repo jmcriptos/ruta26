@@ -32,7 +32,7 @@ completa ni objeto crudo). Campos permitidos: identificadores no personales y en
 | `prediction_submitted` | se guarda un pronóstico | `stage` |
 | `locked_predictions_viewed` | se ven pronósticos compactos | — |
 | `live_ranking_viewed` | se ve el ranking en vivo | `has_personal_impact` (bool) |
-| `post_match_summary_viewed` | se ve el resumen post-partido | `movement` (enum) |
+| `post_match_summary_viewed` | se ve el resumen post-partido | `movement`, `scope` (enum) |
 | `share_summary_clicked` | clic en compartir | `channel` (enum: native/copy) |
 | `whatsapp_copy_clicked` | fallback de copiado | — |
 | `push_prompt_seen` | se muestra el prompt de permiso | — |
