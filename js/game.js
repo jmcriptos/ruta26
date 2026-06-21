@@ -49,6 +49,60 @@
     return pk ? teamFlag(pk.team_id) : "🛡️";
   }
 
+  function downloadBlob(blob, filename) {
+    var a = document.createElement("a");
+    var u = URL.createObjectURL(blob);
+    a.href = u; a.download = filename;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(u); }, 1000);
+  }
+
+  // Compartir "Mi jornada": genera la imagen del podio y la comparte (móvil) o la
+  // descarga + copia el texto (desktop). Cae a solo-texto si algo falla.
+  function shareMiJornada(btn) {
+    var text = btn.dataset.share || "";
+    var origHTML = btn.innerHTML;
+
+    function shareTextOnly() {
+      if (navigator.share) { navigator.share({ title: "Quiniela Ruta 26", text: text }).catch(function () {}); trackEvent("share_summary_clicked", { channel: "native" }); }
+      else if (navigator.clipboard) { navigator.clipboard.writeText(text).then(function () { btn.textContent = "Texto copiado ✓"; }).catch(function () { window.prompt("Copia tu resumen:", text); }); trackEvent("whatsapp_copy_clicked", {}); }
+      else { window.prompt("Copia tu resumen:", text); trackEvent("whatsapp_copy_clicked", {}); }
+    }
+    function restore() { setTimeout(function () { btn.innerHTML = origHTML; btn.disabled = false; }, 2200); }
+
+    if (!WC.shareCard) { shareTextOnly(); return; }
+
+    btn.disabled = true; btn.innerHTML = "Generando…";
+    var rows = WC.scoring.buildLeaderboard(data.profiles, data.predictions, data.picks, matches(), data.captains);
+    var top3 = rows.slice(0, 3).map(function (r) {
+      return { username: r.username, points: r.points, flag: champFlagFor(r.userId) };
+    });
+    var snap = (typeof engagementSnapshot === "function") ? engagementSnapshot() : null;
+    var meId = snap ? snap.meId : null;
+    var meRow = meId ? rows.find(function (r) { return r.userId === meId; }) : null;
+    var me = meRow ? { pos: meRow.pos, points: meRow.points } : null;
+    var url = location.origin + location.pathname + "#quiniela";
+
+    WC.shareCard.podiumBlob({ top3: top3, me: me, teams: WC.state.teams || {}, url: url })
+      .then(function (blob) {
+        var file = new File([blob], "ruta26-podio.png", { type: "image/png" });
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          return navigator.share({ files: [file], text: text }).then(function () {
+            trackEvent("share_summary_clicked", { channel: "image" });
+          });
+        }
+        downloadBlob(blob, "ruta26-podio.png");
+        if (navigator.clipboard) navigator.clipboard.writeText(text).catch(function () {});
+        btn.innerHTML = "Imagen descargada ✓";
+        trackEvent("share_summary_clicked", { channel: "download" });
+      })
+      .catch(function (err) {
+        if (err && err.name === "AbortError") return; // el usuario canceló la hoja → no hacer nada
+        shareTextOnly();                               // error real → solo texto
+      })
+      .finally(restore);
+  }
+
   /* ---------- auth ---------- */
   async function signUp(username, password) {
     username = username.trim().toLowerCase();
@@ -986,11 +1040,9 @@
       else if (navigator.clipboard) { navigator.clipboard.writeText(text + " " + url); event.target.textContent = "Enlace copiado ✓"; }
       return;
     }
-    if (event.target.id === "pmsShare") {
-      const text = event.target.dataset.share || "";
-      if (navigator.share) { navigator.share({ title: "Quiniela Ruta 26", text: text }).catch(function () {}); trackEvent("share_summary_clicked", { channel: "native" }); }
-      else if (navigator.clipboard) { navigator.clipboard.writeText(text).then(function () { event.target.textContent = "Texto copiado ✓"; }).catch(function () { window.prompt("Copia tu resumen:", text); }); trackEvent("whatsapp_copy_clicked", {}); }
-      else { window.prompt("Copia tu resumen:", text); trackEvent("whatsapp_copy_clicked", {}); }
+    var pmsBtn = event.target.closest ? event.target.closest("#pmsShare") : (event.target.id === "pmsShare" ? event.target : null);
+    if (pmsBtn) {
+      shareMiJornada(pmsBtn);
       return;
     }
     if (event.target.id === "pmsCopy") {
