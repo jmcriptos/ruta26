@@ -39,23 +39,33 @@ jobs:
           stamp=$(date -u +%Y-%m-%dT%H-%M-%SZ)
           echo "Respaldo $stamp" > backup/INFO.txt
 
+          # $1 = tabla, $2 = columnas de orden (paginación estable). El proyecto tiene
+          # "Max Rows = 1000" como tope duro del servidor: ningún limit lo supera, así
+          # que paginamos en páginas de 1000 con offset hasta traer la tabla completa.
           rest() {
-            # $1 = tabla. limit alto: sin él, PostgREST/Supabase corta en 1000 filas
-            # (el service key ve todo, pero igual aplica el tope por defecto).
-            curl -fsS "$SUPABASE_URL/rest/v1/$1?select=*&limit=1000000" \
-              -H "apikey: $SERVICE_KEY" \
-              -H "Authorization: Bearer $SERVICE_KEY" \
-              -o "backup/$1.json"
-            # jq valida que sea un array JSON y cuenta filas reales (no comillas).
-            rows=$(jq 'if type=="array" then length else error("'"$1"' no es un array JSON") end' "backup/$1.json")
-            echo "  $1: $rows filas"
+            table="$1"; order="$2"; page=1000; offset=0; total=0
+            : > "backup/$table.ndjson"
+            while : ; do
+              curl -fsS "$SUPABASE_URL/rest/v1/$table?select=*&order=$order&limit=$page&offset=$offset" \
+                -H "apikey: $SERVICE_KEY" \
+                -H "Authorization: Bearer $SERVICE_KEY" \
+                -o "backup/page.json"
+              n=$(jq 'if type=="array" then length else error("'"$table"' no es un array JSON") end' "backup/page.json")
+              jq -c '.[]' "backup/page.json" >> "backup/$table.ndjson"
+              total=$((total + n))
+              [ "$n" -lt "$page" ] && break
+              offset=$((offset + page))
+            done
+            jq -s '.' "backup/$table.ndjson" > "backup/$table.json"
+            rm -f "backup/$table.ndjson" "backup/page.json"
+            echo "  $table: $total filas"
           }
 
           echo "Exportando tablas del juego…"
-          rest profiles
-          rest predictions
-          rest champion_picks
-          rest matches
+          rest profiles "id"
+          rest predictions "user_id,match_id"
+          rest champion_picks "user_id"
+          rest matches "id"
 
           echo "Exportando usuarios de Auth (admin API)…"
           curl -fsS "$SUPABASE_URL/auth/v1/admin/users?per_page=1000" \
