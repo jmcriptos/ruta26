@@ -778,6 +778,8 @@ html { scroll-padding-top: calc(84px + env(safe-area-inset-top)); }
 .primary-btn { border: 0; background: var(--lime); color: var(--ink); }
 .primary-btn:hover { background: var(--lime-deep); }
 .secondary-btn { border: 1px solid #c6c8bd; background: transparent; color: var(--ink); }
+.secondary-btn.share-wa { background: #25d366; border-color: #25d366; color: #08130d; }
+.secondary-btn.share-wa:hover { background: #1fb457; border-color: #1fb457; }
 
 /* Bloque de Oportunidad: tarjeta oscura con barra lima superior */
 .opp-card { position: relative; overflow: hidden; background: var(--ink-soft); color: var(--white); border-color: rgba(255,255,255,.08); }

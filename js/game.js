@@ -822,8 +822,8 @@
     const ctaTarget = hasOpp && opp.primaryAction ? opp.primaryAction.targetMatchId : "";
     const ctaLabel = hasOpp ? "Pronosticar ahora" : "Revisar mis pronósticos";
     const cta = '<button class="primary-btn opp-cta" data-opp-target="' + esc(ctaTarget) + '" data-opp-reason="' + esc((opp && opp.reason) || "mijornada") + '">' + ctaLabel + "</button>";
-    const teaser = (a ? a + " " : "") + url;
-    const share = '<button class="secondary-btn" id="pmsShare" data-share="' + esc(teaser) + '">Compartir</button>';
+    const teaser = narration + " " + url;
+    const share = '<button class="secondary-btn share-wa" id="pmsShare" data-share="' + esc(teaser) + '">Compartir</button>';
 
     return '<div class="game-card mijornada-card"><h3>Mi jornada ⚽</h3>' +
       '<p class="mj-narration">' + esc(narration) + "</p>" +
