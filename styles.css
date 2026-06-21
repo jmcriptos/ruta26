@@ -1024,3 +1024,15 @@ footer { color: var(--white); }
 .push-mini .game-btn { flex: 0 0 auto; padding: 8px 22px; font-size: 12px; min-height: 40px; }
 .push-cta .game-actions { justify-content: flex-start; }
 .push-cta .game-btn { flex: 0 1 320px; padding: 0 32px; }
+
+/* ===== Tipografía de desktop (no afecta móvil/tablet ≤980px) ===== */
+@media (min-width: 981px) {
+  .gt-head > span { font-size: 12px; }
+  .gt-row > span { font-size: 14px; }
+  .gt-team em { font-size: 14px; }
+  .rank-table { font-size: 15px; }
+  .rank-table th { font-size: 12px; }
+  .rank-table td.num { font-size: 17px; }
+  .pod-name, .pod-pts { font-size: 13px; }
+  .game-card > p, .rank-empty, .lr-note { font-size: 14px; }
+}
