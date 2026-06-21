@@ -642,18 +642,21 @@
 
   // Podio del Top 3 (centro #1, izquierda #2, derecha #3). Pura presentación de
   // filas de buildLeaderboard. Empates: cada uno muestra su medalla real por tier.
+  // Podio clásico: medalla y número por ESCALÓN (1º/2º/3º), no por nivel de puntaje.
+  // Las medallas viven solo aquí; la lista de abajo muestra solo el número de posición.
   function podiumHtml(top3, uid) {
     if (!top3.length) return "";
+    const MEDAL = { first: "🥇", second: "🥈", third: "🥉" };
+    const RANK = { first: 1, second: 2, third: 3 };
     const step = function (r, cls) {
       if (!r) return "";
-      const medal = r.tier === 1 ? "🥇" : r.tier === 2 ? "🥈" : r.tier === 3 ? "🥉" : "";
       const me = r.userId === uid ? " pod-me" : "";
       return '<div class="pod-step ' + cls + me + '">' +
-        '<div class="pod-medal">' + medal + "</div>" +
+        '<div class="pod-medal">' + MEDAL[cls] + "</div>" +
         '<div class="pod-flag">' + champFlagFor(r.userId) + "</div>" +
         '<div class="pod-name">' + esc(r.username) + "</div>" +
         '<div class="pod-pts">' + r.points + " pts</div>" +
-        '<div class="pod-block">' + r.pos + "</div>" +
+        '<div class="pod-block">' + RANK[cls] + "</div>" +
         "</div>";
     };
     return '<div class="podium">' + step(top3[1], "second") + step(top3[0], "first") + step(top3[2], "third") + "</div>";
@@ -679,7 +682,8 @@
     const tableHtml = rest.length === 0 ? "" :
       '<table class="rank-table"><tr><th>#</th><th></th><th>Jugador</th><th class="col-x">Exactos</th><th class="col-x">Resultados</th>' + accTh + '<th class="col-x">Bonus</th>' + ptsTh + "</tr>" +
         rest.map(function (r) {
-          const medal = r.tier === 1 ? "🥇" : r.tier === 2 ? "🥈" : r.tier === 3 ? "🥉" : '<span class="num">' + r.pos + "</span>";
+          // Las medallas son solo del podio; en la lista (4º+) va el número de posición.
+          const medal = '<span class="num">' + r.pos + "</span>";
           const acc = r.decided > 0 ? Math.round((r.exact + r.outcome) / r.decided * 100) + "%" : "—";
           return "<tr" + (r.userId === uid ? ' class="me"' : "") + '><td class="pos">' + medal + '</td><td class="flag">' + champFlagFor(r.userId) + "</td><td>" + esc(r.username) + '</td><td class="col-x">' +
             r.exact + '</td><td class="col-x">' + r.outcome + '</td><td class="col-acc">' + acc + '</td><td class="col-x">' + (r.bonus || 0) + '</td><td class="pts">' + r.points + "</td></tr>";
