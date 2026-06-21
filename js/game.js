@@ -566,17 +566,17 @@
     if (snap && snap.liveStale) {
       trackEvent("live_ranking_viewed", { has_personal_impact: false });
       return '<div class="game-card live-rank" id="liveRank"><h3><span class="lr-dot"></span> Ranking en vivo</h3>' +
-        '<span class="es-label live">Datos en vivo</span>' +
-        '<h2 class="lr-social">Ranking en Vivo no disponible ahora</h2>' +
+        '<div class="es-status-row"><span class="es-label live">Datos en vivo</span><span class="es-status live">Sin datos frescos</span></div>' +
+        '<h2 class="lr-social">Actualizando ranking en vivo</h2>' +
         '<p class="lr-note">Los datos live no están frescos. El Ranking Oficial sigue visible abajo.</p></div>';
     }
     const rows = WC.scoring.buildLiveLeaderboard(data.profiles, data.predictions, data.picks, matches(), data.captains);
     if (!rows.length) return "";
     const uid = session ? session.user.id : null;
     const table = rows.map(function (r) {
-      const mov = r.delta > 0 ? '<span class="lr-up">▲' + r.delta + "</span>"
-        : r.delta < 0 ? '<span class="lr-down">▼' + (-r.delta) + "</span>"
-        : '<span class="lr-eq">–</span>';
+      const mov = r.delta > 0 ? '<span class="lr-up">Sube +' + r.delta + "</span>"
+        : r.delta < 0 ? '<span class="lr-down">Baja -' + (-r.delta) + "</span>"
+        : '<span class="lr-eq">Igual</span>';
       const bump = r.livePoints > (lastLivePoints[r.userId] || 0) ? " bump" : "";
       const plus = r.livePoints > 0 ? ' <span class="lr-plus' + bump + '">+' + r.livePoints + "</span>" : "";
       return "<tr" + (r.userId === uid ? ' class="me"' : "") + ' data-user="' + r.userId + '">' +
@@ -593,7 +593,8 @@
       const score = m.hs + " - " + m.as + (m.hp != null && m.ap != null ? " (" + m.hp + "-" + m.ap + ")" : "");
       return engMatchStrip(m.home, m.away, '<div class="es-score live">' + esc(score) + "</div>");
     }).join("");
-    const headBlock = (headline ? '<span class="es-label live">Ranking provisional</span><h2 class="lr-social">' + esc(headline) + "</h2>" : "") + scoreStrips;
+    const status = '<div class="es-status-row"><span class="es-label live">Ranking provisional</span><span class="es-status live">Provisional</span></div>';
+    const headBlock = status + '<h2 class="lr-social" aria-live="polite">' + esc(headline || "La tabla se mueve en vivo") + "</h2>" + scoreStrips;
     const groupsHtml = (WC.engagement && snap ? liveMs : []).map(function (m) {
       const pg = WC.engagement.predictionGroups(snap, m.id);
       if (!pg || pg.state !== "visible" || !pg.groups.length) return "";
@@ -789,11 +790,21 @@
     const strip = summaryScope === "matchday"
       ? engMatchdayStrip(playedInLastDay)
       : engMatchStrip(last.home, last.away, '<div class="es-score">' + esc(score) + "</div>");
+    const evidenceBits = [];
+    if (vm.points) evidenceBits.push(vm.points);
+    evidenceBits.push("Total: " + vm.mePoints + " pts");
+    evidenceBits.push(vm.scope === "matchday" ? "Jornada completa" : "Último partido");
+    const evidenceClass = "pms-evidence" + (vm.points ? " has-gain" : "");
+    const evidence = '<div class="' + evidenceClass + '">' + evidenceBits.map(function (bit) {
+      return '<span>' + esc(bit) + "</span>";
+    }).join("") + "</div>";
     const posTxt = vm.posDelta > 0 ? "+" + vm.posDelta : (vm.posDelta < 0 ? String(vm.posDelta) : "=");
+    const rivalText = vm.rival || "Sin rival cercano";
+    const rivalLabel = vm.rival ? "Rival" : "Meta";
     const impact = '<div class="es-impact">' +
       '<div class="es-cell"><strong>' + posTxt + "</strong><span>Puesto</span></div>" +
-      '<div class="es-cell"><strong>' + esc(vm.mePoints) + "</strong><span>Puntos</span></div>" +
-      '<div class="es-cell"><strong>' + esc(vm.rival || "—") + "</strong><span>Rival</span></div>" +
+      '<div class="es-cell"><strong>' + esc(vm.mePoints) + "</strong><span>Total</span></div>" +
+      '<div class="es-cell"><strong>' + esc(rivalText) + "</strong><span>" + esc(rivalLabel) + "</span></div>" +
       "</div>";
     const buttons = shareText
       ? '<div class="es-buttons">' +
@@ -808,7 +819,7 @@
         '<span class="es-label">' + (vm.scope === "matchday" ? "Resumen de jornada" : "Resumen") + "</span>" +
         '<h2 class="pms-social">' + esc(vm.social) + "</h2>" +
         (vm.subtitle ? '<p class="pms-sub">' + esc(vm.subtitle) + "</p>" : "") +
-        strip + impact + buttons +
+        evidence + strip + impact + buttons +
       "</div>" + bubble +
       "</div>";
   }

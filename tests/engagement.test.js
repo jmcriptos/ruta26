@@ -138,7 +138,8 @@ test("postMatchSummary: expone subtítulo, rival y puntos para la tarjeta", () =
   );
   assert.strictEqual(flat.movement, "none");
   assert.strictEqual(flat.scope, "match");
-  assert.ok(flat.social.indexOf("este partido") >= 0, "por defecto habla del partido");
+  assert.ok(flat.social.indexOf("Sumaste puntos") >= 0, "titular humano antes del cálculo");
+  assert.ok(flat.points.indexOf("este partido") >= 0, "evidencia de puntos habla del partido");
   assert.ok(flat.subtitle && flat.subtitle.length, "subtítulo en movement none");
 
   const matchday = eng.postMatchSummary(
@@ -148,7 +149,8 @@ test("postMatchSummary: expone subtítulo, rival y puntos para la tarjeta", () =
   );
   assert.strictEqual(matchday.movement, "none");
   assert.strictEqual(matchday.scope, "matchday");
-  assert.ok(matchday.social.indexOf("esta jornada") >= 0, "jornada con varios partidos no se atribuye a un partido");
+  assert.ok(matchday.social.indexOf("jornada") >= 0, "titular social de jornada");
+  assert.ok(matchday.points.indexOf("esta jornada") >= 0, "jornada con varios partidos no se atribuye a un partido");
 });
 
 test("opportunity: arma chips (gap, rival, capitán) desde datos", () => {

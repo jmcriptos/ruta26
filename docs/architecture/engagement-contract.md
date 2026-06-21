@@ -100,7 +100,7 @@ menor diferencia de puntos → `match_id` estable.
   scope: "match"|"matchday",              // origen del delta resumido
   social,                              // titular social primero
   subtitle,                            // línea de apoyo (tono según movimiento)
-  points,                              // "+{pts}" como apoyo; vacío si social ya lo dice
+  points,                              // "+{pts}" como evidencia; social nunca es fórmula
   ptsGain, mePoints,                   // números para el grid de impacto de la tarjeta
   rival,                               // username del rival pasado/que pasó (o null)
   posDelta, passed: [usernames], passedBy: [usernames]
@@ -110,9 +110,9 @@ menor diferencia de puntos → `match_id` estable.
 - **Movimiento relevante (PD5):** sube/baja ≥1 posición, pasa a un amigo, un amigo lo
   pasa, o **gana puntos** (aunque no cambie de posición). Solo si no hay nada de eso
   (0 puntos y 0 movimiento) → `null` (sin ruido artificial).
-- Ganó puntos sin cambiar de puesto → `movement:"none"`, `social` = línea de puntos
-  (`post_points` o `post_points_day` si `summaryScope:"matchday"`); en ese caso
-  `points` va vacío para no repetir.
+- Ganó puntos sin cambiar de puesto → `movement:"none"`, `social` = línea humana
+  (`post_points_social` o `post_points_social_day`) y `points` = evidencia
+  (`post_points` o `post_points_day` si `summaryScope:"matchday"`).
 - Si bajó → tono de revancha / Meta Cercana (nunca culpa).
 - El caller (`game.js`) calcula `beforeRows` neutralizando **todos los partidos
   terminados de la última jornada** (día calendario en Curazao), no solo el último,
@@ -123,6 +123,21 @@ menor diferencia de puntos → `match_id` estable.
 - Texto con **solo hechos visibles** + copy allowlisted + enlace a `#quiniela`.
 - Sin datos sensibles ni info fuera de lo visible para el grupo. `null` si no hay
   resumen compartible.
+
+## Matriz de estados UI
+
+`game.js` conserva una sola superficie de Quiniela y debe resolver el estado dominante
+sin crear dashboards paralelos:
+
+| Momento / estado | Superficie dominante | Copy/UX principal | Fallback seguro |
+|---|---|---|---|
+| Antes del partido con pick pendiente | Oportunidad | Frase accionable + CTA al pronóstico | Si falta rival, nombrar el partido |
+| Antes del partido sin acción pendiente | Oportunidad o nada | Meta cercana / jornada | Ocultar si no hay frase social fuerte |
+| Partido live fresco | Ranking en Vivo | Chip `Provisional`, frase social, tabla provisional | Fallback grupal si no hay impacto personal |
+| Partido live stale | Ranking en Vivo | `Actualizando ranking en vivo` | Ranking Oficial sigue visible |
+| Post-partido único | Resumen | Movimiento social + `+N pts en este partido` como evidencia | Sin rival: `Sin rival cercano` |
+| Post-jornada con varios partidos | Resumen de jornada | Movimiento social + `+N pts en esta jornada` como evidencia | Tira de jornada, no marcador del último partido |
+| Share/clipboard falla | Resumen | Texto compartible visible/copiable vía prompt nativo | No perder el resumen ni bloquear navegación |
 
 ## Copy allowlist (lista cerrada)
 
@@ -154,11 +169,13 @@ hechos visibles (nombres ya escapados al render).
 | `post_down` | bajó | `Bajaste {n}, hay revancha 🔁` |
 | `post_passed` | pasó a alguien | `Pasaste a {rival}` |
 | `post_passed_by` | lo pasaron | `{rival} te pasó` |
+| `post_points_social` | solo puntos | `Sumaste puntos, la tabla sigue igual` |
+| `post_points_social_day` | solo puntos de jornada | `Sumaste en la jornada, la tabla sigue igual` |
 | `post_points` | puntos (apoyo) | `+{pts} pts en este partido` |
 | `post_points_day` | puntos de jornada (apoyo) | `+{pts} pts en esta jornada` |
 | `post_sub_up` | subtítulo subió/pasó | `El grupo ya tiene tema.` |
 | `post_sub_down` | subtítulo bajó/lo pasaron | `Mañana hay revancha.` |
-| `post_sub_points` | subtítulo solo puntos | `Sigues sumando. La tabla aún no se mueve.` |
+| `post_sub_points` | subtítulo solo puntos | `Buen cierre: sigues en carrera.` |
 | `share_passed` | compartir: pasó a alguien | `Le pasé a {rival} en la quiniela del Mundial ⚽😎 ¿quién sigue?` |
 | `share_passed_by` | compartir: lo pasaron | `{rival} me pasó… disfrútalo que mañana hay revancha 😏 quiniela del Mundial ⚽` |
 | `share_up` | compartir: subió | `Subí {n} puesto(s) en la quiniela del Mundial 🔥 a ver quién me alcanza` |

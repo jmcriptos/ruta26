@@ -657,7 +657,7 @@ html { scroll-padding-top: calc(84px + env(safe-area-inset-top)); }
 
 .rank-table { width: 100%; border-collapse: collapse; font-size: 14px; }
 .rank-table th { padding: 8px 6px; text-align: left; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .8px; color: var(--muted); border-bottom: 1px solid var(--line); }
-.rank-table td { padding: 11px 6px; border-bottom: 1px solid var(--line); }
+.rank-table td { padding: 11px 6px; border-bottom: 1px solid var(--line); overflow-wrap: anywhere; }
 .rank-table td.num { font: 800 16px "League Spartan"; }
 .rank-table tr.me td { background: rgba(215, 255, 67, .22); }
 .rank-table .pts { font-weight: 800; }
@@ -740,21 +740,25 @@ html { scroll-padding-top: calc(84px + env(safe-area-inset-top)); }
 .es-label::before { content: ""; width: 8px; height: 8px; border-radius: 999px; background: var(--lime-deep); }
 .es-label.live { color: var(--orange); }
 .es-label.live::before { background: var(--orange); }
+.es-status-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 11px; }
+.es-status-row .es-label { margin-bottom: 0; }
+.es-status { flex: 0 0 auto; min-height: 26px; display: inline-flex; align-items: center; padding: 0 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--paper); color: var(--ink); font-size: 10px; font-weight: 800; text-transform: uppercase; }
+.es-status.live { border-color: rgba(255,124,66,.35); background: rgba(255,124,66,.11); color: #9b421e; }
 
-.es-strip { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 10px; margin: 0 0 14px; padding: 12px; border-radius: 10px; background: var(--paper); border: 1px solid var(--line); }
+.es-strip { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 10px; margin: 0 0 14px; padding: 12px; border-radius: 10px; background: var(--paper); border: 1px solid var(--line); }
 .es-team { min-width: 0; text-align: center; }
-.es-name { display: block; font-weight: 800; font-size: 13px; }
-.es-team small { display: block; margin-top: 2px; color: var(--muted); font-size: 10px; font-weight: 800; }
+.es-name { display: block; font-weight: 800; font-size: 13px; overflow-wrap: anywhere; }
+.es-team small { display: block; margin-top: 2px; color: var(--muted); font-size: 10px; font-weight: 800; overflow-wrap: anywhere; }
 .es-vs { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 999px; background: var(--lime); color: var(--ink); font: 800 12px/1 "League Spartan"; }
-.es-score { min-width: 74px; min-height: 40px; padding: 0 8px; display: grid; place-items: center; border-radius: 999px; background: var(--ink); color: var(--white); font: 800 19px/1 "League Spartan"; }
+.es-score { min-width: 74px; min-height: 40px; max-width: 112px; padding: 0 8px; display: grid; place-items: center; border-radius: 999px; background: var(--ink); color: var(--white); font: 800 19px/1 "League Spartan"; text-align: center; overflow-wrap: anywhere; }
 .es-score.live { background: var(--orange); }
 
 .es-chips { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 16px; }
 .es-chip { min-height: 30px; display: inline-flex; align-items: center; padding: 0 11px; border-radius: 999px; border: 1px solid var(--line); background: var(--paper); color: var(--ink); font-size: 12px; font-weight: 700; }
 
-.es-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+.es-buttons { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 9px; }
 .es-buttons .primary-btn, .es-buttons .secondary-btn { min-height: 42px; font-size: 12px; }
-.primary-btn, .secondary-btn { min-height: 48px; width: 100%; display: grid; place-items: center; border-radius: 999px; font: 800 13px/1 "League Spartan"; text-transform: uppercase; letter-spacing: .02em; cursor: pointer; padding: 0 12px; }
+.primary-btn, .secondary-btn { min-height: 48px; width: 100%; display: grid; place-items: center; border-radius: 999px; font: 800 13px/1 "League Spartan"; text-transform: uppercase; letter-spacing: .02em; cursor: pointer; padding: 0 12px; overflow-wrap: anywhere; text-align: center; }
 .primary-btn { border: 0; background: var(--lime); color: var(--ink); }
 .primary-btn:hover { background: var(--lime-deep); }
 .secondary-btn { border: 1px solid #c6c8bd; background: transparent; color: var(--ink); }
@@ -773,6 +777,10 @@ html { scroll-padding-top: calc(84px + env(safe-area-inset-top)); }
 /* Ranking en vivo: titular grande + tira de marcador + pronósticos compactos */
 .live-rank .lr-social { margin: 2px 0 12px; font: 800 24px/1 "League Spartan"; text-transform: uppercase; color: var(--ink); }
 .live-rank .lr-note { font-size: 12px; color: var(--muted); margin: 0 0 10px; }
+.lr-mov span { display: inline-flex; align-items: center; min-height: 24px; padding: 0 7px; border-radius: 999px; font-size: 10px; font-weight: 800; text-transform: uppercase; white-space: nowrap; }
+.lr-up { background: rgba(46,158,91,.13); color: var(--success); }
+.lr-down { background: rgba(214,69,69,.12); color: var(--danger); }
+.lr-eq { background: var(--paper); color: var(--muted); }
 .pg-block { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 10px; }
 .pg-block h4 { font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px; }
 .pg-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 6px; }
@@ -785,13 +793,27 @@ html { scroll-padding-top: calc(84px + env(safe-area-inset-top)); }
 .pms-main { padding: 20px 18px 18px; }
 .pms-card .pms-social { margin: 0 0 8px; font: 800 26px/1 "League Spartan"; text-transform: uppercase; color: var(--ink); line-height: 1; }
 .pms-card .pms-sub { margin: 0 0 16px; color: var(--muted); font-size: 14px; line-height: 1.4; }
-.es-impact { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 0 0 16px; }
+.pms-evidence { display: flex; flex-wrap: wrap; gap: 7px; margin: 0 0 14px; }
+.pms-evidence span { min-height: 30px; display: inline-flex; align-items: center; padding: 0 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--paper); color: var(--ink); font-size: 12px; font-weight: 800; overflow-wrap: anywhere; }
+.pms-evidence.has-gain span:first-child { background: var(--lime); border-color: var(--lime-deep); }
+.es-impact { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 0 0 16px; }
 .es-cell { min-height: 62px; display: grid; align-content: center; gap: 3px; padding: 10px; border-radius: 10px; background: var(--paper); border: 1px solid var(--line); text-align: center; }
-.es-cell strong { font: 800 20px/1 "League Spartan"; }
+.es-cell strong { font: 800 20px/1 "League Spartan"; overflow-wrap: anywhere; }
 .es-cell span { color: var(--muted); font-size: 11px; font-weight: 800; text-transform: uppercase; }
 .es-share { padding: 14px 18px 16px; border-top: 1px dashed var(--line); background: rgba(215,255,67,.11); }
 .es-share h4 { margin: 0 0 9px; font: 800 16px/1 "League Spartan"; text-transform: uppercase; color: var(--ink); }
 .es-bubble { padding: 12px 14px; border-radius: 14px 14px 14px 4px; background: var(--white); border: 1px solid var(--line); color: var(--ink); font-size: 13px; line-height: 1.38; font-weight: 700; }
+
+@media (max-width: 420px) {
+  .es-status-row { align-items: flex-start; flex-direction: column; gap: 6px; }
+  .es-strip { gap: 6px; padding: 10px; }
+  .es-score { min-width: 54px; min-height: 36px; max-width: 78px; font-size: 16px; }
+  .es-buttons { grid-template-columns: 1fr; }
+  .pms-main { padding: 18px 14px 16px; }
+  .pms-card .pms-social, .opp-card .opp-headline { font-size: 23px; }
+  .live-rank .lr-social { font-size: 22px; }
+  .es-impact { grid-template-columns: 1fr; }
+}
 
 /* medallas y bandera del campeón en el ranking */
 .rank-table td.pos { font-size: 18px; text-align: center; width: 30px; }
@@ -958,10 +980,7 @@ footer { color: var(--white); }
   50% { transform: scale(1.35); opacity: .45; }
 }
 .live-rank tr[data-user] { will-change: transform; }
-.rank-table td.lr-mov { width: 34px; font-size: 12px; font-weight: 800; text-align: center; }
-.lr-up { color: #2e9e5b; }
-.lr-down { color: #d64545; }
-.lr-eq { color: var(--muted); }
+.rank-table td.lr-mov { width: 76px; font-size: 12px; font-weight: 800; text-align: center; }
 .lr-plus {
   display: inline-block; margin-left: 4px; padding: 1px 7px; border-radius: 999px;
   background: var(--orange); color: var(--white); font-size: 12px; font-weight: 800;

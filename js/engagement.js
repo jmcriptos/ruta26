@@ -30,11 +30,13 @@
     post_down: "Bajaste {n}, hay revancha 🔁",
     post_passed: "Pasaste a {rival}",
     post_passed_by: "{rival} te pasó",
+    post_points_social: "Sumaste puntos, la tabla sigue igual",
+    post_points_social_day: "Sumaste en la jornada, la tabla sigue igual",
     post_points: "+{pts} pts en este partido",
     post_points_day: "+{pts} pts en esta jornada",
     post_sub_up: "El grupo ya tiene tema.",
     post_sub_down: "Mañana hay revancha.",
-    post_sub_points: "Sigues sumando. La tabla aún no se mueve.",
+    post_sub_points: "Buen cierre: sigues en carrera.",
     // Compartir: tono picante (joda amistosa), primera persona, sin {url} (lo añade la función)
     share_passed: "Le pasé a {rival} en la quiniela del Mundial ⚽😎 ¿quién sigue?",
     share_passed_by: "{rival} me pasó… disfrútalo que mañana hay revancha 😏 quiniela del Mundial ⚽",
@@ -229,16 +231,16 @@
     if (posDelta === 0 && !passed.length && !passedBy.length && ptsGain <= 0) return null;
     const scope = snapshot.summaryScope === "matchday" ? "matchday" : "match";
     const pointsKey = scope === "matchday" ? "post_points_day" : "post_points";
+    const socialPointsKey = scope === "matchday" ? "post_points_social_day" : "post_points_social";
     let movement, social, subtitle, rival = null;
     if (passed.length) { movement = "passed_friend"; social = fill(COPY.post_passed, { rival: passed[0] }); subtitle = COPY.post_sub_up; rival = passed[0]; }
     else if (passedBy.length) { movement = "passed_by_friend"; social = fill(COPY.post_passed_by, { rival: passedBy[0] }); subtitle = COPY.post_sub_down; rival = passedBy[0]; }
     else if (posDelta > 0) { movement = "up"; social = fill(COPY.post_up, { n: posDelta }); subtitle = COPY.post_sub_up; }
     else if (posDelta < 0) { movement = "down"; social = fill(COPY.post_down, { n: Math.abs(posDelta) }); subtitle = COPY.post_sub_down; }
-    else { movement = "none"; social = fill(COPY[pointsKey], { pts: ptsGain }); subtitle = COPY.post_sub_points; } // ganó puntos sin cambiar de puesto
+    else { movement = "none"; social = COPY[socialPointsKey]; subtitle = COPY.post_sub_points; } // ganó puntos sin cambiar de puesto
     return {
       state: "moved", movement: movement, scope: scope, social: social, subtitle: subtitle,
-      // si el social ya ES la línea de puntos (movement "none"), no la repetimos abajo
-      points: movement !== "none" && ptsGain > 0 ? fill(COPY[pointsKey], { pts: ptsGain }) : "",
+      points: ptsGain > 0 ? fill(COPY[pointsKey], { pts: ptsGain }) : "",
       ptsGain: ptsGain, mePoints: meA.points || 0,
       posDelta: posDelta, passed: passed, passedBy: passedBy, rival: rival
     };
