@@ -1047,7 +1047,19 @@
       if (!editing) render();
     },
     myMatchPoints: myMatchPoints,
-    reload: async function () { await loadAll(); render(); }
+    reload: async function () { await loadAll(); render(); },
+    // Re-sincroniza predicciones/perfiles desde Supabase y re-renderiza, SIN pisar
+    // una edición en curso. La llama app.js periódicamente y al volver a la app
+    // para que el ranking no quede desfasado entre dispositivos.
+    refresh: async function () {
+      const editing = Object.keys(saveTimers).some(function (k) {
+        const v = mine[k]; return v && v.state === "saving";
+      });
+      if (editing) return;
+      await loadAll();
+      render();
+      refreshMatchCards();
+    }
   };
 
   // Las tarjetas de partidos (app.js) muestran los puntos del jugador; hay que

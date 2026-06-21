@@ -428,7 +428,28 @@
   }, 30000);
 
   WC.api.load().then(applyData);
-  WC.api.startPolling(function () { return state.matches; }, applyData);
+
+  /* Sincronización frecuente para que dos dispositivos no muestren rankings
+     distintos: el ranking depende de los resultados (FIFA) y de las predicciones
+     de TODOS (Supabase), y ninguna se refrescaba sola de forma confiable. Aquí
+     refrescamos AMBAS al volver a la app (visibilitychange/focus) y cada 2 min
+     mientras esté en primer plano. Throttle 60s para no spamear; nunca corre en
+     segundo plano ni en paralelo consigo misma. */
+  let lastSync = Date.now(), syncing = false;
+  async function syncLiveData(force) {
+    if (document.hidden || syncing) return;
+    const now = Date.now();
+    if (!force && now - lastSync < 60000) return;
+    syncing = true; lastSync = now;
+    try {
+      try { if (WC.game && WC.game.refresh) await WC.game.refresh(); } catch (e) {}
+      try { applyData(await WC.api.load()); } catch (e) {}
+    } finally {
+      syncing = false;  // nunca se queda trabada, aunque algo falle
+    }
+  }
+  setInterval(function () { syncLiveData(false); }, 120000);
+  window.addEventListener("focus", function () { syncLiveData(true); });
 
   /* PWA: iOS restaura la app congelada con assets viejos al reabrirla desde la
      pantalla de inicio. Al volver a primer plano, comparamos el ETag del CSS
@@ -443,7 +464,7 @@
     } catch (e) { /* sin red: se queda como está */ }
   }
   document.addEventListener("visibilitychange", function () {
-    if (!document.hidden) checkVersion();
+    if (!document.hidden) { checkVersion(); syncLiveData(true); }
   });
   checkVersion();
 
@@ -461,5 +482,5 @@
   // game.js llama esto al cambiar la sesión para que las tarjetas muestren u
   // oculten los puntos del jugador. renderMatches preserva filtros, fecha,
   // paginado y paneles de detalle abiertos.
-  WC.app = { refreshMatches: renderMatches };
+  WC.app = { refreshMatches: renderMatches, sync: syncLiveData };
 })();
