@@ -24,7 +24,7 @@ La función `rankingHtml()` (en `js/game.js`) hoy pinta una `<table class="rank-
 
 ### Reglas
 - **El podio siempre refleja los puntos** (la carrera por el título). El sort por % (`rankSort === "acc"`) **solo reordena la lista de abajo**, no el podio. El podio se arma siempre desde el orden por puntos (`rows`, no `view`).
-- **Empates:** el podio toma las 3 primeras filas por orden de puntos; cada escalón muestra su **medalla real por `tier`** (dos empatados en el 1º muestran ambos 🥇). El escalón (centro/izq/der) es solo orden visual.
+- **Empates:** el podio toma las 3 primeras filas del orden canónico (puntos, y **% como desempate** — ver Feature 3); cada escalón muestra su **medalla real por `tier`** (dos empatados en puntos en el 1º muestran ambos 🥇, aunque el de mayor % vaya en el escalón central). El escalón (centro/izq/der) es solo orden visual.
 - **"Yo":** si el usuario logueado está en el Top 3, su escalón se resalta (borde/anillo lima, clase `.pod-me`); si está en la lista, su fila se resalta como hoy (`tr.me`).
 - Se mantienen la bandera de campeón y el botón **"Compartir mi posición"** debajo.
 
@@ -67,6 +67,45 @@ Agregar un **breakpoint de desktop** que **sube el texto** en las zonas densas, 
 
 ### Pruebas
 - Verificación **visual** en desktop (ancho ~1280px): grupos, ranking (con el podio nuevo), partidos y dashboard se leen cómodos; y en móvil (375px) **sin cambios** respecto a lo actual.
+
+---
+
+## Feature 3: Desempate del ranking por % de aciertos
+
+### Qué cambia
+En `WC.scoring.buildLeaderboard` (`js/scoring.js`) el comparador de orden actual es
+`puntos desc → exactos desc → nombre`. Pasa a **`puntos desc → % aciertos desc → exactos desc → nombre`**.
+
+### Reglas (importante)
+- **`pos` y `tier` NO cambian:** se siguen calculando **solo por puntos**. Es decir,
+  dos jugadores con los mismos puntos quedan **empatados en posición y medalla** (misma
+  `pos`, mismo `tier` → misma 🥇/🥈/🥉). El % **solo decide el orden de aparición**
+  dentro de un empate de puntos (quién se muestra/colocae primero en lista y podio).
+- **% de aciertos** = `(exact + outcome) / decided`. Si `decided === 0` (sin picks
+  resueltos), su valor de orden es `-1` (va al fondo del empate). Misma definición que
+  el helper `accValue` de `game.js`, para que el orden por defecto y el toggle de "%"
+  sean coherentes.
+- Aplica a **ambos** rankings (definitivo y en vivo), porque los dos derivan de
+  `buildLeaderboard` / `buildLiveLeaderboard`. Consistente y deseado.
+- El **toggle de orden** (`rankSort` pts/%) en `game.js` no cambia; el % como segundo
+  criterio solo afecta el **orden por defecto** (por puntos).
+
+### Comparador resultante
+```js
+function accOf(r) { return r.decided > 0 ? (r.exact + r.outcome) / r.decided : -1; }
+rows.sort(function (x, y) {
+  return y.points - x.points
+    || accOf(y) - accOf(x)
+    || y.exact - x.exact
+    || (x.username || "").localeCompare(y.username || "", "es");
+});
+```
+El bucle que asigna `pos`/`tier` (por caída de puntos) queda **igual**.
+
+### Pruebas
+- Unit en `tests/scoring.test.js`: con puntos iguales y % distinto, el de mayor % va
+  primero en el array, pero **ambos tienen la misma `pos` y `tier`**; con `decided=0`
+  va al fondo del empate; sin empate de puntos, el % no altera el orden.
 
 ---
 
