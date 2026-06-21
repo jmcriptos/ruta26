@@ -640,26 +640,53 @@
   // % de acierto como fracción para ordenar; sin partidos resueltos va al fondo
   function accValue(r) { return r.decided > 0 ? (r.exact + r.outcome) / r.decided : -1; }
 
+  // Podio del Top 3 (centro #1, izquierda #2, derecha #3). Pura presentación de
+  // filas de buildLeaderboard. Empates: cada uno muestra su medalla real por tier.
+  function podiumHtml(top3, uid) {
+    if (!top3.length) return "";
+    const step = function (r, cls) {
+      if (!r) return "";
+      const medal = r.tier === 1 ? "🥇" : r.tier === 2 ? "🥈" : r.tier === 3 ? "🥉" : "";
+      const me = r.userId === uid ? " pod-me" : "";
+      return '<div class="pod-step ' + cls + me + '">' +
+        '<div class="pod-medal">' + medal + "</div>" +
+        '<div class="pod-flag">' + champFlagFor(r.userId) + "</div>" +
+        '<div class="pod-name">' + esc(r.username) + "</div>" +
+        '<div class="pod-pts">' + r.points + " pts</div>" +
+        '<div class="pod-block">' + r.pos + "</div>" +
+        "</div>";
+    };
+    return '<div class="podium">' + step(top3[1], "second") + step(top3[0], "first") + step(top3[2], "third") + "</div>";
+  }
+
   function rankingHtml() {
     const rows = WC.scoring.buildLeaderboard(data.profiles, data.predictions, data.picks, matches(), data.captains);
     const uid = session ? session.user.id : null;
-    // las medallas (tier) y el número (pos) son del ranking oficial de Pts;
-    // ordenar por % solo cambia el orden de aparición, no el podio.
+    if (rows.length === 0) {
+      return '<div class="game-card"><h3>Ranking</h3><p class="rank-empty">Aún no hay jugadores. ¡Sé el primero!</p></div>';
+    }
+    // El podio SIEMPRE por puntos (rows); la lista respeta el sort elegido (view).
+    const top3 = rows.slice(0, 3);
+    const top3Ids = {};
+    top3.forEach(function (r) { top3Ids[r.userId] = true; });
     const view = rankSort === "acc"
       ? rows.slice().sort(function (x, y) { return accValue(y) - accValue(x) || y.points - x.points; })
       : rows;
+    const rest = view.filter(function (r) { return !top3Ids[r.userId]; });
     const arrow = function (key) { return rankSort === key ? ' <span class="sort-ar">▼</span>' : ""; };
     const accTh = '<th class="col-acc sortable' + (rankSort === "acc" ? " sort-active" : "") + '" data-rank-sort="acc">% Acierto' + arrow("acc") + "</th>";
     const ptsTh = '<th class="sortable' + (rankSort === "pts" ? " sort-active" : "") + '" data-rank-sort="pts">Pts' + arrow("pts") + "</th>";
+    const tableHtml = rest.length === 0 ? "" :
+      '<table class="rank-table"><tr><th>#</th><th></th><th>Jugador</th><th class="col-x">Exactos</th><th class="col-x">Resultados</th>' + accTh + '<th class="col-x">Bonus</th>' + ptsTh + "</tr>" +
+        rest.map(function (r) {
+          const medal = r.tier === 1 ? "🥇" : r.tier === 2 ? "🥈" : r.tier === 3 ? "🥉" : '<span class="num">' + r.pos + "</span>";
+          const acc = r.decided > 0 ? Math.round((r.exact + r.outcome) / r.decided * 100) + "%" : "—";
+          return "<tr" + (r.userId === uid ? ' class="me"' : "") + '><td class="pos">' + medal + '</td><td class="flag">' + champFlagFor(r.userId) + "</td><td>" + esc(r.username) + '</td><td class="col-x">' +
+            r.exact + '</td><td class="col-x">' + r.outcome + '</td><td class="col-acc">' + acc + '</td><td class="col-x">' + (r.bonus || 0) + '</td><td class="pts">' + r.points + "</td></tr>";
+        }).join("") + "</table>";
     return '<div class="game-card"><h3>Ranking</h3>' +
-      (rows.length === 0 ? '<p class="rank-empty">Aún no hay jugadores. ¡Sé el primero!</p>'
-        : '<table class="rank-table"><tr><th>#</th><th></th><th>Jugador</th><th class="col-x">Exactos</th><th class="col-x">Resultados</th>' + accTh + '<th class="col-x">Bonus</th>' + ptsTh + "</tr>" +
-          view.map(function (r) {
-            const medal = r.tier === 1 ? "🥇" : r.tier === 2 ? "🥈" : r.tier === 3 ? "🥉" : '<span class="num">' + r.pos + "</span>";
-            const acc = r.decided > 0 ? Math.round((r.exact + r.outcome) / r.decided * 100) + "%" : "—";
-            return "<tr" + (r.userId === uid ? ' class="me"' : "") + '><td class="pos">' + medal + '</td><td class="flag">' + champFlagFor(r.userId) + "</td><td>" + esc(r.username) + '</td><td class="col-x">' +
-              r.exact + '</td><td class="col-x">' + r.outcome + '</td><td class="col-acc">' + acc + '</td><td class="col-x">' + (r.bonus || 0) + '</td><td class="pts">' + r.points + "</td></tr>";
-          }).join("") + "</table>") +
+      podiumHtml(top3, uid) +
+      tableHtml +
       (uid && rows.some(function (r) { return r.userId === uid; })
         ? '<div class="game-actions game-share" style="margin-top:14px"><button class="game-btn secondary" id="gShare">Compartir mi posición</button></div>'
         : "") +

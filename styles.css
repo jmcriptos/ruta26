@@ -668,6 +668,20 @@ html { scroll-padding-top: calc(84px + env(safe-area-inset-top)); }
 .rank-table .sort-ar { font-size: 10px; vertical-align: middle; }
 .rank-empty { color: var(--muted); font-size: 14px; padding: 10px 0; }
 
+/* Podio del ranking definitivo (Top 3, estilo broadcast) */
+.podium { display: flex; align-items: flex-end; justify-content: center; gap: 8px; background: var(--ink-soft); border-radius: 12px; padding: 16px 12px 0; margin-bottom: 16px; }
+.pod-step { flex: 1; min-width: 0; max-width: 116px; display: flex; flex-direction: column; align-items: center; text-align: center; color: var(--white); }
+.pod-medal { font-size: 20px; line-height: 1; height: 22px; }
+.pod-flag { font-size: 26px; line-height: 1; margin: 2px 0; }
+.pod-name { max-width: 100%; font-size: 12px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pod-pts { font-size: 12px; font-weight: 800; color: var(--lime); margin-bottom: 6px; }
+.pod-block { width: 100%; display: grid; place-items: center; border-radius: 6px 6px 0 0; font: 800 22px/1 "League Spartan", sans-serif; color: var(--ink); }
+.pod-step.first .pod-block { height: 60px; background: var(--lime); }
+.pod-step.second .pod-block { height: 44px; background: #c9ccc4; }
+.pod-step.third .pod-block { height: 32px; background: #d8a56b; }
+.pod-step.pod-me .pod-name { color: var(--lime); }
+.pod-step.pod-me .pod-block { box-shadow: inset 0 0 0 2px var(--ink); }
+
 .game-rules summary { cursor: pointer; font-weight: 700; font-size: 14px; padding: 4px 0; }
 .game-rules table { width: 100%; margin-top: 10px; border-collapse: collapse; font-size: 13px; }
 .game-rules td, .game-rules th { padding: 7px 6px; border-bottom: 1px solid var(--line); text-align: left; }
