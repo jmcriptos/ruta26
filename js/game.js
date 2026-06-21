@@ -574,9 +574,9 @@
     if (!rows.length) return "";
     const uid = session ? session.user.id : null;
     const table = rows.map(function (r) {
-      const mov = r.delta > 0 ? '<span class="lr-up">Sube +' + r.delta + "</span>"
-        : r.delta < 0 ? '<span class="lr-down">Baja -' + (-r.delta) + "</span>"
-        : '<span class="lr-eq">Igual</span>';
+      const mov = r.delta > 0 ? '<span class="lr-up">▲' + r.delta + "</span>"
+        : r.delta < 0 ? '<span class="lr-down">▼' + (-r.delta) + "</span>"
+        : '<span class="lr-eq">–</span>';
       const bump = r.livePoints > (lastLivePoints[r.userId] || 0) ? " bump" : "";
       const plus = r.livePoints > 0 ? ' <span class="lr-plus' + bump + '">+' + r.livePoints + "</span>" : "";
       return "<tr" + (r.userId === uid ? ' class="me"' : "") + ' data-user="' + r.userId + '">' +

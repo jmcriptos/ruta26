@@ -10,6 +10,8 @@
   --white: #fff;
   --orange: #ff7c42;
   --blue: #68a7ff;
+  --success: #2e9e5b;
+  --danger: #d64545;
   --shadow: 0 18px 50px rgba(12, 29, 23, .1);
 }
 
@@ -777,10 +779,10 @@ html { scroll-padding-top: calc(84px + env(safe-area-inset-top)); }
 /* Ranking en vivo: titular grande + tira de marcador + pronósticos compactos */
 .live-rank .lr-social { margin: 2px 0 12px; font: 800 24px/1 "League Spartan"; text-transform: uppercase; color: var(--ink); }
 .live-rank .lr-note { font-size: 12px; color: var(--muted); margin: 0 0 10px; }
-.lr-mov span { display: inline-flex; align-items: center; min-height: 24px; padding: 0 7px; border-radius: 999px; font-size: 10px; font-weight: 800; text-transform: uppercase; white-space: nowrap; }
-.lr-up { background: rgba(46,158,91,.13); color: var(--success); }
-.lr-down { background: rgba(214,69,69,.12); color: var(--danger); }
-.lr-eq { background: var(--paper); color: var(--muted); }
+.lr-mov span { display: inline-flex; align-items: center; gap: 1px; font-size: 13px; font-weight: 800; white-space: nowrap; }
+.lr-up { color: var(--success); }
+.lr-down { color: var(--danger); }
+.lr-eq { color: var(--muted); }
 .pg-block { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 10px; }
 .pg-block h4 { font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px; }
 .pg-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 6px; }
@@ -816,7 +818,7 @@ html { scroll-padding-top: calc(84px + env(safe-area-inset-top)); }
 }
 
 /* medallas y bandera del campeón en el ranking */
-.rank-table td.pos { font-size: 18px; text-align: center; width: 30px; }
+.rank-table td.pos { font-size: 18px; text-align: center; width: 42px; white-space: nowrap; }
 .rank-table td.pos .num { font: 800 16px "League Spartan", sans-serif; color: var(--muted); }
 .rank-table td.flag { font-size: 22px; width: 30px; text-align: center; }
 
@@ -980,7 +982,7 @@ footer { color: var(--white); }
   50% { transform: scale(1.35); opacity: .45; }
 }
 .live-rank tr[data-user] { will-change: transform; }
-.rank-table td.lr-mov { width: 76px; font-size: 12px; font-weight: 800; text-align: center; }
+.rank-table td.lr-mov { width: 46px; font-size: 13px; font-weight: 800; text-align: center; }
 .lr-plus {
   display: inline-block; margin-left: 4px; padding: 1px 7px; border-radius: 999px;
   background: var(--orange); color: var(--white); font-size: 12px; font-weight: 800;
