@@ -83,11 +83,13 @@ Agregar un **breakpoint de desktop** que **sube el texto** en las zonas densas, 
 En `WC.scoring.buildLeaderboard` (`js/scoring.js`) el comparador de orden actual es
 `puntos desc → exactos desc → nombre`. Pasa a **`puntos desc → % aciertos desc → exactos desc → nombre`**.
 
-### Reglas (importante)
-- **`pos` y `tier` NO cambian:** se siguen calculando **solo por puntos**. Es decir,
-  dos jugadores con los mismos puntos quedan **empatados en posición y medalla** (misma
-  `pos`, mismo `tier` → misma 🥇/🥈/🥉). El % **solo decide el orden de aparición**
-  dentro de un empate de puntos (quién se muestra/colocae primero en lista y podio).
+### Reglas (importante) — ACTUALIZADO: el % rompe el empate
+- **El % de aciertos ROMPE el empate de puntos → posiciones distintas** (decisión de
+  JM, revierte la regla previa de "comparten posición"). `pos`/`tier` avanzan cuando el
+  jugador difiere en puntos **o** en %; solo comparten quienes empatan en puntos **y**
+  en % (empate real). Así el podio (escalón) y la narración (pos) **concuerdan**: el de
+  mayor % entre dos empatados queda arriba (oro), el otro abajo (plata), y la narración
+  dice la posición real (2º).
 - **% de aciertos** = `(exact + outcome) / decided`. Si `decided === 0` (sin picks
   resueltos), su valor de orden es `-1` (va al fondo del empate). Misma definición que
   el helper `accValue` de `game.js`, para que el orden por defecto y el toggle de "%"

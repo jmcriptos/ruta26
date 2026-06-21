@@ -356,7 +356,7 @@ test("fixture capitan-contract: tie-break de ranking por username", () => {
   assert.deepStrictEqual(rows.map(function (r) { return r.username; }), t.expectOrderUsernames);
 });
 
-test("buildLeaderboard: empate de puntos se ordena por % de aciertos (pos/tier por puntos)", () => {
+test("buildLeaderboard: el % de aciertos rompe el empate de puntos → posiciones distintas", () => {
   const matches = [
     played("group", 2, 1, null, { id: "g1" }),  // gana local
     played("group", 2, 1, null, { id: "g2" })   // gana local
@@ -368,10 +368,23 @@ test("buildLeaderboard: empate de puntos se ordena por % de aciertos (pos/tier p
     { user_id: "u2", match_id: "g2", hg: 0, ag: 1 }   // ana: falla g2 → 1/2 = 50%, 1 pt
   ];
   const rows = sc.buildLeaderboard(profiles, predictions, [], matches);
-  // mismo puntaje (1), pero zoe tiene mayor % → va primero, AUNQUE "ana" < "zoe" por nombre
+  // mismo puntaje (1), pero zoe tiene mayor % → va primero (aunque "ana" < "zoe" por nombre)
   assert.strictEqual(rows[0].username, "zoe");
   assert.strictEqual(rows[1].username, "ana");
-  // empate de puntos → misma posición y medalla (tier)
-  assert.strictEqual(rows[0].pos, rows[1].pos);
+  // el % rompe el empate → posiciones y tiers DISTINTOS
+  assert.strictEqual(rows[0].pos, 1);
+  assert.strictEqual(rows[1].pos, 2);
+  assert.ok(rows[0].tier < rows[1].tier);
+});
+
+test("buildLeaderboard: empate REAL (mismos puntos y mismo %) comparte posición", () => {
+  const matches = [played("group", 2, 1, null, { id: "g1" })];
+  const profiles = [{ id: "u1", username: "uno" }, { id: "u2", username: "dos" }];
+  const predictions = [
+    { user_id: "u1", match_id: "g1", hg: 1, ag: 0 },  // 1/1 = 100%, 1 pt
+    { user_id: "u2", match_id: "g1", hg: 2, ag: 0 }   // 1/1 = 100%, 1 pt (idéntico)
+  ];
+  const rows = sc.buildLeaderboard(profiles, predictions, [], matches);
+  assert.strictEqual(rows[0].pos, rows[1].pos);   // empate real → misma posición
   assert.strictEqual(rows[0].tier, rows[1].tier);
 });
