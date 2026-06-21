@@ -131,11 +131,12 @@
     if (meIdx >= 0) {
       const me = official[meIdx], above = official[meIdx - 1], below = official[meIdx + 1];
       const potential = nextMatch ? dayPotential(snapshot, upcoming, nextMatch) : 0;
-      if (above && (above.points - me.points) > 0 && (above.points - me.points) <= potential) {
+      const hasDecided = me.decided == null || me.decided > 0; // carrera real: solo si ya se jugó algo (undefined = sin dato = permitir)
+      if (hasDecided && above && (above.points - me.points) > 0 && (above.points - me.points) <= potential) {
         const gap = above.points - me.points;
         return vm("reachable_rival", nextMatch, { username: above.username, pos: above.pos, pointsGap: gap }, null, "opp_reachable_rival", { gap: gap, rival: above.username });
       }
-      if (below && (me.points - below.points) <= THREAT_GAP) {
+      if (hasDecided && below && (me.points - below.points) <= THREAT_GAP) {
         return vm("rival_threat", nextMatch, { username: below.username, pos: below.pos, pointsGap: me.points - below.points }, null, "opp_rival_threat", { rival: below.username });
       }
     }

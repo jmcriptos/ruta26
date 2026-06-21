@@ -184,3 +184,34 @@ test("opportunity: no promete pasar a un rival fuera del potencial de la jornada
   assert.notStrictEqual(vm.state, "reachable_rival");
   assert.notStrictEqual(vm.copy && vm.copy.headline, "Hoy puedes pasar a lider");
 });
+
+test("opportunity: sin partidos decididos no dispara rival_threat/reachable_rival", () => {
+  const official = [
+    { userId: "me", username: "yo", points: 0, decided: 0, exact: 0, pos: 1 },
+    { userId: "ot", username: "otro", points: 0, decided: 0, exact: 0, pos: 1 }
+  ];
+  const snap = {
+    now: 0, meId: "me", official: official, live: [],
+    matches: [{ id: "m1", stage: "group", status: "scheduled", kickoff_at: "2999-01-01T00:00:00Z", home: "1", away: "2" }],
+    matchPotentials: { m1: 3 }, myPredictions: { m1: { hg: 1, ag: 0 } }, myCaptains: [],
+    visiblePredictions: [], teams: { "1": { name: "A" }, "2": { name: "B" } }
+  };
+  const opp = eng.opportunity(snap);
+  assert.ok(opp.reason !== "rival_threat" && opp.reason !== "reachable_rival");
+});
+
+test("opportunity: con partidos decididos y gap chico sí dispara rival_threat", () => {
+  const official = [
+    { userId: "me", username: "yo", points: 5, decided: 4, exact: 1, pos: 1 },
+    { userId: "ot", username: "otro", points: 3, decided: 4, exact: 0, pos: 2 }
+  ];
+  const snap = {
+    now: 0, meId: "me", official: official, live: [],
+    matches: [{ id: "m1", stage: "group", status: "scheduled", kickoff_at: "2999-01-01T00:00:00Z", home: "1", away: "2" }],
+    matchPotentials: { m1: 3 }, myPredictions: { m1: { hg: 1, ag: 0 } }, myCaptains: [],
+    visiblePredictions: [], teams: { "1": { name: "A" }, "2": { name: "B" } }
+  };
+  const opp = eng.opportunity(snap);
+  assert.strictEqual(opp.reason, "rival_threat");
+  assert.strictEqual(opp.rival.username, "otro");
+});
