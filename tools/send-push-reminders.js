@@ -13,6 +13,7 @@ const webpush = require("web-push");
 const pm = require("./push-messages.js");
 const scoring = require("../js/scoring.js");
 const engagement = require("../js/engagement.js");
+const api = require("../js/api.js");
 
 const SUPABASE_URL = process.env.SUPABASE_URL || "https://wwzgpifvfmogjttwstxy.supabase.co";
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
@@ -96,6 +97,26 @@ function engagementMatch(m) {
   return { id: m.id, stage: m.stage, status: m.status, kickoff_at: m.date, home: m.home, away: m.away, winner: m.winner };
 }
 
+// Trae resultados en vivo de FIFA y los fusiona con el snapshot; degrada al snapshot si falla.
+async function liveMatches(snapMatches) {
+  try {
+    const ctrl = new AbortController();
+    const t = setTimeout(function () { ctrl.abort(); }, 10000);
+    let res;
+    try { res = await fetch(api.ENDPOINT, { signal: ctrl.signal, cache: "no-store" }); }
+    finally { clearTimeout(t); }
+    if (!res.ok) throw new Error("FIFA HTTP " + res.status);
+    const json = await res.json();
+    if (!json || !Array.isArray(json.Results)) throw new Error("Respuesta FIFA inválida");
+    const live = json.Results.map(api.normalize).filter(function (m) { return m.id && m.num && m.date; });
+    console.log("FIFA en vivo: " + live.length + " partidos fusionados");
+    return api.merge(snapMatches, live);
+  } catch (e) {
+    console.error("FIFA en vivo falló, uso snapshot:", e.message);
+    return snapMatches;
+  }
+}
+
 function userOpportunityCandidate(uid, soon, teams, official, allPreds, caps, now) {
   const myPredictions = {};
   allPreds.forEach(function (p) {
@@ -119,11 +140,12 @@ function userOpportunityCandidate(uid, soon, teams, official, allPreds, caps, no
     visiblePredictions: [],
     teams: teams
   });
-  if (!opp || !opp.match || ["pending_pick", "captain", "reachable_rival", "rival_threat"].indexOf(opp.reason) === -1) return null;
+  if (!opp || !opp.match || ["captain", "reachable_rival", "rival_threat"].indexOf(opp.reason) === -1) return null;
   return {
     userId: uid,
     matchId: opp.match.id,
     reason: opp.reason,
+    kind: "opportunity",
     kickoffAt: opp.match.kickoffAt,
     opp: opp
   };
@@ -132,7 +154,8 @@ function userOpportunityCandidate(uid, soon, teams, official, allPreds, caps, no
 (async function main() {
   const snap = snapshot();
   const now = Date.now();
-  const soon = snap.matches.filter(function (m) {
+  const matches = await liveMatches(snap.matches);
+  const soon = matches.filter(function (m) {
     const t = new Date(m.date).getTime();
     return m.status === "scheduled" && t > now && t <= now + WINDOW_MS;
   });
@@ -223,16 +246,12 @@ function userOpportunityCandidate(uid, soon, teams, official, allPreds, caps, no
   const preds = await rest("predictions?select=user_id,match_id,hg,ag,pens&limit=20000");
   const profiles = await rest("profiles?select=id,username");
   const picks = await rest("champion_picks?select=user_id,team_id");
-  const sent = await rest("push_sent?select=user_id,match_id,sent_at&match_id=in.(" + ids + ")");
+  const sent = await rest("push_sent?select=user_id,match_id,kind,sent_at&match_id=in.(" + ids + ")");
   const sentTodayRows = await rest("push_sent?select=user_id,sent_at&sent_at=gte." + encodeURIComponent(curacaoDayStartIso(now)));
-  // capitanes (para la oportunidad "marca tu Capitán"); degrada si la tabla falta
   const caps = await rest("captain_picks?select=user_id,match_id&limit=20000").catch(function () { return []; });
+
   const alreadySent = new Set();
-  sent.forEach(function (s) {
-    Object.keys(pm.REASON_PRIORITY).forEach(function (reason) {
-      alreadySent.add(s.user_id + "|" + s.match_id + "|" + reason);
-    });
-  });
+  (sent || []).forEach(function (s) { alreadySent.add(s.user_id + "|" + s.match_id + "|" + (s.kind || "opportunity")); });
   const sentTodayCount = {};
   (sentTodayRows || []).forEach(function (s) { sentTodayCount[s.user_id] = (sentTodayCount[s.user_id] || 0) + 1; });
 
@@ -241,21 +260,30 @@ function userOpportunityCandidate(uid, soon, teams, official, allPreds, caps, no
     const userSubs = byUser[s.user_id] = byUser[s.user_id] || [];
     if (userSubs.length < MAX_SUBSCRIPTIONS_PER_USER) userSubs.push(s);
   });
-  const official = scoring.buildLeaderboard(profiles || [], preds || [], picks || [], snap.matches, caps || []);
-  const candidates = Object.keys(byUser).map(function (uid) {
+  const userIds = Object.keys(byUser);
+
+  const official = scoring.buildLeaderboard(profiles || [], preds || [], picks || [], matches, caps || []);
+  const tallies = pm.tallyByMatch(preds || []);
+  const hasPred = new Set((preds || []).map(function (p) { return p.user_id + "|" + p.match_id; }));
+
+  // Candidatos: summary (%, principal) + oportunidad (capitán/rival; pending_pick lo cubre el %).
+  const summaryCands = pm.buildSummaryCandidates(userIds, soon, hasPred);
+  const oppCands = userIds.map(function (uid) {
     return userOpportunityCandidate(uid, soon, snap.teams, official, preds || [], caps || [], now);
   }).filter(Boolean);
-  const winners = pm.applyGuardrails(candidates, { alreadySent: alreadySent, sentTodayCount: sentTodayCount });
+  const winners = pm.applyGuardrails(summaryCands.concat(oppCands), { alreadySent: alreadySent, sentTodayCount: sentTodayCount });
   const winnersByUser = {};
   winners.forEach(function (c) { (winnersByUser[c.userId] = winnersByUser[c.userId] || []).push(c); });
 
   let avisados = 0;
   for (const uid of Object.keys(winnersByUser)) {
     for (const candidate of winnersByUser[uid]) {
-      const msg = pm.buildOpportunityPush(candidate.opp, pm.horaTxt(candidate.kickoffAt));
+      const msg = candidate.kind === "summary"
+        ? pm.buildPush(candidate.blockMatches, snap.teams, tallies, candidate.missingPick)
+        : pm.buildOpportunityPush(candidate.opp, pm.horaTxt(candidate.kickoffAt));
       if (!msg) continue;
       const payload = pushPayload(msg.title, msg.body, msg.data);
-      console.log((DRY ? "[dry-run] " : "") + uid.slice(0, 8) + "… [" + candidate.reason + "] ← " + msg.title + " | " + msg.body.replace(/\n/g, " ⏎ "));
+      console.log((DRY ? "[dry-run] " : "") + uid.slice(0, 8) + "… [" + candidate.kind + ":" + candidate.reason + "] ← " + msg.title + " | " + msg.body.replace(/\n/g, " ⏎ "));
       if (DRY) { avisados++; continue; }
 
       let delivered = 0;
@@ -263,7 +291,6 @@ function userOpportunityCandidate(uid, soon, teams, official, allPreds, caps, no
         try {
           await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload);
           delivered++;
-          console.log("  push aceptado por proveedor");
         } catch (e) {
           if (e.statusCode === 404 || e.statusCode === 410) {
             await rest("push_subscriptions?user_id=eq." + uid + "&endpoint=eq." + encodeURIComponent(s.endpoint), { method: "DELETE" });
@@ -273,13 +300,10 @@ function userOpportunityCandidate(uid, soon, teams, official, allPreds, caps, no
           }
         }
       }
-      if (!delivered) {
-        console.error("  ningún endpoint aceptó el push; se reintentará");
-        continue;
-      }
+      if (!delivered) { console.error("  ningún endpoint aceptó el push; se reintentará"); continue; }
       await rest("push_sent", {
         method: "POST",
-        body: JSON.stringify([{ match_id: candidate.matchId, user_id: uid }])
+        body: JSON.stringify([{ match_id: candidate.matchId, user_id: uid, kind: candidate.kind }])
       });
       avisados++;
     }
