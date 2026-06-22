@@ -12,7 +12,7 @@
     opp_captain: "Elige tu Capitán para {match}",
     opp_captain_cta: "Marcar Capitán",
     opp_reachable_rival: "Hoy puedes pasar a {rival}",
-    opp_rival_threat: "{rival} te pisa los talones",
+    opp_rival_threat: "{rival} te pisa los talones — defiende tu lugar",
     opp_win_matchday: "Hoy puedes ganar la jornada",
     opp_ready: "Listo: tu pick quedó guardado",
     opp_closed: "Este partido ya cerró",
@@ -132,7 +132,10 @@
       const me = official[meIdx], above = official[meIdx - 1], below = official[meIdx + 1];
       const potential = nextMatch ? dayPotential(snapshot, upcoming, nextMatch) : 0;
       const hasDecided = me.decided == null || me.decided > 0; // carrera real: solo si ya se jugó algo (undefined = sin dato = permitir)
-      if (hasDecided && above && (above.points - me.points) > 0 && (above.points - me.points) <= potential) {
+      // Oportunidad (perseguir) ANTES que amenaza (defender): se dispara también con
+      // empate (gap >= 0) para que el pelotón vea "hoy puedes pasar a X" en vez de la
+      // amenaza; solo los de arriba (sin nadie alcanzable encima) caen a rival_threat.
+      if (hasDecided && above && nextMatch && (above.points - me.points) >= 0 && (above.points - me.points) <= potential) {
         const gap = above.points - me.points;
         return vm("reachable_rival", nextMatch, { username: above.username, pos: above.pos, pointsGap: gap }, null, "opp_reachable_rival", { gap: gap, rival: above.username });
       }

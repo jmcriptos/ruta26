@@ -215,3 +215,23 @@ test("opportunity: con partidos decididos y gap chico sí dispara rival_threat",
   assert.strictEqual(opp.reason, "rival_threat");
   assert.strictEqual(opp.rival.username, "otro");
 });
+
+test("opportunity: empatado con el de arriba → reachable_rival (perseguir), no amenaza", () => {
+  // yo (pos 2) empatado con el líder arriba y con un perseguidor 1 pt abajo:
+  // debe ganar la OPORTUNIDAD (hoy puedes pasar al líder), no la amenaza.
+  const official = [
+    { userId: "a", username: "lider", points: 5, decided: 4, exact: 1, pos: 1 },
+    { userId: "me", username: "yo", points: 5, decided: 4, exact: 1, pos: 1 },
+    { userId: "b", username: "perseguidor", points: 4, decided: 4, exact: 0, pos: 3 }
+  ];
+  const snap = {
+    now: 0, meId: "me", official: official, live: [],
+    matches: [{ id: "m1", stage: "group", status: "scheduled", kickoff_at: "2999-01-01T00:00:00Z", home: "1", away: "2" }],
+    matchPotentials: { m1: 3 }, myPredictions: { m1: { hg: 1, ag: 0 } }, myCaptains: [],
+    visiblePredictions: [], teams: { "1": { name: "A" }, "2": { name: "B" } }
+  };
+  const opp = eng.opportunity(snap);
+  assert.strictEqual(opp.reason, "reachable_rival");
+  assert.strictEqual(opp.rival.username, "lider");
+  assert.strictEqual(opp.rival.pointsGap, 0);
+});

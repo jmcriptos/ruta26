@@ -151,7 +151,7 @@ hechos visibles (nombres ya escapados al render).
 | `opp_captain` | capitán disponible | `Elige tu Capitán para {match}` |
 | `opp_captain_cta` | CTA capitán | `Marcar Capitán` |
 | `opp_reachable_rival` | rival alcanzable | `Hoy puedes pasar a {rival}` |
-| `opp_rival_threat` | amenaza | `{rival} te pisa los talones` |
+| `opp_rival_threat` | amenaza | `{rival} te pisa los talones — defiende tu lugar` |
 | `opp_win_matchday` | jornada | `Hoy puedes ganar la jornada` |
 | `opp_ready` | listo | `Listo: tu pick quedó guardado` |
 | `opp_closed` | cerrado | `Este partido ya cerró` |

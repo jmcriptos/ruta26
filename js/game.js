@@ -855,15 +855,17 @@
     if (hasOpp) {
       const mn = opp.match && opp.match.homeName && opp.match.awayName ? (opp.match.homeName + " vs " + opp.match.awayName) : "tu próximo partido";
       const rival = (opp.rival && opp.rival.username) || "tu rival";
-      if (opp.state === "pending_pick") b = "Aún te falta tu pick de " + mn + " — el que no juega no puntúa.";
-      else if (opp.state === "captain") b = "Marca tu Capitán para " + mn + " y dale más filo a tu jugada.";
-      else if (opp.state === "reachable_rival") b = "Tienes a " + rival + " a tiro: un acierto y lo pasas.";
-      else if (opp.state === "rival_threat") b = "Ojo: " + rival + " te respira en la nuca.";
+      const gap = opp.rival ? opp.rival.pointsGap : null;
+      const ptTxt = function (n) { return n + " pt" + (n > 1 ? "s" : ""); };
+      if (opp.state === "pending_pick") b = "Aún te falta tu pick de " + mn + " — no te quedes afuera.";
+      else if (opp.state === "captain") b = "Marca tu Capitán para " + mn + " y súmale filo.";
+      else if (opp.state === "reachable_rival") b = gap > 0 ? "Tienes a " + rival + " a tiro (a " + ptTxt(gap) + "): aciertas y lo pasas." : "Estás empatado con " + rival + ": aciertas y lo pasas.";
+      else if (opp.state === "rival_threat") b = (gap > 0 ? rival + " te pisa los talones a " + ptTxt(gap) : rival + " está empatado contigo") + " — defiende tu lugar.";
       else if (opp.state === "win_matchday") b = "Hoy puedes ganar la jornada.";
     }
 
     // cláusula C — empujón a volver
-    const c = hasOpp ? "Vuelve y revisa tus pronósticos antes del kickoff." : (recap ? "Mañana hay revancha." : "");
+    const c = hasOpp ? "Entra antes del kickoff, que la tabla no espera." : (recap ? "Mañana hay revancha 🔁." : "");
 
     const narration = [a, b, c].filter(Boolean).join(" ");
     if (!narration) return "";

@@ -198,9 +198,9 @@ function applyGuardrails(candidates, opts) {
 const OPP_PUSH_COPY = {
   pending_pick: "👉 Aún te falta tu pick de {match}",
   captain: "⭐ Elige tu Capitán para {match}",
-  reachable_rival: "Estás a {gap} de {rival}",
-  rival_threat: "{rival} te pisa los talones",
-  win_matchday: "Hoy puedes ganar la jornada"
+  reachable_rival: "🔥 Hoy puedes pasar a {rival}",
+  rival_threat: "{rival} te pisa los talones — defiende tu lugar 👀",
+  win_matchday: "🏆 Hoy puedes ganar la jornada"
 };
 // opp: view model de WC.engagement.opportunity (reason, match{id,name}, rival{username,pointsGap}).
 // Devuelve {title, body, data} con metadata allowlisted para atribución, o null.
