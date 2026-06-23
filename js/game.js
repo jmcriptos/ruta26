@@ -704,11 +704,13 @@
     const step = function (r, cls) {
       if (!r) return "";
       const me = r.userId === uid ? " pod-me" : "";
+      const acc = r.decided > 0 ? Math.round((r.exact + r.outcome) / r.decided * 100) + "% acierto" : "—";
       return '<div class="pod-step ' + cls + me + '">' +
         '<div class="pod-medal">' + MEDAL[cls] + "</div>" +
         '<div class="pod-flag">' + champFlagFor(r.userId) + "</div>" +
         '<div class="pod-name">' + esc(r.username) + "</div>" +
         '<div class="pod-pts">' + r.points + " pts</div>" +
+        '<div class="pod-acc">' + acc + "</div>" +
         '<div class="pod-block">' + RANK[cls] + "</div>" +
         "</div>";
     };
