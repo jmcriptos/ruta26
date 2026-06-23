@@ -675,7 +675,7 @@ html { scroll-padding-top: calc(84px + env(safe-area-inset-top)); }
 .pod-flag { font-size: 26px; line-height: 1; margin: 2px 0; }
 .pod-name { max-width: 100%; font-size: 12px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .pod-pts { font-size: 12px; font-weight: 800; color: var(--lime); }
-.pod-acc { font-size: 10px; font-weight: 700; color: var(--muted, #9aa0a6); margin-bottom: 6px; }
+.pod-acc { font-size: 10px; font-weight: 700; color: rgba(255, 255, 255, .8); margin-bottom: 6px; }
 .pod-block { width: 100%; display: grid; place-items: center; border-radius: 6px 6px 0 0; font: 800 22px/1 "League Spartan", sans-serif; color: var(--ink); }
 .pod-step.first .pod-block { height: 60px; background: var(--lime); }
 .pod-step.second .pod-block { height: 44px; background: #c9ccc4; }
