@@ -681,7 +681,10 @@ html { scroll-padding-top: calc(84px + env(safe-area-inset-top)); }
 .pod-step.second .pod-block { height: 44px; background: #c9ccc4; }
 .pod-step.third .pod-block { height: 32px; background: #d8a56b; }
 .pod-step.pod-me .pod-name { color: var(--lime); }
-.pod-step.pod-me .pod-block { box-shadow: inset 0 0 0 2px var(--ink); }
+/* Resalte "este eres tú": borde interno solo arriba y a los lados; el borde
+   inferior se omite para que el bloque quede al ras del fondo del podio (si no,
+   la línea oscura se funde con el fondo y parece un hueco bajo el escalón). */
+.pod-step.pod-me .pod-block { box-shadow: inset 0 2px 0 var(--ink), inset 2px 0 0 var(--ink), inset -2px 0 0 var(--ink); }
 
 .game-rules summary { cursor: pointer; font-weight: 700; font-size: 14px; padding: 4px 0; }
 .game-rules table { width: 100%; margin-top: 10px; border-collapse: collapse; font-size: 13px; }
