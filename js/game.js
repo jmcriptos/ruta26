@@ -26,7 +26,7 @@
 
   let session = null;
   let profile = null;
-  let data = { profiles: [], predictions: [], picks: [], captains: [] };
+  let data = { profiles: [], predictions: [], picks: [], captains: [], koHints: {} };
   let captainErr = {}; // matchId → mensaje de error del capitán (se limpia al reintentar)
   let mine = {};            // match_id → {hg, ag, state, error}
   let myPick = null;        // team_id
@@ -147,16 +147,25 @@
         // completo supera eso (jugadores × 104 partidos) — el ranking quedaría corto
         client.from("predictions").select("user_id, match_id, hg, ag, pens").limit(20000),
         client.from("champion_picks").select("user_id, team_id"),
-        client.from("captain_picks").select("user_id, match_id").limit(20000)
+        client.from("captain_picks").select("user_id, match_id").limit(20000),
+        // Pista gruesa del batacazo: agregado server-side (RPC security definer).
+        // NO esencial: si el RPC aún no existe o falla, la quiniela sigue sin pista.
+        // El .catch evita que un rechazo (red) tumbe el Promise.all y la carga.
+        client.rpc("batacazo_hints").then(function (r) { return r; }, function () { return { error: true }; })
       ]);
-      // captain_picks (results[3]) es NO esencial: si la tabla aún no existe o
-      // falla, la quiniela debe seguir funcionando (sin bonus de capitán), así
-      // que se excluye del chequeo de error fatal y degrada a lista vacía.
+      // captain_picks (results[3]) y batacazo_hints (results[4]) son NO esenciales:
+      // si la tabla/función aún no existe o falla, la quiniela debe seguir
+      // funcionando (sin bonus / sin pista), así que se excluyen del chequeo de
+      // error fatal y degradan a vacío.
       if (results.slice(0, 3).some(function (r) { return r.error; })) { loadError = true; return; }
       data.profiles = results[0].data || [];
       data.predictions = results[1].data || [];
       data.picks = results[2].data || [];
       data.captains = results[3].error ? [] : (results[3].data || []);
+      data.koHints = {};
+      if (!results[4].error && results[4].data) {
+        results[4].data.forEach(function (h) { data.koHints[h.match_id] = { home: h.home_band, away: h.away_band }; });
+      }
       if (session) {
         const uid = session.user.id;
         mine = {};
@@ -446,6 +455,15 @@
       '<div class="pm-team"><span class="pm-flag">' + (aId ? teamFlag(aId) : "🏳️") + '</span><span class="pm-name">' + esc(WC.slotName(m, "away")) + "</span></div></div>";
   }
 
+  // Pista gruesa del batacazo: traduce la banda del RPC a una etiqueta orientativa
+  // bajo cada "Avanza". "poca gente" = vas contracorriente (batacazo grande si aciertas).
+  // 'na'/sin dato → sin etiqueta (no delatamos nada con muestras chicas).
+  function bandLabel(band) {
+    const txt = { few: "poca gente", split: "dividido", most: "la mayoría" }[band];
+    if (!txt) return "";
+    return ' <small class="adv-band adv-' + band + '">' + txt + "</small>";
+  }
+
   function pickRowHtml(m) {
     const v = mine[m.id];
     const locked = kicked(m);
@@ -463,7 +481,7 @@
         : '<span class="pts-chip zero">0 puntos</span>';
       const wasCap = m.stage !== "group" && isCaptain(m.id);
       const capBonus = wasCap && s.points > 0 ? captainBonusFor(m) : 0;
-      const capTag = wasCap ? ' <span class="cap-tag">⭐ Capitán' + (capBonus > 0 ? " +" + capBonus : "") + "</span>" : "";
+      const capTag = wasCap ? ' <span class="cap-tag">💥 Batacazo' + (capBonus > 0 ? " +" + capBonus : "") + "</span>" : "";
       return '<div class="pick-card locked" data-match="' + m.id + '">' + head +
         '<div class="pick-foot"><small>Tu pick: ' + pickLabel(m, v) + " · Real: " + real + capTag + "</small>" + chip + "</div></div>";
     }
@@ -489,9 +507,10 @@
     } else {
       const sel = v ? (v.hg > v.ag ? "h" : "a") : "";
       const hId = advId(m, "home"), aId = advId(m, "away");
+      const hint = data.koHints[m.id] || {};
       controls = '<div class="pick-1x2 ko">' +
-        '<button type="button" data-adv="h" class="' + (sel === "h" ? "on" : "") + '"><span class="b1f">' + (hId ? teamFlag(hId) : "🏳️") + "</span>Avanza</button>" +
-        '<button type="button" data-adv="a" class="' + (sel === "a" ? "on" : "") + '"><span class="b1f">' + (aId ? teamFlag(aId) : "🏳️") + "</span>Avanza</button>" +
+        '<button type="button" data-adv="h" class="' + (sel === "h" ? "on" : "") + '"><span class="b1f">' + (hId ? teamFlag(hId) : "🏳️") + "</span>Avanza" + bandLabel(hint.home) + "</button>" +
+        '<button type="button" data-adv="a" class="' + (sel === "a" ? "on" : "") + '"><span class="b1f">' + (aId ? teamFlag(aId) : "🏳️") + "</span>Avanza" + bandLabel(hint.away) + "</button>" +
         '<button type="button" data-pens class="pens ' + (v && v.pens ? "on" : "") + '">⚽ Por penales</button></div>';
     }
     const st = stateLabel(v);
@@ -500,7 +519,7 @@
     const star = showStar
       ? '<button type="button" class="cap-star' + (starOn ? " on" : "") + '" data-captain="' + m.id + '"' +
         (v ? "" : " disabled") + ' aria-pressed="' + (starOn ? "true" : "false") +
-        '" title="Capitán del día: suma puntos extra si aciertas (más si pocos lo tenían)">⭐ Capitán' + (starOn ? " ✓" : "") + "</button>"
+        '" title="Batacazo del día: suma puntos extra si aciertas (más si pocos lo tenían, 0 si era el favorito obvio)">💥 Batacazo' + (starOn ? " ✓" : "") + "</button>"
       : "";
     const capMsg = (showStar && captainErr[m.id]) ? '<span class="cap-msg">' + esc(captainErr[m.id]) + "</span>" : "";
     return '<div class="pick-card" data-match="' + m.id + '" data-type="' + type + '">' + head +
@@ -531,11 +550,12 @@
       "<tr><td>Eliminatorias: + acertar que fue por penales</td><td>+1 pt</td></tr>" +
       "<tr><td>Final: marcador exacto</td><td>3 pts</td></tr>" +
       "<tr><td>Final: solo el resultado</td><td>1 pt</td></tr>" +
-      "<tr><td>Campeón</td><td>15 pts</td></tr>" +
-      "<tr><td>⭐ Capitán en 16vos: mientras menos gente lo tenía, más suma</td><td>+1 a +4</td></tr>" +
-      "<tr><td>⭐ Capitán de octavos a la final</td><td>+2</td></tr></table>" +
+      "<tr><td>Campeón: según hasta dónde llegue (8vos / 4tos / semis / final / copa)</td><td>4 · 8 · 11 · 13 · 15</td></tr>" +
+      "<tr><td>💥 Batacazo: mientras menos gente tenía tu acierto, más suma</td><td>+1 a +3</td></tr></table>" +
       "<p>Cada partido cierra a su hora de inicio. El bonus de penales solo cuenta si además aciertas quién avanza. " +
-      "En la fase eliminatoria marcas un partido por día como Capitán ⭐ (solo suma si aciertas, nunca resta). En dieciseisavos premia la valentía: +1 si tu acierto lo tenía la mayoría, hasta +4 si casi nadie lo tenía. De octavos a la final, +2 fijo. " +
+      "Tu campeón ahora suma en el camino: cada ronda que sobrevive te paga más (4 en 8vos, 8 en 4tos, 11 en semis, 13 si llega a la final, 15 la copa), aunque no levante el trofeo. " +
+      "En la fase eliminatoria marcas un partido por día como Batacazo 💥 (solo suma si aciertas, nunca resta): mientras menos gente tenía tu acierto, más suma — hasta +3 si casi nadie lo tenía, y 0 si era el favorito obvio. " +
+      "Bajo cada opción verás una pista de qué tan acompañado va ese lado (poca gente · dividido · la mayoría) para que elijas tu batacazo con los ojos abiertos. " +
       "Los picks de los demás se revelan cuando el partido empieza. ¿Olvidaste tu contraseña? Escríbele a JM.</p></details>";
   }
 
@@ -603,7 +623,7 @@
       });
     return '<div class="game-card"><h3>Mi campeón 🏆</h3>' +
       (open
-        ? '<p>Vale 15 puntos. Puedes cambiarlo hasta el 28 de junio.</p><div class="champ-pick">' +
+        ? '<p>Ahora suma en el camino: 4 pts si llega a 8vos, 8 a 4tos, 11 a semis, 13 a la final y 15 si levanta la copa. Puedes cambiarlo hasta el 28 de junio.</p><div class="champ-pick">' +
           '<select id="gChamp"><option value="">Elige tu campeón…</option>' + opts.join("") + "</select>" +
           '<span class="pick-state ok" id="champState">' + (myPick ? "Guardado ✓" : "") + "</span></div>"
         : '<p>La elección cerró el 28 de junio.</p><p class="champ-locked">' + (myPick ? teamName(myPick) : "No elegiste campeón") + "</p>") +
@@ -860,7 +880,7 @@
       const gap = opp.rival ? opp.rival.pointsGap : null;
       const ptTxt = function (n) { return n + " pt" + (n > 1 ? "s" : ""); };
       if (opp.state === "pending_pick") b = "Aún te falta tu pick de " + mn + " — no te quedes afuera.";
-      else if (opp.state === "captain") b = "Marca tu Capitán para " + mn + " y súmale filo.";
+      else if (opp.state === "captain") b = "Marca tu Batacazo para " + mn + " y súmale filo.";
       else if (opp.state === "reachable_rival") b = gap > 0 ? "Tienes a " + rival + " a tiro (a " + ptTxt(gap) + "): aciertas y lo pasas." : "Estás empatado con " + rival + ": aciertas y lo pasas.";
       else if (opp.state === "rival_threat") b = (gap > 0 ? rival + " te pisa los talones a " + ptTxt(gap) : rival + " está empatado contigo") + " — defiende tu lugar.";
       else if (opp.state === "win_matchday") b = "Hoy puedes ganar la jornada.";

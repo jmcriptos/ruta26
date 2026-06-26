@@ -9,33 +9,33 @@
   };
   const CHAMPION_LOCK = "2026-06-28T19:00:00Z";
 
-  // Capitán contracorriente (aditivo). El capitán SUMA un bono a lo ganado en el
-  // partido, solo si acierta (puntos > 0); nunca resta. En dieciseisavos (r32) el
-  // bono premia ir contracorriente según qué tan acompañado estuvo el acierto
-  // (pCorrect = fracción de la liga que acertó el avance). De octavos en adelante
-  // (incl. 3er lugar) es un bono fijo. Grupos no se capitanean.
-  const CAPTAIN_FIXED_BONUS = 2;
-  // Escalones r32: pCorrect < maxP → bono. Ordenados del más raro al más común.
-  const CAPTAIN_R32_TIERS = [
-    { maxP: 0.20, bonus: 4 },
-    { maxP: 0.35, bonus: 3 },
-    { maxP: 0.60, bonus: 2 },
-    { maxP: Infinity, bonus: 1 }
+  // Batacazo (antes "capitán"). Bono aditivo a lo ganado en un partido de
+  // eliminatorias, solo si se acierta (puntos > 0); nunca resta. Premia ir
+  // contracorriente: cuanto menos acompañado estuvo el acierto (pCorrect =
+  // fracción de la liga que acertó el avance), más suma. La MISMA escala aplica
+  // en todas las rondas KO (R32 → final, incl. 3er lugar): no se aplana al final.
+  // Techo +3; el favorito obvio (≥65% lo tenía) paga 0: ir con la masa no es
+  // batacazo. Grupos no se batacazean.
+  const CAPTAIN_TIERS = [
+    { maxP: 0.25, bonus: 3 },    // casi nadie lo tenía
+    { maxP: 0.45, bonus: 2 },
+    { maxP: 0.65, bonus: 1 },
+    { maxP: Infinity, bonus: 0 } // favorito obvio
   ];
 
-  // Bono aditivo del capitán para un partido (0 en grupos). pCorrect (0..1) solo
-  // se usa en r32; sin dato válido se asume el escalón más común.
+  // Bono aditivo del batacazo para un partido (0 en grupos). pCorrect (0..1) es
+  // la fracción de la liga que acertó el avance; sin dato válido se asume 1
+  // (favorito obvio → 0).
   function captainBonus(match, pCorrect) {
     if (!match || match.stage === "group") return 0;
-    if (match.stage !== "r32") return CAPTAIN_FIXED_BONUS;
     const p = (typeof pCorrect === "number" && pCorrect >= 0) ? pCorrect : 1;
-    for (let i = 0; i < CAPTAIN_R32_TIERS.length; i++) {
-      if (p < CAPTAIN_R32_TIERS[i].maxP) return CAPTAIN_R32_TIERS[i].bonus;
+    for (let i = 0; i < CAPTAIN_TIERS.length; i++) {
+      if (p < CAPTAIN_TIERS[i].maxP) return CAPTAIN_TIERS[i].bonus;
     }
-    return 1;
+    return 0;
   }
 
-  // Total de un partido capitaneado: lo ganado + el bono (solo si acertó).
+  // Total de un partido con batacazo: lo ganado + el bono (solo si acertó).
   function captainTotal(s, match, pCorrect) {
     if (!s || s.points <= 0 || match.stage === "group") return s ? s.points : 0;
     return s.points + captainBonus(match, pCorrect);
@@ -43,10 +43,9 @@
 
   function maxCaptainBonus(match) {
     if (!match || match.stage === "group") return 0;
-    if (match.stage === "r32") return CAPTAIN_R32_TIERS.reduce(function (max, tier) {
+    return CAPTAIN_TIERS.reduce(function (max, tier) {
       return Math.max(max, tier.bonus);
     }, 0);
-    return CAPTAIN_FIXED_BONUS;
   }
 
   // Potencial máximo de puntos para un partido, usado por engagement para saber
@@ -88,11 +87,22 @@
     return { points: points, kind: "outcome" };
   }
 
+  // Campeón graduado (front-loaded): paga por la ronda KO más profunda que el
+  // equipo elegido GANÓ, no solo por levantar la copa. Rescata valor temprano
+  // para que un campeón eliminado no caiga a cero y mantenga viva la apuesta.
+  // Solo cuenta lo confirmado (partidos jugados); sube solo conforme avanza.
+  //   ganó R32 → llegó a 8vos = 4 ; ganó 8vos → 4tos = 8 ; ganó 4tos → semis = 11 ;
+  //   ganó semis → llegó a la final = 13 ; ganó la final → campeón = 15.
+  const CHAMPION_TIERS = { r32: 4, r16: 8, qf: 11, sf: 13, final: POINTS.champion };
   function scoreChampion(pick, matches) {
     if (!pick) return 0;
-    const final = matches.find(function (m) { return m.stage === "final"; });
-    if (!final || final.status !== "played" || !final.winner) return 0;
-    return pick.team_id === final.winner ? POINTS.champion : 0;
+    let best = 0;
+    matches.forEach(function (m) {
+      if (m.status !== "played" || m.winner !== pick.team_id) return;
+      const tier = CHAMPION_TIERS[m.stage];
+      if (tier && tier > best) best = tier;
+    });
+    return best;
   }
 
   function buildLeaderboard(profiles, predictions, picks, matches, captains) {
@@ -187,7 +197,7 @@
     return rows;
   }
 
-  const scoring = { POINTS: POINTS, CAPTAIN_FIXED_BONUS: CAPTAIN_FIXED_BONUS, CAPTAIN_R32_TIERS: CAPTAIN_R32_TIERS, CHAMPION_LOCK: CHAMPION_LOCK, scoreMatch: scoreMatch, captainBonus: captainBonus, captainTotal: captainTotal, maxCaptainBonus: maxCaptainBonus, maxMatchPoints: maxMatchPoints, scoreChampion: scoreChampion, buildLeaderboard: buildLeaderboard, freezeLive: freezeLive, buildLiveLeaderboard: buildLiveLeaderboard };
+  const scoring = { POINTS: POINTS, CAPTAIN_TIERS: CAPTAIN_TIERS, CHAMPION_TIERS: CHAMPION_TIERS, CHAMPION_LOCK: CHAMPION_LOCK, scoreMatch: scoreMatch, captainBonus: captainBonus, captainTotal: captainTotal, maxCaptainBonus: maxCaptainBonus, maxMatchPoints: maxMatchPoints, scoreChampion: scoreChampion, buildLeaderboard: buildLeaderboard, freezeLive: freezeLive, buildLiveLeaderboard: buildLiveLeaderboard };
   root.WC = root.WC || {};
   root.WC.scoring = scoring;
   if (typeof module !== "undefined" && module.exports) module.exports = scoring;

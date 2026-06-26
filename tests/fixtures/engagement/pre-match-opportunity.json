@@ -25,7 +25,7 @@
         "official": [{ "userId": "u1", "username": "ana", "points": 5, "pos": 1 }],
         "teams": { "MEX": { "name": "México" }, "KOR": { "name": "Corea del Sur" } }
       },
-      "expect": { "state": "captain", "reason": "captain", "matchId": "m1", "actionLabel": "Marcar Capitán" }
+      "expect": { "state": "captain", "reason": "captain", "matchId": "m1", "actionLabel": "Marcar Batacazo" }
     },
     {
       "name": "reachable_rival: rival arriba dentro de la brecha",

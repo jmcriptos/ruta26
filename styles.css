@@ -742,6 +742,11 @@ html { scroll-padding-top: calc(84px + env(safe-area-inset-top)); }
 .pick-card .pick-controls { display: flex; align-items: center; justify-content: center; gap: 6px; }
 .pick-card .pick-controls .pcf { font-size: 22px; }
 .pick-card .pick-1x2 button .b1f { display: block; font-size: 20px; line-height: 1; margin-bottom: 1px; }
+/* Pista gruesa del batacazo: cuán acompañado va cada lado. "poca gente" = contracorriente. */
+.pick-1x2.ko button .adv-band { display: block; margin-top: 2px; font-size: 10px; font-weight: 700; letter-spacing: .02em; text-transform: uppercase; opacity: .85; }
+.pick-1x2.ko button .adv-band.adv-few { color: #b8860b; }
+.pick-1x2.ko button .adv-band.adv-most { color: var(--muted); }
+.pick-1x2.ko button.on .adv-band { color: inherit; opacity: .7; }
 .pick-card .pick-state { display: block; text-align: right; margin-top: 10px; }
 .pick-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; border-top: 1px solid var(--line); padding-top: 10px; }
 .pick-foot small { color: var(--muted); font-size: 12px; }

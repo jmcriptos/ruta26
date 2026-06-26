@@ -13,20 +13,21 @@
     { "name": "sin pronóstico", "pred": null, "match": { "id": "m", "stage": "group", "status": "played", "hs": 1, "as": 0 }, "expect": { "points": 0, "kind": "none" } }
   ],
   "captainBonus": [
-    { "name": "r32 batacazo (<20%)", "match": { "stage": "r32" }, "pCorrect": 0.10, "expect": 4 },
-    { "name": "r32 pocos (20-35%)", "match": { "stage": "r32" }, "pCorrect": 0.25, "expect": 3 },
-    { "name": "r32 mitad (35-60%)", "match": { "stage": "r32" }, "pCorrect": 0.50, "expect": 2 },
-    { "name": "r32 obvio (>=60%)", "match": { "stage": "r32" }, "pCorrect": 0.80, "expect": 1 },
-    { "name": "octavos fijo", "match": { "stage": "r16" }, "pCorrect": 0.5, "expect": 2 },
-    { "name": "final fijo", "match": { "stage": "final" }, "pCorrect": 0.5, "expect": 2 },
-    { "name": "tercer lugar fijo", "match": { "stage": "third" }, "pCorrect": 0.5, "expect": 2 },
+    { "name": "r32 batacazo (<25%)", "match": { "stage": "r32" }, "pCorrect": 0.10, "expect": 3 },
+    { "name": "r32 pocos (25-45%)", "match": { "stage": "r32" }, "pCorrect": 0.30, "expect": 2 },
+    { "name": "r32 mitad (45-65%)", "match": { "stage": "r32" }, "pCorrect": 0.50, "expect": 1 },
+    { "name": "r32 obvio (>=65%)", "match": { "stage": "r32" }, "pCorrect": 0.80, "expect": 0 },
+    { "name": "octavos misma escala (rareza media)", "match": { "stage": "r16" }, "pCorrect": 0.5, "expect": 1 },
+    { "name": "final misma escala (rareza media)", "match": { "stage": "final" }, "pCorrect": 0.5, "expect": 1 },
+    { "name": "tercer lugar misma escala (rareza media)", "match": { "stage": "third" }, "pCorrect": 0.5, "expect": 1 },
     { "name": "grupos sin bono", "match": { "stage": "group" }, "pCorrect": 0.1, "expect": 0 }
   ],
   "captainTotal": [
-    { "name": "capitán r32 batacazo acierto (1+4)", "s": { "points": 1 }, "match": { "stage": "r32" }, "pCorrect": 0.1, "expect": 5 },
-    { "name": "capitán octavos acierto (1+2)", "s": { "points": 1 }, "match": { "stage": "r16" }, "pCorrect": 0.5, "expect": 3 },
-    { "name": "capitán inactivo (fallo) no suma", "s": { "points": 0 }, "match": { "stage": "r32" }, "pCorrect": 0.1, "expect": 0 },
-    { "name": "capitán en grupos no aplica", "s": { "points": 1 }, "match": { "stage": "group" }, "pCorrect": 0.1, "expect": 1 }
+    { "name": "batacazo r32 acierto raro (1+3)", "s": { "points": 1 }, "match": { "stage": "r32" }, "pCorrect": 0.1, "expect": 4 },
+    { "name": "batacazo octavos acierto rareza media (1+1)", "s": { "points": 1 }, "match": { "stage": "r16" }, "pCorrect": 0.5, "expect": 2 },
+    { "name": "batacazo favorito obvio no suma (1+0)", "s": { "points": 1 }, "match": { "stage": "r16" }, "pCorrect": 0.9, "expect": 1 },
+    { "name": "batacazo inactivo (fallo) no suma", "s": { "points": 0 }, "match": { "stage": "r32" }, "pCorrect": 0.1, "expect": 0 },
+    { "name": "batacazo en grupos no aplica", "s": { "points": 1 }, "match": { "stage": "group" }, "pCorrect": 0.1, "expect": 1 }
   ],
   "leaderboardTieBreak": {
     "description": "mismo puntaje y exactos se rompe por username (es)",
