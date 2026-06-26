@@ -1,10 +1,10 @@
 /* Puntos de la quiniela. Puro y dual-environment (browser + node:test). */
 (function (root) {
   const POINTS = {
-    match: 1,        // grupos y eliminatorias: acertar resultado/quién avanza
-    pens: 1,         // eliminatorias: extra por acertar "por penales"
-    finalExact: 3,   // final: marcador exacto
-    finalOutcome: 1, // final: solo resultado
+    match: 1,        // grupos: acertar el 1X2 (gana/empata/pierde)
+    finalExact: 3,   // KO (incl. final): marcador exacto
+    finalOutcome: 1, // KO (incl. final): solo el resultado (signo)
+    koAdvance: 1,    // KO con avance (r32-sf): acertar quién avanza
     champion: 15
   };
   const CHAMPION_LOCK = "2026-06-28T19:00:00Z";
@@ -53,38 +53,52 @@
   function maxMatchPoints(match, opts) {
     if (!match) return 0;
     let base;
-    if (match.stage === "final") base = POINTS.finalExact;
-    else if (match.stage === "group") base = POINTS.match;
-    else base = POINTS.match + POINTS.pens;
+    if (match.stage === "group") base = POINTS.match;
+    else base = POINTS.finalExact + (isAdvancingRound(match.stage) ? POINTS.koAdvance : 0);
     return base + (opts && opts.captain ? maxCaptainBonus(match) : 0);
   }
 
   function sign(n) { return n > 0 ? 1 : (n < 0 ? -1 : 0); }
 
-  // pred = {hg, ag, pens}. Codificación: grupos/final marcador real o canónico
-  // (1-0 local, 0-0 empate, 0-1 visitante); eliminatorias 1-0 avanza local / 0-1 avanza visitante.
-  // kind: "exact" (solo final) | "outcome" | "miss" | "pending" | "none".
+  // Rondas KO donde alguien pasa de ronda (el +1 de "quién avanza" aplica).
+  // Terminal (3er puesto, final): no hay avance, solo marcador.
+  function isAdvancingRound(stage) {
+    return stage === "r32" || stage === "r16" || stage === "qf" || stage === "sf";
+  }
+
+  // Quién cree el jugador que gana/avanza: por el signo del marcador, o por adv
+  // cuando predijo empate (el partido se define por penales).
+  function predWinner(pred, match) {
+    if (pred.hg > pred.ag) return match.home;
+    if (pred.hg < pred.ag) return match.away;
+    return pred.adv === "home" ? match.home : (pred.adv === "away" ? match.away : null);
+  }
+
+  // pred = {hg, ag, adv}. Grupos: 1X2 (1 pt). KO (incl. 3er y final): marcador
+  // exacto = 3, solo el resultado (signo) = 1; en rondas con avance, +1 extra
+  // por acertar quién avanza (en empates lo define pred.adv).
+  // kind refleja la calidad del marcador: "exact" | "outcome" | "miss" | "pending" | "none".
   function scoreMatch(pred, match) {
     if (!pred || pred.hg == null || pred.ag == null || !isFinite(pred.hg) || !isFinite(pred.ag)) return { points: 0, kind: "none" };
     if (match.status !== "played" || match.hs == null) return { points: 0, kind: "pending" };
-
-    if (match.stage === "final") {
-      if (pred.hg === match.hs && pred.ag === match.as) return { points: POINTS.finalExact, kind: "exact" };
-      if (sign(pred.hg - pred.ag) === sign(match.hs - match.as)) return { points: POINTS.finalOutcome, kind: "outcome" };
-      return { points: 0, kind: "miss" };
-    }
 
     if (match.stage === "group") {
       if (sign(pred.hg - pred.ag) === sign(match.hs - match.as)) return { points: POINTS.match, kind: "outcome" };
       return { points: 0, kind: "miss" };
     }
 
-    // eliminatorias: quién avanza (+ penales). La UI solo escribe (1,0) local o (0,1) visitante; 0-0 no es pick válido aquí.
-    const predWinner = pred.hg > pred.ag ? match.home : match.away;
-    if (!match.winner || predWinner !== match.winner) return { points: 0, kind: "miss" };
-    let points = POINTS.match;
-    if (pred.pens && match.hp != null) points += POINTS.pens; // hubo tanda de penales
-    return { points: points, kind: "outcome" };
+    // KO: marcador (exacto/resultado) + avance (solo rondas con avance).
+    let points = 0, kind;
+    if (pred.hg === match.hs && pred.ag === match.as) { points = POINTS.finalExact; kind = "exact"; }
+    else if (sign(pred.hg - pred.ag) === sign(match.hs - match.as)) { points = POINTS.finalOutcome; kind = "outcome"; }
+    else kind = "miss";
+
+    if (isAdvancingRound(match.stage) && match.winner && predWinner(pred, match) === match.winner) {
+      points += POINTS.koAdvance;
+    }
+    // si sumó por avance aunque el signo falló, no es "miss" del todo
+    if (points > 0 && kind === "miss") kind = "outcome";
+    return { points: points, kind: kind };
   }
 
   // Campeón graduado (front-loaded): paga por la ronda KO más profunda que el
@@ -118,7 +132,7 @@
       if (!match) return;
       const t = tallyByMatch[pr.match_id] || (tallyByMatch[pr.match_id] = { total: 0, correct: 0 });
       t.total++;
-      if (match.winner && (pr.hg > pr.ag ? match.home : match.away) === match.winner) t.correct++;
+      if (match.winner && predWinner(pr, match) === match.winner) t.correct++;
     });
     function pCorrectFor(matchId) {
       const t = tallyByMatch[matchId];
@@ -135,7 +149,7 @@
       const match = matchById[pr.match_id];
       if (!row || !match) return;
       row.predicted++;
-      const s = scoreMatch({ hg: pr.hg, ag: pr.ag, pens: pr.pens }, match);
+      const s = scoreMatch({ hg: pr.hg, ag: pr.ag, adv: pr.adv }, match);
       const isCap = captainSet[pr.user_id + "|" + pr.match_id];
       row.points += isCap ? captainTotal(s, match, pCorrectFor(pr.match_id)) : s.points;
       if (s.kind === "exact") row.exact++;

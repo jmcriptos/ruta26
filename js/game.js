@@ -145,7 +145,7 @@
         client.from("profiles").select("id, username"),
         // limit explícito: el default de Supabase son 1000 filas y el torneo
         // completo supera eso (jugadores × 104 partidos) — el ranking quedaría corto
-        client.from("predictions").select("user_id, match_id, hg, ag, pens").limit(20000),
+        client.from("predictions").select("user_id, match_id, hg, ag, adv").limit(20000),
         client.from("champion_picks").select("user_id, team_id"),
         client.from("captain_picks").select("user_id, match_id").limit(20000),
         // Pista gruesa del batacazo: agregado server-side (RPC security definer).
@@ -170,7 +170,7 @@
         const uid = session.user.id;
         mine = {};
         data.predictions.forEach(function (r) {
-          if (r.user_id === uid) mine[r.match_id] = { hg: r.hg, ag: r.ag, pens: !!r.pens, state: "saved" };
+          if (r.user_id === uid) mine[r.match_id] = { hg: r.hg, ag: r.ag, adv: r.adv || null, state: "saved" };
         });
         const own = data.picks.find(function (r) { return r.user_id === uid; });
         myPick = own ? own.team_id : null;
@@ -187,8 +187,10 @@
       if (!v || !session) return;
       const uid = session.user.id;
       v.state = "saving"; paintRow(matchId);
+      // adv solo aplica al empate KO; pens queda en false (columna NOT NULL legacy).
+      const advVal = (v.hg === v.ag) ? (v.adv || null) : null;
       const res = await client.from("predictions").upsert({
-        user_id: uid, match_id: matchId, hg: v.hg, ag: v.ag, pens: !!v.pens,
+        user_id: uid, match_id: matchId, hg: v.hg, ag: v.ag, pens: false, adv: advVal,
         updated_at: new Date().toISOString()
       });
       if (res.error) {
@@ -197,7 +199,7 @@
       } else {
         v.state = "saved"; v.error = null;
         const idx = data.predictions.findIndex(function (r) { return r.user_id === uid && r.match_id === matchId; });
-        const row = { user_id: uid, match_id: matchId, hg: v.hg, ag: v.ag, pens: !!v.pens };
+        const row = { user_id: uid, match_id: matchId, hg: v.hg, ag: v.ag, adv: advVal };
         if (idx >= 0) data.predictions[idx] = row; else data.predictions.push(row);
         const sm = WC.state.matches.find(function (x) { return x.id === matchId; });
         trackEvent("prediction_submitted", { stage: sm ? sm.stage : "" });
@@ -400,7 +402,9 @@
     return { cls: "err", text: v.error || "Error" };
   }
 
-  function predType(m) { return m.stage === "final" ? "score" : (m.stage === "group" ? "1x2" : "ko"); }
+  function predType(m) { return m.stage === "group" ? "1x2" : "score"; }
+  // Rondas KO donde alguien avanza (el toggle de empate y la pista del batacazo aplican).
+  function isAdvancingStage(m) { return m.stage === "r32" || m.stage === "r16" || m.stage === "qf" || m.stage === "sf"; }
 
   // Día calendario del partido en Curazao (UTC-4, sin DST) → "YYYY-MM-DD".
   function matchDay(m) {
@@ -422,7 +426,8 @@
     data.predictions.forEach(function (pr) {
       if (pr.match_id !== m.id) return;
       total++;
-      if (m.winner && (pr.hg > pr.ag ? m.home : m.away) === m.winner) correct++;
+      const pw = pr.hg > pr.ag ? m.home : (pr.hg < pr.ag ? m.away : (pr.adv === "home" ? m.home : pr.adv === "away" ? m.away : null));
+      if (m.winner && pw === m.winner) correct++;
     });
     return WC.scoring.captainBonus(m, total > 0 ? correct / total : 1);
   }
@@ -430,14 +435,15 @@
   // Produce HTML (se interpola en innerHTML): todo string de equipo debe pasar por esc().
   function pickLabel(m, v) {
     if (!v) return "sin pick";
-    if (m.stage === "final") return v.hg + "–" + v.ag;
     if (m.stage === "group") {
       if (v.hg > v.ag) return "Gana " + esc(WC.slotName(m, "home"));
       if (v.hg < v.ag) return "Gana " + esc(WC.slotName(m, "away"));
       return "Empate";
     }
-    const adv = v.hg > v.ag ? WC.slotName(m, "home") : WC.slotName(m, "away");
-    return "Avanza " + esc(adv) + (v.pens ? " (pen)" : "");
+    // KO (incl. final): marcador; si es empate, además a quién pasa por penales
+    let s = v.hg + "–" + v.ag;
+    if (v.hg === v.ag && v.adv) s += " (pasa " + esc(WC.slotName(m, v.adv)) + ")";
+    return s;
   }
 
   function advId(m, side) {
@@ -470,7 +476,7 @@
     const when = WC.fmt.dayLocal(m.date) + " · " + WC.fmt.timeLocal(m.date);
     const head = '<div class="pick-head"><span>' + when + "</span><span>" + WC.stageLabel(m) + "</span></div>" + matchupHtml(m);
     if (locked) {
-      const s = WC.scoring.scoreMatch(v ? { hg: v.hg, ag: v.ag, pens: v.pens } : null, m);
+      const s = WC.scoring.scoreMatch(v ? { hg: v.hg, ag: v.ag, adv: v.adv } : null, m);
       const real = m.status !== "scheduled" && m.hs != null
         ? m.hs + "–" + m.as + (m.hp != null ? " (pen " + m.hp + "–" + m.ap + ")" : "")
         : "—";
@@ -490,28 +496,33 @@
     if (type === "score") {
       const hg = v ? v.hg : "·";
       const ag = v ? v.ag : "·";
+      const hId = advId(m, "home"), aId = advId(m, "away");
       controls = '<div class="pick-controls">' +
-        '<span class="pcf">' + teamFlag(m.home) + "</span>" +
+        '<span class="pcf">' + (hId ? teamFlag(hId) : "🏳️") + "</span>" +
         '<button type="button" data-step="hg,-1" aria-label="Menos goles local">−</button><b data-val="hg">' + hg + "</b>" +
         '<button type="button" data-step="hg,1" aria-label="Más goles local">+</button>' +
         "<i>:</i>" +
         '<button type="button" data-step="ag,-1" aria-label="Menos goles visitante">−</button><b data-val="ag">' + ag + "</b>" +
         '<button type="button" data-step="ag,1" aria-label="Más goles visitante">+</button>' +
-        '<span class="pcf">' + teamFlag(m.away) + "</span></div>";
-    } else if (type === "1x2") {
+        '<span class="pcf">' + (aId ? teamFlag(aId) : "🏳️") + "</span></div>";
+      // pista gruesa del batacazo + toggle de avance (solo rondas con avance)
+      if (isAdvancingStage(m)) {
+        const hint = data.koHints[m.id] || {};
+        const hb = bandLabel(hint.home), ab = bandLabel(hint.away);
+        if (hb || ab) controls += '<div class="adv-hints"><span>' + (hId ? teamFlag(hId) : "🏳️") + hb + '</span><span>' + (aId ? teamFlag(aId) : "🏳️") + ab + "</span></div>";
+        const isDraw = v && v.hg != null && v.hg === v.ag;
+        controls += '<div class="ko-adv' + (isDraw ? "" : " hidden") + '">' +
+          '<span class="ko-adv-q">Empate → ¿quién avanza por penales?</span>' +
+          '<button type="button" data-adv="home" class="' + (v && v.adv === "home" ? "on" : "") + '"><span class="b1f">' + (hId ? teamFlag(hId) : "🏳️") + "</span>" + esc(WC.slotName(m, "home")) + "</button>" +
+          '<button type="button" data-adv="away" class="' + (v && v.adv === "away" ? "on" : "") + '"><span class="b1f">' + (aId ? teamFlag(aId) : "🏳️") + "</span>" + esc(WC.slotName(m, "away")) + "</button></div>";
+      }
+    } else {
+      // grupos: 1X2
       const sel = v ? (v.hg > v.ag ? "h" : (v.hg < v.ag ? "a" : "x")) : "";
       controls = '<div class="pick-1x2">' +
         '<button type="button" data-1x2="h" class="' + (sel === "h" ? "on" : "") + '"><span class="b1f">' + teamFlag(m.home) + "</span>Gana</button>" +
         '<button type="button" data-1x2="x" class="' + (sel === "x" ? "on" : "") + '">Empate</button>' +
         '<button type="button" data-1x2="a" class="' + (sel === "a" ? "on" : "") + '"><span class="b1f">' + teamFlag(m.away) + "</span>Gana</button></div>";
-    } else {
-      const sel = v ? (v.hg > v.ag ? "h" : "a") : "";
-      const hId = advId(m, "home"), aId = advId(m, "away");
-      const hint = data.koHints[m.id] || {};
-      controls = '<div class="pick-1x2 ko">' +
-        '<button type="button" data-adv="h" class="' + (sel === "h" ? "on" : "") + '"><span class="b1f">' + (hId ? teamFlag(hId) : "🏳️") + "</span>Avanza" + bandLabel(hint.home) + "</button>" +
-        '<button type="button" data-adv="a" class="' + (sel === "a" ? "on" : "") + '"><span class="b1f">' + (aId ? teamFlag(aId) : "🏳️") + "</span>Avanza" + bandLabel(hint.away) + "</button>" +
-        '<button type="button" data-pens class="pens ' + (v && v.pens ? "on" : "") + '">⚽ Por penales</button></div>';
     }
     const st = stateLabel(v);
     const showStar = m.stage !== "group";
@@ -537,25 +548,26 @@
     row.querySelectorAll("[data-val]").forEach(function (b) { b.textContent = v ? v[b.dataset.val] : "·"; });
     const sel1x2 = v ? (v.hg > v.ag ? "h" : (v.hg < v.ag ? "a" : "x")) : "";
     row.querySelectorAll("[data-1x2]").forEach(function (b) { b.classList.toggle("on", b.dataset["1x2"] === sel1x2); });
-    row.querySelectorAll("[data-adv]").forEach(function (b) { b.classList.toggle("on", v && b.dataset.adv === (v.hg > v.ag ? "h" : "a")); });
-    const pensBtn = row.querySelector("[data-pens]");
-    if (pensBtn) pensBtn.classList.toggle("on", !!(v && v.pens));
+    // toggle de avance (empate KO): mostrar solo si el marcador es empate; marcar el lado elegido
+    const isDraw = !!(v && v.hg != null && v.hg === v.ag);
+    const advWrap = row.querySelector(".ko-adv");
+    if (advWrap) advWrap.classList.toggle("hidden", !isDraw);
+    row.querySelectorAll("[data-adv]").forEach(function (b) { b.classList.toggle("on", !!(v && v.adv === b.dataset.adv)); });
   }
 
   function rulesHtml() {
     return '<details class="game-rules game-card"><summary>Cómo se juega</summary>' +
       "<table><tr><th>Predicción</th><th>Puntos</th></tr>" +
       "<tr><td>Grupos: acertar gana/empata/pierde</td><td>1 pt</td></tr>" +
-      "<tr><td>Eliminatorias: acertar quién avanza</td><td>1 pt</td></tr>" +
-      "<tr><td>Eliminatorias: + acertar que fue por penales</td><td>+1 pt</td></tr>" +
-      "<tr><td>Final: marcador exacto</td><td>3 pts</td></tr>" +
-      "<tr><td>Final: solo el resultado</td><td>1 pt</td></tr>" +
+      "<tr><td>Eliminatorias y final: marcador exacto</td><td>3 pts</td></tr>" +
+      "<tr><td>Eliminatorias y final: solo el resultado</td><td>1 pt</td></tr>" +
+      "<tr><td>Eliminatorias: + acertar quién avanza</td><td>+1 pt</td></tr>" +
       "<tr><td>Campeón: según hasta dónde llegue (8vos / 4tos / semis / final / copa)</td><td>4 · 8 · 11 · 13 · 15</td></tr>" +
       "<tr><td>💥 Batacazo: mientras menos gente tenía tu acierto, más suma</td><td>+1 a +3</td></tr></table>" +
-      "<p>Cada partido cierra a su hora de inicio. El bonus de penales solo cuenta si además aciertas quién avanza. " +
-      "Tu campeón ahora suma en el camino: cada ronda que sobrevive te paga más (4 en 8vos, 8 en 4tos, 11 en semis, 13 si llega a la final, 15 la copa), aunque no levante el trofeo. " +
-      "En la fase eliminatoria marcas un partido por día como Batacazo 💥 (solo suma si aciertas, nunca resta): mientras menos gente tenía tu acierto, más suma — hasta +3 si casi nadie lo tenía, y 0 si era el favorito obvio. " +
-      "Bajo cada opción verás una pista de qué tan acompañado va ese lado (poca gente · dividido · la mayoría) para que elijas tu batacazo con los ojos abiertos. " +
+      "<p>Cada partido cierra a su hora de inicio. En eliminatorias ahora pronosticas el MARCADOR: exacto vale 3, solo el resultado 1, y en las rondas con avance (16vos a semis) sumas +1 extra si aciertas quién pasa. Si pones empate, eliges a quién avanza por penales. " +
+      "Tu campeón suma en el camino: cada ronda que sobrevive te paga más (4 en 8vos, 8 en 4tos, 11 en semis, 13 si llega a la final, 15 la copa), aunque no levante el trofeo. " +
+      "Marcas un partido por día como Batacazo 💥 (solo suma si aciertas el avance, nunca resta): mientras menos gente tenía tu acierto, más suma — hasta +3 si casi nadie lo tenía, y 0 si era el favorito obvio. " +
+      "Bajo el marcador verás una pista de qué tan acompañado va cada lado (poca gente · dividido · la mayoría) para que elijas tu batacazo con los ojos abiertos. " +
       "Los picks de los demás se revelan cuando el partido empieza. ¿Olvidaste tu contraseña? Escríbele a JM.</p></details>";
   }
 
@@ -1017,19 +1029,10 @@
     if (bAdv && session) {
       const row = bAdv.closest("[data-match]");
       const matchId = row.dataset.match;
-      const prev = mine[matchId] || {};
-      mine[matchId] = { hg: bAdv.dataset.adv === "h" ? 1 : 0, ag: bAdv.dataset.adv === "a" ? 1 : 0, pens: !!prev.pens, state: "saving" };
-      paintRow(matchId);
-      savePrediction(matchId);
-      return;
-    }
-    const bPens = event.target.closest("[data-pens]");
-    if (bPens && session) {
-      const row = bPens.closest("[data-match]");
-      const matchId = row.dataset.match;
       const v = mine[matchId];
-      if (!v) return; // primero hay que elegir quién avanza
-      v.pens = !v.pens; v.state = "saving";
+      if (!v) return; // primero hay que poner el marcador
+      v.adv = bAdv.dataset.adv; // "home" | "away" — a quién pasa por penales en el empate
+      v.state = "saving";
       paintRow(matchId);
       savePrediction(matchId);
       return;
@@ -1125,7 +1128,7 @@
     if (!session || !match || match.status !== "played") return null;
     const pred = mine[match.id];
     if (!pred) return { hasPred: false };
-    const s = WC.scoring.scoreMatch({ hg: pred.hg, ag: pred.ag, pens: pred.pens }, match);
+    const s = WC.scoring.scoreMatch({ hg: pred.hg, ag: pred.ag, adv: pred.adv }, match);
     return { hasPred: true, points: s.points, kind: s.kind };
   }
 

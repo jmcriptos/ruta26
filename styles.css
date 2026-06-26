@@ -743,10 +743,18 @@ html { scroll-padding-top: calc(84px + env(safe-area-inset-top)); }
 .pick-card .pick-controls .pcf { font-size: 22px; }
 .pick-card .pick-1x2 button .b1f { display: block; font-size: 20px; line-height: 1; margin-bottom: 1px; }
 /* Pista gruesa del batacazo: cuán acompañado va cada lado. "poca gente" = contracorriente. */
-.pick-1x2.ko button .adv-band { display: block; margin-top: 2px; font-size: 10px; font-weight: 700; letter-spacing: .02em; text-transform: uppercase; opacity: .85; }
-.pick-1x2.ko button .adv-band.adv-few { color: #b8860b; }
-.pick-1x2.ko button .adv-band.adv-most { color: var(--muted); }
-.pick-1x2.ko button.on .adv-band { color: inherit; opacity: .7; }
+.adv-hints { display: flex; justify-content: space-around; gap: 8px; margin-top: 6px; }
+.adv-hints span { display: inline-flex; align-items: center; gap: 4px; font-size: 16px; }
+.adv-band { font-size: 10px; font-weight: 700; letter-spacing: .02em; text-transform: uppercase; opacity: .85; }
+.adv-band.adv-few { color: #b8860b; }
+.adv-band.adv-most { color: var(--muted); }
+/* Toggle "¿quién avanza?" cuando el marcador KO predicho es empate (penales). */
+.ko-adv { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px; margin-top: 8px; }
+.ko-adv.hidden { display: none; }
+.ko-adv-q { flex: 1 1 100%; text-align: center; font-size: 12px; color: var(--muted); }
+.ko-adv button { min-height: 40px; padding: 6px 12px; border: 1px solid var(--line); background: white; border-radius: 999px; font-size: 13px; font-weight: 700; color: var(--ink); cursor: pointer; }
+.ko-adv button.on { background: var(--lime); border-color: var(--lime); }
+.ko-adv button .b1f { font-size: 16px; margin-right: 4px; }
 .pick-card .pick-state { display: block; text-align: right; margin-top: 10px; }
 .pick-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; border-top: 1px solid var(--line); padding-top: 10px; }
 .pick-foot small { color: var(--muted); font-size: 12px; }

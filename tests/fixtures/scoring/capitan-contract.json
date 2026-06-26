@@ -6,9 +6,9 @@
     { "name": "grupos: empate acertado", "pred": { "hg": 0, "ag": 0 }, "match": { "id": "m", "stage": "group", "status": "played", "hs": 1, "as": 1 }, "expect": { "points": 1, "kind": "outcome" } },
     { "name": "final: marcador exacto", "pred": { "hg": 2, "ag": 1 }, "match": { "id": "m", "stage": "final", "status": "played", "hs": 2, "as": 1 }, "expect": { "points": 3, "kind": "exact" } },
     { "name": "final: solo resultado", "pred": { "hg": 3, "ag": 0 }, "match": { "id": "m", "stage": "final", "status": "played", "hs": 2, "as": 1 }, "expect": { "points": 1, "kind": "outcome" } },
-    { "name": "eliminatoria: acierta avance", "pred": { "hg": 1, "ag": 0 }, "match": { "id": "m", "stage": "r16", "status": "played", "hs": 2, "as": 1, "home": "H", "away": "A", "winner": "H" }, "expect": { "points": 1, "kind": "outcome" } },
-    { "name": "eliminatoria: avance + penales", "pred": { "hg": 1, "ag": 0, "pens": true }, "match": { "id": "m", "stage": "r16", "status": "played", "hs": 1, "as": 1, "home": "H", "away": "A", "winner": "H", "hp": 4, "ap": 2 }, "expect": { "points": 2, "kind": "outcome" } },
-    { "name": "eliminatoria: fallo de avance", "pred": { "hg": 1, "ag": 0 }, "match": { "id": "m", "stage": "qf", "status": "played", "hs": 0, "as": 1, "home": "H", "away": "A", "winner": "A" }, "expect": { "points": 0, "kind": "miss" } },
+    { "name": "KO: resultado + avance (1+1)", "pred": { "hg": 1, "ag": 0 }, "match": { "id": "m", "stage": "r16", "status": "played", "hs": 2, "as": 1, "home": "H", "away": "A", "winner": "H" }, "expect": { "points": 2, "kind": "outcome" } },
+    { "name": "KO: empate exacto + avance por penales (3+1)", "pred": { "hg": 1, "ag": 1, "adv": "home" }, "match": { "id": "m", "stage": "r16", "status": "played", "hs": 1, "as": 1, "home": "H", "away": "A", "winner": "H", "hp": 4, "ap": 2 }, "expect": { "points": 4, "kind": "exact" } },
+    { "name": "KO: fallar marcador y avance", "pred": { "hg": 1, "ag": 0 }, "match": { "id": "m", "stage": "qf", "status": "played", "hs": 0, "as": 1, "home": "H", "away": "A", "winner": "A" }, "expect": { "points": 0, "kind": "miss" } },
     { "name": "partido sin resultado (pendiente)", "pred": { "hg": 1, "ag": 0 }, "match": { "id": "m", "stage": "r16", "status": "scheduled", "hs": null }, "expect": { "points": 0, "kind": "pending" } },
     { "name": "sin pronóstico", "pred": null, "match": { "id": "m", "stage": "group", "status": "played", "hs": 1, "as": 0 }, "expect": { "points": 0, "kind": "none" } }
   ],
