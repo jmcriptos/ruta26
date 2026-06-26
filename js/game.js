@@ -553,6 +553,9 @@
     const advWrap = row.querySelector(".ko-adv");
     if (advWrap) advWrap.classList.toggle("hidden", !isDraw);
     row.querySelectorAll("[data-adv]").forEach(function (b) { b.classList.toggle("on", !!(v && v.adv === b.dataset.adv)); });
+    // el botón de Batacazo se habilita en cuanto hay pick (al renderizar nace disabled sin pick)
+    const capStar = row.querySelector(".cap-star");
+    if (capStar) capStar.disabled = !v;
   }
 
   function rulesHtml() {
