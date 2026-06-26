@@ -760,7 +760,7 @@ html { scroll-padding-top: calc(84px + env(safe-area-inset-top)); }
 .pick-foot small { color: var(--muted); font-size: 12px; }
 
 /* Capitán de eliminatorias */
-.cap-star { display: block; width: 100%; min-height: 40px; margin-top: 10px; padding: 8px 12px; border: 1px solid var(--line); background: white; border-radius: 999px; font-size: 13px; font-weight: 700; color: var(--ink); cursor: pointer; }
+.cap-star { display: block; width: 100%; max-width: 360px; min-height: 40px; margin: 10px auto 0; padding: 8px 12px; border: 1px solid var(--line); background: white; border-radius: 999px; font-size: 13px; font-weight: 700; color: var(--ink); cursor: pointer; }
 .cap-star:hover:not(:disabled) { border-color: #e3c25a; }
 .cap-star.on { background: #f2c200; border-color: #f2c200; color: var(--ink); }
 .cap-star:disabled { opacity: .5; cursor: not-allowed; }
