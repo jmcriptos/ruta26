@@ -168,7 +168,7 @@
     const g = row[winnerGroup];
     if (!g) return null;
     const table = tables && tables[g];
-    return table && table[2] ? table[2].teamId : null;
+    return table && table[2] ? (table[2].teamId || null) : null;
   }
 
   const standings = { computeGroups: computeGroups, groupFinished: groupFinished, rankThirds: rankThirds, resolveSlot: resolveSlot, teamRoute: teamRoute, groupStageEliminated: groupStageEliminated, bracketSide: bracketSide, resolveThird: resolveThird };
