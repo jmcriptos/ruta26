@@ -14,6 +14,15 @@ async function main() {
   if (!res.ok) throw new Error("HTTP " + res.status + " al traer la tabla");
   const wt = (await res.json()).parse.wikitext;
 
+  // Orden real de las columnas de ganador (1A..1L) leído del encabezado, para no
+  // depender de un orden alfabético asumido: si Wikipedia reordena, falla ruidoso.
+  const hEnd = wt.search(/\n\|-\s*\n!\s*scope="row"/);
+  const header = hEnd >= 0 ? wt.slice(0, hEnd) : "";
+  const cols = (header.match(/1([A-L])\s*<br\s*\/?>\s*vs/g) || []).map(function (s) { return s.match(/1([A-L])/)[1]; });
+  if (cols.length !== 8 || cols.slice().sort().join("") !== WINNERS.slice().sort().join("")) {
+    throw new Error("orden de columnas inesperado: [" + cols.join(",") + "]");
+  }
+
   const blocks = wt.split(/\n\|-/).filter(function (b) { return /scope="row"/.test(b); });
   const alloc = {};
   blocks.forEach(function (b) {
@@ -23,7 +32,7 @@ async function main() {
     if (key.length !== 8 || asg.length !== 8) throw new Error("fila " + no + ": key=" + key.length + " asg=" + asg.length);
     const keyStr = key.slice().sort().join("");
     const map = {};
-    WINNERS.forEach(function (w, i) { map[w] = asg[i]; });
+    cols.forEach(function (w, i) { map[w] = asg[i]; });
     const vals = WINNERS.map(function (w) { return map[w]; });
     if (new Set(vals).size !== 8) throw new Error("fila " + no + " (" + keyStr + "): terceros repetidos");
     if (vals.slice().sort().join("") !== keyStr) throw new Error("fila " + no + " (" + keyStr + "): asignados != clave");

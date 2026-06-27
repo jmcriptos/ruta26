@@ -21,4 +21,5 @@ test("allocation: invariante estructural en todas las filas", () => {
 test("allocation: filas conocidas de Wikipedia", () => {
   assert.deepStrictEqual(alloc["BDEFIJKL"], { A: "E", B: "J", D: "B", E: "D", G: "I", I: "F", K: "L", L: "K" });
   assert.deepStrictEqual(alloc["ABCDEFGI"], { A: "C", B: "G", D: "B", E: "D", G: "A", I: "F", K: "E", L: "I" });
+  assert.deepStrictEqual(alloc["EFGHIJKL"], { A: "E", B: "J", D: "I", E: "F", G: "H", I: "G", K: "L", L: "K" });
 });
