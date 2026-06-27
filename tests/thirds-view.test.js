@@ -41,10 +41,10 @@ test("renderThirds: inserta la línea de corte una sola vez", () => {
 
 test("renderThirds: asterisco solo en terceros con grupo en curso (pj<3)", () => {
   const html = view.renderThirds(makeThirds(), makeTeamById());
-  // t6 (pj 2) lleva asterisco; su etiqueta de grupo es "Gr. F *"
-  assert.ok(html.indexOf("Gr. F *") >= 0, "t6 debería ir marcado provisional");
-  // t1 (pj 3) no lleva asterisco: "Gr. A" sin " *"
-  assert.ok(html.indexOf("Gr. A</small>") >= 0, "t1 no debería ir marcado");
+  // El grupo va en su propia columna (solo la letra). t6 (pj 2) lleva asterisco: "F*".
+  assert.ok(html.indexOf('<span class="t3-grp">F*</span>') >= 0, "t6 debería ir marcado provisional");
+  // t1 (pj 3) no lleva asterisco: "A" sin "*".
+  assert.ok(html.indexOf('<span class="t3-grp">A</span>') >= 0, "t1 no debería ir marcado");
 });
 
 test("renderThirds: cada fila lleva data-team-id para abrir el panel", () => {

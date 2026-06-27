@@ -16,6 +16,7 @@
     const lookup = teamById || {};
     const head = '<div class="gt-row gt-head">' +
       '<span class="gt-pos">#</span><span class="gt-team">Mejores terceros</span>' +
+      '<span class="t3-grp">GR</span>' +
       '<span>PJ</span><span>PG</span><span>PE</span><span>PP</span><span>DG</span>' +
       '<span class="gt-pts">PTS</span></div>';
     const rows = list.map(function (t, i) {
@@ -29,8 +30,8 @@
         '<button class="gt-row gt-team-row' + (t.qualifies ? " qualifying" : "") +
         '" data-team-id="' + esc(t.teamId) + '">' +
         '<span class="gt-pos">' + (i + 1) + '</span>' +
-        '<span class="gt-team"><i>' + esc(tm.flag) + '</i><em>' + esc(tm.name) + '</em>' +
-        '<small class="t3-grp">Gr. ' + esc(t.group) + (prov ? ' *' : '') + '</small></span>' +
+        '<span class="gt-team"><i>' + esc(tm.flag) + '</i><em>' + esc(tm.name) + '</em></span>' +
+        '<span class="t3-grp">' + esc(t.group) + (prov ? '*' : '') + '</span>' +
         '<span>' + t.pj + '</span><span>' + t.pg + '</span><span>' + t.pe + '</span>' +
         '<span>' + t.pp + '</span><span>' + dg + '</span>' +
         '<span class="gt-pts">' + t.pts + '</span></button>';

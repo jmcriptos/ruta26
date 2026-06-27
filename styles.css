@@ -274,7 +274,8 @@ h1 em { color: var(--lime); font-style: normal; }
 .gt-team-row.qualifying .gt-pos { color: #557526; }
 .thirds-card { grid-column: 1 / -1; }
 .thirds-card .gt-head .gt-team { color: var(--ink); }
-.t3-grp { margin-left: auto; flex: 0 0 auto; padding-left: 8px; font-size: 11px; font-weight: 800; color: var(--muted); white-space: nowrap; }
+.thirds-card .gt-row { grid-template-columns: 18px minmax(0, 1fr) 22px repeat(5, 24px) 28px; }
+.t3-grp { font-size: 11px; font-weight: 800; color: var(--muted); white-space: nowrap; }
 .thirds-cut { display: flex; align-items: center; padding: 6px 14px; border-top: 2px dashed var(--lime-deep); }
 .thirds-cut span { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .5px; color: #557526; }
 .thirds-note { padding: 10px 14px 14px; margin: 0; color: var(--muted); font-size: 11px; line-height: 1.5; }
