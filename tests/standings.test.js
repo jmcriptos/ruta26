@@ -252,3 +252,28 @@ test("groupStageEliminated: 4º con grupo cerrado, 3º no clasificado, y casos n
   const withKO = matches.concat([ko(73, "r32", "1A", "2B", { home: "a4", away: "b1" })]);
   assert.strictEqual(st.groupStageEliminated("a4", { matches: withKO, teams: teams, tables: tables, thirds: thirds }), false);
 });
+
+test("resolveThird: asigna el tercero correcto según la tabla", () => {
+  const groups = ["A", "B", "D", "E", "G", "I", "K", "L"];
+  const thirds = groups.map(function (g) { return { teamId: "third_" + g, group: g, qualifies: true }; })
+    .concat(["C", "F", "H", "J"].map(function (g) { return { teamId: "third_" + g, group: g, qualifies: false }; }));
+  // stub identidad: clave ABDEGIKL → cada ganador recibe el tercero de su propio grupo
+  const allocation = { "ABDEGIKL": { A: "A", B: "B", D: "D", E: "E", G: "G", I: "I", K: "K", L: "L" } };
+  const tables = {};
+  groups.forEach(function (g) { tables[g] = [{ teamId: "x" }, { teamId: "y" }, { teamId: "third_" + g }]; });
+  assert.strictEqual(st.resolveThird("E", thirds, tables, allocation), "third_E");
+  assert.strictEqual(st.resolveThird("A", thirds, tables, allocation), "third_A");
+});
+
+test("resolveThird: null si no hay exactamente 8 terceros que clasifican", () => {
+  const seven = ["A", "B", "D", "E", "G", "I", "K"].map(function (g) { return { teamId: "t" + g, group: g, qualifies: true }; });
+  assert.strictEqual(st.resolveThird("A", seven, {}, {}), null);
+});
+
+test("resolveThird: null si la clave o el ganador no están en la tabla", () => {
+  const thirds = ["A", "B", "D", "E", "G", "I", "K", "L"].map(function (g) { return { teamId: "t" + g, group: g, qualifies: true }; });
+  assert.strictEqual(st.resolveThird("A", thirds, {}, {}), null); // clave ausente
+  const allocation = { "ABDEGIKL": { A: "A" } };
+  const tables = { A: [{}, {}, { teamId: "tA" }] };
+  assert.strictEqual(st.resolveThird("B", thirds, tables, allocation), null); // ganador ausente en la fila
+});

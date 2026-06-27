@@ -156,7 +156,22 @@
     return null;
   }
 
-  const standings = { computeGroups: computeGroups, groupFinished: groupFinished, rankThirds: rankThirds, resolveSlot: resolveSlot, teamRoute: teamRoute, groupStageEliminated: groupStageEliminated, bracketSide: bracketSide };
+  // Resuelve qué tercero ocupa la casilla emparejada con el ganador del grupo
+  // winnerGroup, según la tabla oficial FIFA y el top-8 actual de terceros.
+  // thirds: salida de rankThirds. allocation: WC.thirdsAllocation. Devuelve teamId o null.
+  function resolveThird(winnerGroup, thirds, tables, allocation) {
+    const q = (thirds || []).filter(function (t) { return t && t.qualifies; });
+    if (q.length !== 8) return null;
+    const key = q.map(function (t) { return t.group; }).sort().join("");
+    const row = allocation && allocation[key];
+    if (!row) return null;
+    const g = row[winnerGroup];
+    if (!g) return null;
+    const table = tables && tables[g];
+    return table && table[2] ? table[2].teamId : null;
+  }
+
+  const standings = { computeGroups: computeGroups, groupFinished: groupFinished, rankThirds: rankThirds, resolveSlot: resolveSlot, teamRoute: teamRoute, groupStageEliminated: groupStageEliminated, bracketSide: bracketSide, resolveThird: resolveThird };
   root.WC = root.WC || {};
   root.WC.standings = standings;
   if (typeof module !== "undefined" && module.exports) module.exports = standings;
