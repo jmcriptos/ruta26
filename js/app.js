@@ -222,7 +222,8 @@
       }).join("");
       return '<article class="group-card"><div class="group-table">' + head + body + "</div></article>";
     }).filter(Boolean);
-    groupsGrid.innerHTML = cards.join("");
+    const thirdsCard = normalized ? "" : WC.thirdsView.renderThirds(state.thirds, state.teams);
+    groupsGrid.innerHTML = cards.join("") + thirdsCard;
     noTeams.hidden = cards.length > 0;
   }
 
