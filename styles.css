@@ -272,6 +272,12 @@ h1 em { color: var(--lime); font-style: normal; }
 .gt-team-row:hover .gt-team em { text-decoration: underline; text-decoration-color: var(--lime-deep); text-decoration-thickness: 2px; }
 .gt-team-row.qualifying { background: #f3f8e3; box-shadow: inset 3px 0 0 var(--lime-deep); }
 .gt-team-row.qualifying .gt-pos { color: #557526; }
+.thirds-card { grid-column: 1 / -1; }
+.thirds-card .gt-head .gt-team { color: var(--ink); }
+.t3-grp { margin-left: auto; flex: 0 0 auto; padding-left: 8px; font-size: 11px; font-weight: 800; color: var(--muted); white-space: nowrap; }
+.thirds-cut { display: flex; align-items: center; padding: 6px 14px; border-top: 2px dashed var(--lime-deep); }
+.thirds-cut span { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .5px; color: #557526; }
+.thirds-note { padding: 10px 14px 14px; margin: 0; color: var(--muted); font-size: 11px; line-height: 1.5; }
 .no-teams { padding: 30px; text-align: center; color: var(--muted); border: 1px dashed var(--line); }
 
 .projections { padding: 105px 0; color: white; background: #101d18; }
