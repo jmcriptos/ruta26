@@ -37,7 +37,7 @@
   function esc(s) {
     return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   }
-  function slotCtx() { return { tables: state.tables, matchesByNum: matchesByNum(), teams: state.teams }; }
+  function slotCtx() { return { tables: state.tables, matchesByNum: matchesByNum(), teams: state.teams, thirds: state.thirds }; }
   WC.slotCtx = slotCtx;
 
   const fmtTime = new Intl.DateTimeFormat("es", { hour: "2-digit", minute: "2-digit" });

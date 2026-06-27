@@ -51,7 +51,17 @@
   function teamBox(m, side, ctx, classes) {
     const id = side === "home" ? m.home : m.away;
     const score = side === "home" ? m.hs : m.as;
-    const slot = WC.standings.resolveSlot(side === "home" ? m.phA : m.phB, ctx, { provisional: true });
+    const ph = side === "home" ? m.phA : m.phB;
+    let slot = WC.standings.resolveSlot(ph, ctx, { provisional: true });
+    // casilla de 3º: resolver al tercero que la tabla oficial asigna al ganador hermano
+    if (!id && !slot.teamId && /^3[A-L]+$/.test(ph)) {
+      const sib = side === "home" ? m.phB : m.phA;
+      const wm = /^1([A-L])$/.exec(sib || "");
+      const tid = wm && WC.thirdsAllocation
+        ? WC.standings.resolveThird(wm[1], ctx.thirds, ctx.tables, WC.thirdsAllocation)
+        : null;
+      if (tid) slot = { teamId: tid, label: "", provisional: true };
+    }
     const resolved = id || slot.teamId;
     if (resolved) {
       const t = WC.state.teams[resolved] || { code: "?", flag: "🏳️" };
