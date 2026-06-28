@@ -9,7 +9,7 @@
   const COPY = {
     opp_pending_pick: "Aún te falta tu pick de {match}",
     opp_pending_cta: "Pronosticar ahora",
-    opp_captain: "Elige tu Batacazo para {match}",
+    opp_captain: "Marca tu Batacazo de hoy",
     opp_captain_cta: "Marcar Batacazo",
     opp_reachable_rival: "Hoy puedes pasar a {rival}",
     opp_rival_threat: "{rival} te pisa los talones — defiende tu lugar",
@@ -100,11 +100,18 @@
       .filter(function (m) { return m.status !== "played" && kickoffMs(m) > now && teams[m.home] && teams[m.away]; })
       .sort(function (a, b) { return kickoffMs(a) - kickoffMs(b) || String(a.id).localeCompare(String(b.id)); });
 
+    // El Batacazo es UNO POR JORNADA (día en Curaçao): registra los días donde ya
+    // se usó, para no ofrecerlo de nuevo en otro partido del mismo día.
+    const matchById = {};
+    matches.forEach(function (m) { matchById[m.id] = m; });
+    const capDays = {};
+    myCaps.forEach(function (c) { const cm = matchById[c.match_id]; if (cm) capDays[dayKey(cm)] = true; });
+
     function vm(state, match, rival, ctaKey, headlineKey, vars) {
       const chips = [];
       if (rival && rival.pointsGap != null) chips.push(rival.pointsGap > 0 ? fill(COPY.opp_chip_gap, { gap: rival.pointsGap }) : COPY.opp_chip_tied);
       if (rival && rival.username) chips.push(fill(COPY.opp_chip_rival, { rival: rival.username }));
-      const capAvail = match && match.stage !== "group" && myPreds[match.id] && !myCaps.some(function (c) { return c.match_id === match.id; });
+      const capAvail = match && match.stage !== "group" && myPreds[match.id] && !capDays[dayKey(match)];
       if (capAvail) chips.push(COPY.opp_chip_captain);
       return {
         state: state, reason: state,
@@ -119,9 +126,9 @@
     const noPick = upcoming.find(function (m) { return !myPreds[m.id]; });
     if (noPick) return vm("pending_pick", noPick, null, "opp_pending_cta", "opp_pending_pick", { match: matchName(noPick, teams) });
 
-    // 2) captain (eliminatoria con pick y sin capitán en ese partido)
+    // 2) batacazo: uno por jornada (día). Solo si no usó su batacazo ese día.
     const capMatch = upcoming.find(function (m) {
-      return m.stage !== "group" && myPreds[m.id] && !myCaps.some(function (c) { return c.match_id === m.id; });
+      return m.stage !== "group" && myPreds[m.id] && !capDays[dayKey(m)];
     });
     if (capMatch) return vm("captain", capMatch, null, "opp_captain_cta", "opp_captain", { match: matchName(capMatch, teams) });
 

@@ -185,6 +185,25 @@ test("opportunity: no promete pasar a un rival fuera del potencial de la jornada
   assert.notStrictEqual(vm.copy && vm.copy.headline, "Hoy puedes pasar a lider");
 });
 
+test("opportunity: el batacazo es UNO POR JORNADA (día), no por partido", () => {
+  // Dos KO el mismo día en Curaçao (UTC-4): 22:00Z=18:00 y 23:30Z=19:30 → 2026-07-03.
+  const matches = [
+    { id: "kA", stage: "r16", status: "scheduled", kickoff_at: "2026-07-03T22:00:00Z", home: "t1", away: "t2" },
+    { id: "kB", stage: "r16", status: "scheduled", kickoff_at: "2026-07-03T23:30:00Z", home: "t1", away: "t2" }
+  ];
+  const teams = { t1: { name: "Brasil" }, t2: { name: "España" } };
+  const base = {
+    now: 0, meId: "u1", matches: matches, teams: teams,
+    myPredictions: { kA: { hg: 1, ag: 0 }, kB: { hg: 1, ag: 0 } },
+    official: [{ userId: "u1", username: "ana", points: 0, pos: 1 }]
+  };
+  // Sin batacazo ese día → SÍ hay oportunidad de batacazo.
+  assert.strictEqual(eng.opportunity(Object.assign({}, base, { myCaptains: [] })).state, "captain");
+  // Ya marcó su batacazo en kA (mismo día) → NO debe ofrecerlo en kB.
+  const vm = eng.opportunity(Object.assign({}, base, { myCaptains: [{ match_id: "kA" }] }));
+  assert.notStrictEqual(vm.state, "captain");
+});
+
 test("opportunity: sin partidos decididos no dispara rival_threat/reachable_rival", () => {
   const official = [
     { userId: "me", username: "yo", points: 0, decided: 0, exact: 0, pos: 1 },

@@ -197,7 +197,7 @@ function applyGuardrails(candidates, opts) {
 // Lista cerrada de copy seguro (≤3 líneas, sin culpa/humillación). {x}=placeholder.
 const OPP_PUSH_COPY = {
   pending_pick: "👉 Aún te falta tu pick de {match}",
-  captain: "💥 Elige tu Batacazo para {match}",
+  captain: "💥 Aún no marcaste tu Batacazo de hoy",
   reachable_rival: "🔥 Hoy puedes pasar a {rival}",
   rival_threat: "{rival} te pisa los talones — defiende tu lugar 👀",
   win_matchday: "🏆 Hoy puedes ganar la jornada"
