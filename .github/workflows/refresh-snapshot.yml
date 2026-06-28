@@ -1,0 +1,83 @@
+name: Refrescar snapshot
+
+# Regenera el snapshot embebido (js/data.js) con los resultados en vivo de FIFA y,
+# SOLO si cambió, lo commitea y redepliega el sitio. Mantiene fresco el fallback
+# que ve quien no logra el fetch en vivo (incógnito / primera visita / red mala).
+#
+# Es autocontenido (regenera + commitea + despliega en el mismo workflow) porque un
+# push con el GITHUB_TOKEN no dispara deploy-pages.yml (anti-recursión de GitHub).
+
+on:
+  schedule:
+    - cron: "0 */3 * * *"   # cada 3 horas (00,03,06,09,12,15,18,21 UTC)
+  workflow_dispatch: {}      # botón para correrlo a mano
+
+permissions:
+  contents: write   # commitear y pushear js/data.js
+  pages: write      # desplegar a Pages
+  id-token: write   # deploy-pages
+
+concurrency:
+  group: pages           # compartido con deploy-pages.yml: nunca dos deploys a la vez
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      changed: ${{ steps.gen.outputs.changed }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 20
+
+      - name: Regenerar snapshot desde la API de FIFA
+        run: node tools/generate-data.js
+
+      - name: ¿Cambió el snapshot?
+        id: gen
+        run: |
+          if git diff --quiet -- js/data.js; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "Sin cambios en js/data.js — no se commitea ni despliega."
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "Snapshot actualizado."
+          fi
+
+      - name: Tests (gate antes de desplegar)
+        if: steps.gen.outputs.changed == 'true'
+        run: node --test tests/
+
+      - name: Commit y push del snapshot
+        if: steps.gen.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add js/data.js
+          git commit -m "chore(datos): refrescar snapshot (auto)"
+          git push
+
+      - name: Versionar assets (?v= por hash de contenido)
+        if: steps.gen.outputs.changed == 'true'
+        run: node tools/version-assets.js
+
+      - uses: actions/configure-pages@v5
+        if: steps.gen.outputs.changed == 'true'
+      - uses: actions/upload-pages-artifact@v3
+        if: steps.gen.outputs.changed == 'true'
+        with:
+          path: "."
+
+  deploy:
+    needs: build
+    if: needs.build.outputs.changed == 'true'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
