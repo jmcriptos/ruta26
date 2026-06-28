@@ -16,8 +16,8 @@
 
   /* ---------- sin configuración: tarjeta apagada ---------- */
   if (!window.supabase || String(cfg.SUPABASE_URL).indexOf("http") !== 0) {
-    rootEl.innerHTML = '<div class="game-card game-off"><h3>La quiniela aún no está activa</h3>' +
-      "<p>Estamos conectando el juego. Vuelve en un rato.</p></div>";
+    rootEl.innerHTML = '<div class="game-card game-off"><h3>No se pudo cargar el juego</h3>' +
+      "<p>Revisa tu conexión y recarga la página.</p></div>";
     WC.game = { onDataUpdate: function () {}, myMatchPoints: function () { return null; } };
     return;
   }
