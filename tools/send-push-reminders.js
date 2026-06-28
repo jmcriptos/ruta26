@@ -1,6 +1,6 @@
 /* Push pre-partido de la quiniela. Corre en GitHub Actions cada 15 min:
    hasta ~3h antes del kickoff manda pushes accionables (pick pendiente o
-   Capitán pendiente), con dedupe/frecuencia por usuario. Dedupe persistente vía
+   Batacazo pendiente), con dedupe/frecuencia por usuario. Dedupe persistente vía
    tabla push_sent (PK match+user; más estricto que match+reason).
 
    Env: SUPABASE_SERVICE_KEY, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY,
@@ -266,7 +266,7 @@ function userOpportunityCandidate(uid, soon, teams, official, allPreds, caps, no
   const tallies = pm.tallyByMatch(preds || []);
   const hasPred = new Set((preds || []).map(function (p) { return p.user_id + "|" + p.match_id; }));
 
-  // Candidatos: summary (%, principal) + oportunidad (capitán/rival; pending_pick lo cubre el %).
+  // Candidatos: summary (%, principal) + oportunidad (batacazo/rival; pending_pick lo cubre el %).
   const summaryCands = pm.buildSummaryCandidates(userIds, soon, hasPred);
   const oppCands = userIds.map(function (uid) {
     return userOpportunityCandidate(uid, soon, snap.teams, official, preds || [], caps || [], now);
