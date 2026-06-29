@@ -622,12 +622,12 @@ html { scroll-padding-top: calc(84px + env(safe-area-inset-top)); }
 .game-section { padding: 75px 0 20px; }
 .howto-link {
   align-self: flex-end; min-height: 44px; display: inline-flex; align-items: center; gap: 14px;
-  padding: 11px 16px; color: var(--ink); background: var(--lime); border: 1px solid var(--lime-deep);
-  border-radius: 999px; box-shadow: 0 8px 22px rgba(90, 122, 30, .16);
+  padding: 11px 16px; color: var(--ink); background: var(--orange); border: 1px solid #e8682f;
+  border-radius: 999px; box-shadow: 0 8px 22px rgba(214, 86, 30, .2);
   font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .6px; white-space: nowrap;
   transition: transform .2s ease, background .2s ease, box-shadow .2s ease;
 }
-.howto-link:hover { transform: translateY(-2px); background: var(--lime-deep); box-shadow: 0 12px 28px rgba(90, 122, 30, .24); }
+.howto-link:hover { transform: translateY(-2px); background: #e8682f; box-shadow: 0 12px 28px rgba(214, 86, 30, .28); }
 .howto-link:active { transform: translateY(0); }
 .howto-link:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
 .howto-link span { color: var(--ink); font-size: 17px; line-height: 1; }
