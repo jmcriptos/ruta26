@@ -12,8 +12,8 @@ const path = require("path");
 const webpush = require("web-push");
 const pm = require("./push-messages.js");
 const scoring = require("../js/scoring.js");
-const engagement = require("../js/engagement.js");
 const api = require("../js/api.js");
+const pushOpp = require("./push-opportunity.js");
 
 const SUPABASE_URL = process.env.SUPABASE_URL || "https://wwzgpifvfmogjttwstxy.supabase.co";
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
@@ -93,10 +93,6 @@ function curacaoDayStartIso(ms) {
   return new Date(Date.UTC(local.getUTCFullYear(), local.getUTCMonth(), local.getUTCDate(), 4, 0, 0)).toISOString();
 }
 
-function engagementMatch(m) {
-  return { id: m.id, stage: m.stage, status: m.status, kickoff_at: m.date, home: m.home, away: m.away, winner: m.winner };
-}
-
 // Trae resultados en vivo de FIFA y los fusiona con el snapshot; degrada al snapshot si falla.
 async function liveMatches(snapMatches) {
   try {
@@ -115,40 +111,6 @@ async function liveMatches(snapMatches) {
     console.error("FIFA en vivo falló, uso snapshot:", e.message);
     return snapMatches;
   }
-}
-
-function userOpportunityCandidate(uid, soon, teams, official, allPreds, caps, now) {
-  const myPredictions = {};
-  allPreds.forEach(function (p) {
-    if (p.user_id === uid) myPredictions[p.match_id] = { hg: p.hg, ag: p.ag, pens: !!p.pens };
-  });
-  const myCaptains = (caps || []).filter(function (c) { return c.user_id === uid; });
-  const matchPotentials = {};
-  soon.forEach(function (m) {
-    const isCap = myCaptains.some(function (c) { return c.match_id === m.id; });
-    matchPotentials[m.id] = scoring.maxMatchPoints(m, { captain: isCap });
-  });
-  const opp = engagement.opportunity({
-    now: now,
-    meId: uid,
-    official: official,
-    live: [],
-    matches: soon.map(engagementMatch),
-    matchPotentials: matchPotentials,
-    myPredictions: myPredictions,
-    myCaptains: myCaptains,
-    visiblePredictions: [],
-    teams: teams
-  });
-  if (!opp || !opp.match || ["captain", "reachable_rival", "rival_threat"].indexOf(opp.reason) === -1) return null;
-  return {
-    userId: uid,
-    matchId: opp.match.id,
-    reason: opp.reason,
-    kind: "opportunity",
-    kickoffAt: opp.match.kickoffAt,
-    opp: opp
-  };
 }
 
 (async function main() {
@@ -269,7 +231,7 @@ function userOpportunityCandidate(uid, soon, teams, official, allPreds, caps, no
   // Candidatos: summary (%, principal) + oportunidad (batacazo/rival; pending_pick lo cubre el %).
   const summaryCands = pm.buildSummaryCandidates(userIds, soon, hasPred);
   const oppCands = userIds.map(function (uid) {
-    return userOpportunityCandidate(uid, soon, snap.teams, official, preds || [], caps || [], now);
+    return pushOpp.userOpportunityCandidate(uid, soon, snap.teams, official, preds || [], caps || [], now, matches);
   }).filter(Boolean);
   const winners = pm.applyGuardrails(summaryCands.concat(oppCands), { alreadySent: alreadySent, sentTodayCount: sentTodayCount });
   const winnersByUser = {};
