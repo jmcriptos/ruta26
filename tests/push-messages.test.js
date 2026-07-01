@@ -199,3 +199,46 @@ test("applyGuardrails: dedupe por kind (summary y opportunity no se pisan)", () 
   const opp = [{ userId: "u1", matchId: "m1", reason: "rival_threat", kind: "opportunity", kickoffAt: "2026-06-29T22:00:00Z" }];
   assert.strictEqual(pm.applyGuardrails(opp, { alreadySent: new Set(["u1|m1|summary"]) }).length, 1);
 });
+
+/* ---------- promo especial: batacazo Cabo Verde (+50) ---------- */
+const CV_MATCH = { id: "400021521", num: 86, date: "2026-07-03T22:00:00.000Z", home: "43922", away: "43850", status: "scheduled" };
+const CV_TEAMS = { "43922": { id: "43922", name: "Argentina", flag: "🇦🇷" }, "43850": { id: "43850", name: "Cabo Verde", flag: "🇨🇻" } };
+
+test("buildSpecialCandidates: un candidato por usuario si el cruce especial está en la ventana", () => {
+  const cands = pm.buildSpecialCandidates(["u1", "u2"], [M1, CV_MATCH], "400021521");
+  assert.strictEqual(cands.length, 2);
+  assert.strictEqual(cands[0].reason, "special_batacazo");
+  assert.strictEqual(cands[0].kind, "special");
+  assert.strictEqual(cands[0].matchId, "400021521");
+  assert.strictEqual(cands[0].match.id, "400021521");
+});
+
+test("buildSpecialCandidates: nada si el cruce especial no está en la ventana", () => {
+  assert.strictEqual(pm.buildSpecialCandidates(["u1"], [M1, M2], "400021521").length, 0);
+});
+
+test("buildSpecialPush: copy con el underdog, +50 y metadata allowlisted", () => {
+  const push = pm.buildSpecialPush(CV_MATCH, CV_TEAMS, "6:00 p. m.", "43850");
+  assert.ok(push.title.indexOf("Batacazo ESPECIAL") >= 0);
+  assert.ok(push.body.indexOf("🇨🇻 Cabo Verde") >= 0);
+  assert.ok(push.body.indexOf("+50") >= 0);
+  assert.strictEqual(push.data.reason, "special_batacazo");
+  assert.strictEqual(push.data.matchId, "400021521");
+  assert.strictEqual(push.data.campaign, "special_batacazo");
+});
+
+test("applyGuardrails: el push especial gana el bloque sobre el % (summary)", () => {
+  const cands = [
+    { userId: "u1", matchId: "400021521", reason: "summary", kind: "summary", kickoffAt: "2026-07-03T22:00:00Z" },
+    { userId: "u1", matchId: "400021521", reason: "special_batacazo", kind: "special", kickoffAt: "2026-07-03T22:00:00Z" }
+  ];
+  const out = pm.applyGuardrails(cands, {});
+  assert.strictEqual(out.length, 1);
+  assert.strictEqual(out[0].kind, "special");
+});
+
+test("applyGuardrails: el especial dedupe por su propio kind", () => {
+  const cands = [{ userId: "u1", matchId: "400021521", reason: "special_batacazo", kind: "special", kickoffAt: "2026-07-03T22:00:00Z" }];
+  assert.strictEqual(pm.applyGuardrails(cands, { alreadySent: new Set(["u1|400021521|special"]) }).length, 0);
+  assert.strictEqual(pm.applyGuardrails(cands, { alreadySent: new Set(["u1|400021521|summary"]) }).length, 1);
+});

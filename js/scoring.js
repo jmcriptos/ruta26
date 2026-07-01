@@ -23,6 +23,14 @@
     { maxP: Infinity, bonus: 0 } // favorito obvio
   ];
 
+  // Promo de una jornada (viernes 3 jul 2026): quien marque el cruce
+  // Argentina–Cabo Verde (R32, id 400021521) como batacazo APOSTANDO por Cabo
+  // Verde (predijo que Cabo Verde avanza) cobra un premio fijo de +50 —encima de
+  // lo que gane el pick, en lugar de la escala de rareza— si Cabo Verde avanza.
+  // Si el pick va con Argentina, o Cabo Verde no avanza, no aplica (rige la
+  // escala normal). Amarrado por match_id + team_id para que sea un evento único.
+  const SPECIAL_BATACAZO = { matchId: "400021521", teamId: "43850", bonus: 50 };
+
   // Bono aditivo del batacazo para un partido (0 en grupos). pCorrect (0..1) es
   // la fracción de la liga que acertó el avance; sin dato válido se asume 1
   // (favorito obvio → 0).
@@ -35,10 +43,25 @@
     return 0;
   }
 
+  // ¿La apuesta ya resuelta cae en la promo especial? (batacazo sobre el cruce
+  // marcado, el pick va con Cabo Verde y Cabo Verde avanzó). pred = {hg,ag,adv}.
+  function specialBatacazoApplies(match, pred) {
+    return !!match && !!pred && match.id === SPECIAL_BATACAZO.matchId &&
+      match.winner === SPECIAL_BATACAZO.teamId &&
+      predWinner(pred, match) === SPECIAL_BATACAZO.teamId;
+  }
+
+  // Bono efectivo del batacazo: el premio especial si aplica, si no la escala de
+  // rareza. Única fuente de verdad para scoring y para el display del bono.
+  function effectiveBatacazoBonus(match, pCorrect, pred) {
+    if (specialBatacazoApplies(match, pred)) return SPECIAL_BATACAZO.bonus;
+    return captainBonus(match, pCorrect);
+  }
+
   // Total de un partido con batacazo: lo ganado + el bono (solo si acertó).
-  function captainTotal(s, match, pCorrect) {
+  function captainTotal(s, match, pCorrect, pred) {
     if (!s || s.points <= 0 || match.stage === "group") return s ? s.points : 0;
-    return s.points + captainBonus(match, pCorrect);
+    return s.points + effectiveBatacazoBonus(match, pCorrect, pred);
   }
 
   function maxCaptainBonus(match) {
@@ -149,9 +172,10 @@
       const match = matchById[pr.match_id];
       if (!row || !match) return;
       row.predicted++;
-      const s = scoreMatch({ hg: pr.hg, ag: pr.ag, adv: pr.adv }, match);
+      const pred = { hg: pr.hg, ag: pr.ag, adv: pr.adv };
+      const s = scoreMatch(pred, match);
       const isCap = captainSet[pr.user_id + "|" + pr.match_id];
-      row.points += isCap ? captainTotal(s, match, pCorrectFor(pr.match_id)) : s.points;
+      row.points += isCap ? captainTotal(s, match, pCorrectFor(pr.match_id), pred) : s.points;
       if (s.kind === "exact") row.exact++;
       if (s.kind === "outcome") row.outcome++;
       // decided = picks de partidos ya resueltos (acierto o fallo); excluye pendientes/sin pick
@@ -211,7 +235,7 @@
     return rows;
   }
 
-  const scoring = { POINTS: POINTS, CAPTAIN_TIERS: CAPTAIN_TIERS, CHAMPION_TIERS: CHAMPION_TIERS, CHAMPION_LOCK: CHAMPION_LOCK, scoreMatch: scoreMatch, captainBonus: captainBonus, captainTotal: captainTotal, maxCaptainBonus: maxCaptainBonus, maxMatchPoints: maxMatchPoints, scoreChampion: scoreChampion, buildLeaderboard: buildLeaderboard, freezeLive: freezeLive, buildLiveLeaderboard: buildLiveLeaderboard };
+  const scoring = { POINTS: POINTS, CAPTAIN_TIERS: CAPTAIN_TIERS, SPECIAL_BATACAZO: SPECIAL_BATACAZO, CHAMPION_TIERS: CHAMPION_TIERS, CHAMPION_LOCK: CHAMPION_LOCK, scoreMatch: scoreMatch, captainBonus: captainBonus, captainTotal: captainTotal, specialBatacazoApplies: specialBatacazoApplies, effectiveBatacazoBonus: effectiveBatacazoBonus, maxCaptainBonus: maxCaptainBonus, maxMatchPoints: maxMatchPoints, scoreChampion: scoreChampion, buildLeaderboard: buildLeaderboard, freezeLive: freezeLive, buildLiveLeaderboard: buildLiveLeaderboard };
   root.WC = root.WC || {};
   root.WC.scoring = scoring;
   if (typeof module !== "undefined" && module.exports) module.exports = scoring;

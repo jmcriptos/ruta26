@@ -228,12 +228,15 @@ async function liveMatches(snapMatches) {
   const tallies = pm.tallyByMatch(preds || []);
   const hasPred = new Set((preds || []).map(function (p) { return p.user_id + "|" + p.match_id; }));
 
-  // Candidatos: summary (%, principal) + oportunidad (batacazo/rival; pending_pick lo cubre el %).
+  // Candidatos: special (promo de una jornada, máxima prioridad) + summary (%, principal)
+  // + oportunidad (batacazo/rival; pending_pick lo cubre el %).
   const summaryCands = pm.buildSummaryCandidates(userIds, soon, hasPred);
   const oppCands = userIds.map(function (uid) {
     return pushOpp.userOpportunityCandidate(uid, soon, snap.teams, official, preds || [], caps || [], now, matches);
   }).filter(Boolean);
-  const winners = pm.applyGuardrails(summaryCands.concat(oppCands), { alreadySent: alreadySent, sentTodayCount: sentTodayCount });
+  const specialCands = scoring.SPECIAL_BATACAZO
+    ? pm.buildSpecialCandidates(userIds, soon, scoring.SPECIAL_BATACAZO.matchId) : [];
+  const winners = pm.applyGuardrails(specialCands.concat(summaryCands).concat(oppCands), { alreadySent: alreadySent, sentTodayCount: sentTodayCount });
   const winnersByUser = {};
   winners.forEach(function (c) { (winnersByUser[c.userId] = winnersByUser[c.userId] || []).push(c); });
 
@@ -242,7 +245,9 @@ async function liveMatches(snapMatches) {
     for (const candidate of winnersByUser[uid]) {
       const msg = candidate.kind === "summary"
         ? pm.buildPush(candidate.blockMatches, snap.teams, tallies, candidate.missingPick)
-        : pm.buildOpportunityPush(candidate.opp, pm.horaTxt(candidate.kickoffAt));
+        : candidate.kind === "special"
+          ? pm.buildSpecialPush(candidate.match, snap.teams, pm.horaTxt(candidate.kickoffAt), scoring.SPECIAL_BATACAZO.teamId)
+          : pm.buildOpportunityPush(candidate.opp, pm.horaTxt(candidate.kickoffAt));
       if (!msg) continue;
       const payload = pushPayload(msg.title, msg.body, msg.data);
       console.log((DRY ? "[dry-run] " : "") + uid.slice(0, 8) + "… [" + candidate.kind + ":" + candidate.reason + "] ← " + msg.title + " | " + msg.body.replace(/\n/g, " ⏎ "));

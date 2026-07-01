@@ -429,7 +429,10 @@
       const pw = pr.hg > pr.ag ? m.home : (pr.hg < pr.ag ? m.away : (pr.adv === "home" ? m.home : pr.adv === "away" ? m.away : null));
       if (m.winner && pw === m.winner) correct++;
     });
-    return WC.scoring.captainBonus(m, total > 0 ? correct / total : 1);
+    // Usa el bono efectivo (incluye la promo especial de Cabo Verde) con el pick propio.
+    const v = mine[m.id];
+    const pred = v ? { hg: v.hg, ag: v.ag, adv: v.adv } : null;
+    return WC.scoring.effectiveBatacazoBonus(m, total > 0 ? correct / total : 1, pred);
   }
 
   // Produce HTML (se interpola en innerHTML): todo string de equipo debe pasar por esc().
@@ -470,11 +473,28 @@
     return ' <small class="adv-band adv-' + band + '">' + txt + "</small>";
   }
 
+  // Aviso de la promo de una jornada (batacazo Cabo Verde = +50). Solo aparece en
+  // la tarjeta de ese cruce; el copy se adapta a si el partido está por jugarse,
+  // ya cerrado (locked/en vivo) o terminado con el premio logrado.
+  function specialPromoHtml(m) {
+    const sp = WC.scoring.SPECIAL_BATACAZO;
+    if (!sp || m.id !== sp.matchId) return "";
+    const v = mine[m.id];
+    if (m.status === "played" && m.hs != null) {
+      const won = isCaptain(m.id) && v && WC.scoring.specialBatacazoApplies(m, { hg: v.hg, ag: v.ag, adv: v.adv });
+      return won ? '<div class="promo-bat won">💥 ¡Batacazo especial logrado! <b>+50 puntos</b></div>' : "";
+    }
+    const txt = kicked(m)
+      ? "Batacazo especial: <b>+50 puntos</b> si Cabo Verde avanza."
+      : "Marca a <b>Cabo Verde</b> como tu batacazo y gana <b>+50 puntos</b> si avanza.";
+    return '<div class="promo-bat"><span class="promo-bat-tag">💥 Especial</span> <span class="promo-bat-txt">' + txt + "</span></div>";
+  }
+
   function pickRowHtml(m) {
     const v = mine[m.id];
     const locked = kicked(m);
     const when = WC.fmt.dayLocal(m.date) + " · " + WC.fmt.timeLocal(m.date);
-    const head = '<div class="pick-head"><span>' + when + "</span><span>" + WC.stageLabel(m) + "</span></div>" + matchupHtml(m);
+    const head = '<div class="pick-head"><span>' + when + "</span><span>" + WC.stageLabel(m) + "</span></div>" + matchupHtml(m) + specialPromoHtml(m);
     if (locked) {
       const s = WC.scoring.scoreMatch(v ? { hg: v.hg, ag: v.ag, adv: v.adv } : null, m);
       const real = m.status !== "scheduled" && m.hs != null

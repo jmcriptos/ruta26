@@ -86,7 +86,8 @@ function buildPush(matches, teams, tallies, missingPick) {
 
 /* ---------- Story 2.1: guardrails de push (puro, testeable) ---------- */
 // Prioridad de "Oportunidad más fuerte" (PD3 / engagement-contract.md).
-const REASON_PRIORITY = { summary: 6, pending_pick: 5, captain: 4, reachable_rival: 3, rival_threat: 2, win_matchday: 1 };
+// special_batacazo por encima del % (promo de una jornada: gana su bloque).
+const REASON_PRIORITY = { special_batacazo: 7, summary: 6, pending_pick: 5, captain: 4, reachable_rival: 3, rival_threat: 2, win_matchday: 1 };
 
 // Bloque horario (PD1): hora local Curaçao del kickoff → "YYYY-MM-DDTHH".
 function blockHourKey(iso) {
@@ -127,6 +128,28 @@ function buildOpportunityCandidates(userIds, matches, predictions, captains, tea
     });
   });
   return out;
+}
+
+// Candidatos del push "special" (promo de una jornada: batacazo Cabo Verde = +50).
+// Un candidato por usuario si el cruce especial está en la ventana (soon). Broadcast:
+// no se gatilla por estado del pick/batacazo; es un anuncio. Dedupe por kind "special".
+function buildSpecialCandidates(userIds, soon, specialMatchId) {
+  const m = (soon || []).find(function (x) { return x.id === specialMatchId; });
+  if (!m) return [];
+  return (userIds || []).map(function (uid) {
+    return { userId: uid, matchId: m.id, reason: "special_batacazo", kind: "special", kickoffAt: m.date, match: m };
+  });
+}
+
+// Push {title, body, data} de la promo especial. teamId = el underdog a marcar.
+function buildSpecialPush(match, teams, hora, teamId) {
+  const team = teamName(teams, teamId);
+  const tname = team ? (team.flag ? team.flag + " " : "") + team.name : "el underdog";
+  return {
+    title: "💥 Batacazo ESPECIAL" + (hora ? " · " + hora : ""),
+    body: "Marca a " + tname + " como tu Batacazo y gana +50 puntos si avanza hoy. ¡Solo esta jornada!",
+    data: { reason: "special_batacazo", matchId: match.id, blockHour: blockHourKey(match.date), campaign: "special_batacazo" }
+  };
 }
 
 // Candidatos del push "summary" (% del más votado), por (usuario, bloque horario).
@@ -226,5 +249,6 @@ module.exports = {
   REASON_PRIORITY: REASON_PRIORITY, blockHourKey: blockHourKey, matchDayKey: matchDayKey,
   buildOpportunityCandidates: buildOpportunityCandidates,
   buildSummaryCandidates: buildSummaryCandidates,
+  buildSpecialCandidates: buildSpecialCandidates, buildSpecialPush: buildSpecialPush,
   applyGuardrails: applyGuardrails, buildOpportunityPush: buildOpportunityPush
 };

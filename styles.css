@@ -782,6 +782,18 @@ html { scroll-padding-top: calc(84px + env(safe-area-inset-top)); }
 .cap-tag { display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: 999px; background: #fbeec2; color: #7a5b00; font-size: 11px; font-weight: 700; }
 .cap-msg { display: block; text-align: right; margin-top: 8px; font-size: 11px; font-weight: 700; color: #a83a22; }
 
+/* Aviso de la promo de una jornada (batacazo especial Cabo Verde = +50) */
+.promo-bat { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 10px 0 2px; padding: 8px 12px; border-radius: 12px;
+  background: linear-gradient(100deg, #fff3c9 0%, #ffe58a 100%); border: 1px solid #f2c200;
+  box-shadow: 0 4px 14px rgba(242,194,0,.18); }
+.promo-bat-tag { flex-shrink: 0; padding: 2px 9px; border-radius: 999px; background: var(--ink); color: #ffd83d;
+  font-size: 11px; font-weight: 800; letter-spacing: .03em; text-transform: uppercase; }
+.promo-bat-txt { font-size: 12.5px; font-weight: 600; color: #6b5200; line-height: 1.35; }
+.promo-bat-txt b { color: #7a3b00; font-weight: 800; }
+.promo-bat.won { justify-content: center; background: linear-gradient(100deg, #d7ffe0 0%, #b6f5c6 100%); border-color: var(--success);
+  color: #10692f; font-size: 13px; font-weight: 700; }
+.promo-bat.won b { color: #0c5325; }
+
 /* ===== Engagement (estilo broadcast, ver mockups UX) ===== */
 /* Componentes compartidos: etiqueta, tira de partido, chips, botones */
 .es-label { display: inline-flex; align-items: center; gap: 7px; margin-bottom: 11px; font-size: 11px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: #5f7a18; }

@@ -323,6 +323,78 @@ test("captainTotal: en grupos no aplica (queda igual a la base)", () => {
   assert.strictEqual(sc.captainTotal(s, m, 0.1), 1);
 });
 
+// Promo de una jornada (3 jul 2026): batacazo por Cabo Verde que avanza = +50.
+// Cruce Argentina(H, 43922) vs Cabo Verde(A, 43850), R32, id 400021521.
+function cvMatch(hs, as, extra) {
+  return Object.assign({ id: "400021521", stage: "r32", status: "played", hs: hs, as: as, home: "43922", away: "43850" }, extra || {});
+}
+
+test("promo Cabo Verde: batacazo por Cabo Verde que avanza paga +50 encima (exacto+avance)", () => {
+  const m = cvMatch(0, 1, { winner: "43850" });   // Cabo Verde gana 0-1
+  const pred = { hg: 0, ag: 1 };                   // predijo Cabo Verde 0-1 (exacto)
+  const s = sc.scoreMatch(pred, m);
+  assert.strictEqual(s.points, 4);                 // exacto 3 + avance 1
+  assert.strictEqual(sc.captainTotal(s, m, 0.10, pred), 54); // 4 + 50
+});
+
+test("promo Cabo Verde: paga +50 aunque solo aciertes el resultado (no exacto)", () => {
+  const m = cvMatch(0, 1, { winner: "43850" });
+  const pred = { hg: 0, ag: 2 };                   // signo correcto (gana visitante), no exacto
+  const s = sc.scoreMatch(pred, m);                // outcome 1 + avance 1 = 2
+  assert.strictEqual(s.points, 2);
+  assert.strictEqual(sc.captainTotal(s, m, 0.99, pred), 52); // 2 + 50 (ignora la escala)
+});
+
+test("promo Cabo Verde: por penales también cuenta (empate + adv Cabo Verde)", () => {
+  const m = cvMatch(1, 1, { winner: "43850", hp: 3, ap: 4 });
+  const pred = { hg: 1, ag: 1, adv: "away" };      // exacto 1-1 + avanza Cabo Verde
+  const s = sc.scoreMatch(pred, m);                // 3 + 1 = 4
+  assert.strictEqual(sc.captainTotal(s, m, 0.1, pred), 54);
+});
+
+test("promo Cabo Verde: NO aplica si el pick va con Argentina", () => {
+  const m = cvMatch(2, 0, { winner: "43922" });    // Argentina gana
+  const pred = { hg: 2, ag: 0 };                   // apostó Argentina
+  const s = sc.scoreMatch(pred, m);                // exacto+avance = 4 pero NO es Cabo Verde
+  assert.strictEqual(sc.specialBatacazoApplies(m, pred), false);
+  assert.strictEqual(sc.captainTotal(s, m, 0.9, pred), 4); // 4 + 0 (favorito obvio), sin 50
+});
+
+test("promo Cabo Verde: NO aplica si Cabo Verde no avanza (pick pierde)", () => {
+  const m = cvMatch(2, 0, { winner: "43922" });    // Argentina gana
+  const pred = { hg: 0, ag: 1 };                   // apostó Cabo Verde → pierde
+  const s = sc.scoreMatch(pred, m);
+  assert.strictEqual(s.points, 0);
+  assert.strictEqual(sc.captainTotal(s, m, 0.1, pred), 0);
+});
+
+test("promo Cabo Verde: amarrada al partido (otro cruce usa la escala normal)", () => {
+  const m = cvMatch(0, 1, { winner: "43850", id: "999" }); // mismo escenario, otro id
+  const pred = { hg: 0, ag: 1 };
+  const s = sc.scoreMatch(pred, m);
+  assert.strictEqual(sc.captainTotal(s, m, 0.10, pred), 7); // 4 + 3 (escala normal), NO 54
+});
+
+test("promo Cabo Verde: ranking end-to-end suma +50 al batacazo", () => {
+  const profiles = [{ id: "u1", username: "ana" }, { id: "u2", username: "leo" }];
+  const matches = [cvMatch(0, 1, { winner: "43850" })];
+  const preds = [
+    { user_id: "u1", match_id: "400021521", hg: 0, ag: 1 }, // Cabo Verde exacto
+    { user_id: "u2", match_id: "400021521", hg: 2, ag: 0 }  // Argentina
+  ];
+  const rows = sc.buildLeaderboard(profiles, preds, [], matches, [{ user_id: "u1", match_id: "400021521" }]);
+  assert.strictEqual(rows.find(function (r) { return r.userId === "u1"; }).points, 54); // 4 + 50
+  assert.strictEqual(rows.find(function (r) { return r.userId === "u2"; }).points, 0);  // perdió
+});
+
+test("promo Cabo Verde: helpers specialBatacazoApplies / effectiveBatacazoBonus", () => {
+  const m = cvMatch(0, 1, { winner: "43850" });
+  assert.strictEqual(sc.specialBatacazoApplies(m, { hg: 0, ag: 1 }), true);
+  assert.strictEqual(sc.effectiveBatacazoBonus(m, 0.9, { hg: 0, ag: 1 }), 50); // ignora pCorrect
+  assert.strictEqual(sc.effectiveBatacazoBonus(m, 0.9, { hg: 2, ag: 0 }), 0);  // Argentina → escala normal (favorito obvio)
+  assert.strictEqual(sc.effectiveBatacazoBonus(m, 0.1, { hg: 2, ag: 0 }), 3);  // Argentina → escala normal (raro)
+});
+
 test("maxMatchPoints: expone potencial máximo por partido desde scoring", () => {
   assert.strictEqual(sc.maxMatchPoints(played("group", 2, 1)), 1);
   assert.strictEqual(sc.maxMatchPoints(played("r16", 1, 1, "H")), 4); // exacto 3 + avance 1
