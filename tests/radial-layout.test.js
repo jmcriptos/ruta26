@@ -41,3 +41,23 @@ test("bracketTree: anida izquierda antes que derecha", () => {
   assert.deepStrictEqual(rounds.r32.map(m => m.num), [4, 5, 6, 7]);
   assert.deepStrictEqual(rounds.r16.map(m => m.num), [2, 3]);
 });
+
+test("geometría: RINGS de afuera hacia adentro", () => {
+  assert.strictEqual(rl.RINGS.length, 5);
+  assert.strictEqual(rl.RINGS[0].n, 32);
+  assert.strictEqual(rl.RINGS[4].n, 2);
+});
+
+test("geometría: padre = floor(i/2)", () => {
+  assert.strictEqual(rl.parentIndex(0), 0);
+  assert.strictEqual(rl.parentIndex(7), 3);
+});
+
+test("geometría: finalistas a las 9 y 3 en punto", () => {
+  const a = rl.nodePos(4, 0, 100); // ring final, nodo 0
+  const b = rl.nodePos(4, 1, 100); // ring final, nodo 1
+  assert.ok(a.x < 50, "nodo 0 a la izquierda");
+  assert.ok(b.x > 50, "nodo 1 a la derecha");
+  assert.ok(Math.abs(a.y - 50) < 0.001, "nodo 0 centrado en vertical");
+  assert.ok(Math.abs(b.y - 50) < 0.001, "nodo 1 centrado en vertical");
+});
