@@ -2,3 +2,5 @@
 .playwright-mcp/
 .claude/
 _bmad/config.user.toml
+
+.superpowers/
