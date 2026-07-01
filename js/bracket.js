@@ -1,19 +1,16 @@
-/* Bracket simétrico. Depende de: app.js (WC.state, WC.fmt, WC.slotCtx), standings.js */
+/* Bracket radial. Depende de: app.js (WC.state, WC.slotCtx), standings.js,
+   radial-layout.js, flags.js, team-panel.js. */
 (function () {
   const grid = document.getElementById("bracketGrid");
   const select = document.getElementById("bracketTeam");
   const toggle = document.getElementById("scenarioToggle");
-  const sideTabs = document.getElementById("bracketSide");
-
-  // rondas de fuera hacia el centro
-  const ORDER = ["r32", "r16", "qf", "sf"];
-  const ROUND_LABEL = { r32: "16avos", r16: "8vos", qf: "4tos", sf: "Semis" };
+  const RL = WC.radialLayout;
+  const FEED = ["r32", "r16", "qf", "sf", "final"]; // etapa que alimenta cada anillo interno
 
   let selectedTeam = "";
   let scenario = 1;
   let scenarioManual = false;
   let groupEliminated = false;
-  let mobileSide = "left";
 
   function esc(s) {
     return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -36,24 +33,12 @@
     return map;
   }
 
-  // etiqueta corta para un slot sin equipo definido
-  function shortLabel(label) {
-    if (!label) return "—";
-    if (/^Mejor 3º/.test(label)) return "3º";
-    const m = label.match(/^([12])º grupo ([A-L])$/);
-    if (m) return m[1] + m[2];
-    const w = label.match(/^Gana P?(\d+)$/);
-    if (w) return "G" + w[1];
-    return label.length > 6 ? label.slice(0, 6) : label;
-  }
-
-  // una caja de equipo (bandera + código 3 letras) o placeholder corto
-  function teamBox(m, side, ctx, classes) {
+  // Resuelve el equipo (fijo o provisional) de una casilla de 16avos, igual que
+  // el render anterior: equipo fijo, o slot resuelto, o el tercero asignado.
+  function resolveSlotTeam(m, side, ctx) {
     const id = side === "home" ? m.home : m.away;
-    const score = side === "home" ? m.hs : m.as;
     const ph = side === "home" ? m.phA : m.phB;
     let slot = WC.standings.resolveSlot(ph, ctx, { provisional: true });
-    // casilla de 3º: resolver al tercero que la tabla oficial asigna al ganador hermano
     if (!id && !slot.teamId && /^3[A-L]+$/.test(ph)) {
       const sib = side === "home" ? m.phB : m.phA;
       const wm = /^1([A-L])$/.exec(sib || "");
@@ -63,52 +48,37 @@
       if (tid) slot = { teamId: tid, label: "", provisional: true };
     }
     const resolved = id || slot.teamId;
-    if (resolved) {
-      const t = WC.state.teams[resolved] || { code: "?", flag: "🏳️" };
-      const winner = m.status === "played" && m.winner === resolved;
-      // equipo provisional: viene del slot (no de un equipo ya fijo) y el grupo no cerró
-      const prov = !id && slot.provisional;
-      return '<div class="b-team' + (winner ? " b-winner" : "") + (prov ? " b-prov" : "") + '"' +
-        (prov ? ' title="Clasificado provisional"' : "") + '><span class="b-flag">' + (t.flag || "🏳️") +
-        '</span><span class="b-code">' + esc(t.code || "?") + "</span>" +
-        (m.status !== "scheduled" && score != null ? '<span class="b-score">' + score + "</span>" : "") + "</div>";
+    return { teamId: resolved || null, provisional: Boolean(!id && slot.provisional) };
+  }
+
+  // Equipo que ocupa un nodo. Anillo 0 = casilla de 16avos; anillos internos =
+  // ganador del partido que los alimenta (o null → punto gris).
+  function teamAtNode(ringIdx, i, tree, ctx, byNum) {
+    if (ringIdx === 0) {
+      const slot = tree.order[i];
+      const m = byNum[slot.matchNum];
+      return m ? resolveSlotTeam(m, slot.side, ctx) : { teamId: null, provisional: false };
     }
-    return '<div class="b-team b-tbd"><span class="b-code">' + esc(shortLabel(slot.label)) + "</span></div>";
+    const m = tree.rounds[FEED[ringIdx - 1]][i];
+    if (m && m.status === "played" && m.winner) return { teamId: m.winner, provisional: false };
+    return { teamId: null, provisional: false };
   }
 
-  function matchBox(m, ctx, classes, sideClass) {
-    const cls = (classes[m.num] || "") + (sideClass ? " " + sideClass : "");
-    return '<div class="b-match ' + cls + '" data-num="' + m.num + '">' +
-      teamBox(m, "home", ctx, classes) + teamBox(m, "away", ctx, classes) + "</div>";
+  // Eliminado = fuera en grupos, o perdió un partido KO ya jugado.
+  function teamEliminated(teamId) {
+    if (WC.standings.groupStageEliminated(teamId, WC.state)) return true;
+    return WC.state.matches.some(function (m) {
+      return m.stage !== "group" && m.status === "played" && m.winner &&
+        (m.home === teamId || m.away === teamId) && m.winner !== teamId;
+    });
   }
 
-  // columna de una ronda y un lado, ordenada por num
-  function columnHtml(stage, side, ctx, classes, byNum) {
-    const ms = WC.state.matches.filter(function (m) {
-      return m.stage === stage && WC.standings.bracketSide(m.num, byNum) === side;
-    }).sort(function (a, b) { return a.num - b.num; });
-    return '<div class="b-col" data-stage="' + stage + '" data-side="' + side + '">' +
-      '<p class="b-col-title">' + ROUND_LABEL[stage] + "</p>" +
-      '<div class="b-col-body">' + ms.map(function (m) { return matchBox(m, ctx, classes, ""); }).join("") + "</div></div>";
+  function championTeam(tree) {
+    const f = tree.rounds.final[0];
+    return f && f.status === "played" && f.winner ? f.winner : null;
   }
 
-  function finalColumnHtml(ctx, classes) {
-    const final = WC.state.matches.find(function (m) { return m.stage === "final"; });
-    const third = WC.state.matches.find(function (m) { return m.stage === "third"; });
-    if (!final) return "";
-    return '<div class="b-final-col">' +
-      '<div class="b-trophy">🏆</div><p class="b-col-title final">Final · 19 JUL</p>' +
-      matchBox(final, ctx, classes, "final-match") +
-      '<div class="b-final-meta">' + WC.fmt.dayLocal(final.date) + " · " + esc(final.city) + "</div>" +
-      (third ? '<p class="b-third-note">3er puesto</p>' + matchBox(third, ctx, classes, "third-match") : "") +
-      "</div>";
-  }
-
-  function sideStackHtml(side, ctx, classes, byNum) {
-    return '<div class="b-side b-side-' + side + '">' +
-      ORDER.map(function (st) { return columnHtml(st, side, ctx, classes, byNum); }).join("") + "</div>";
-  }
-
+  // clases de ruta por num de partido (lit / maybe), como antes.
   function routeClasses() {
     const classes = {};
     if (!selectedTeam || groupEliminated) return classes;
@@ -121,18 +91,93 @@
     return classes;
   }
 
-  // lado donde está el camino del equipo (para la vista móvil)
-  function routeSide(byNum) {
-    if (!selectedTeam) return mobileSide;
-    const route = WC.standings.teamRoute(selectedTeam, scenario, WC.state);
-    for (let s = 0; s < route.segments.length; s++) {
-      const ms = route.segments[s].matches;
-      for (let i = 0; i < ms.length; i++) {
-        const side = WC.standings.bracketSide(ms[i].num, byNum);
-        if (side) return side;
+  // Nodos y líneas iluminados: ubica al equipo en su casilla de 16avos y sube
+  // hacia el centro por floor(i/2); frena si ya perdió.
+  function routeViz(tree, classes, ctx, byNum) {
+    const nodes = {}, lines = [];
+    if (!selectedTeam || groupEliminated) return { nodes: nodes, lines: lines };
+    let i = -1;
+    for (let p = 0; p < 32; p++) {
+      const info = teamAtNode(0, p, tree, ctx, byNum);
+      if (info.teamId === selectedTeam) { i = p; break; }
+    }
+    if (i < 0) return { nodes: nodes, lines: lines };
+    nodes["0|" + i] = "lit";
+    let cur = i;
+    for (let k = 1; k <= 4; k++) {
+      const parent = RL.parentIndex(cur);
+      const m = tree.rounds[FEED[k - 1]][parent];
+      if (m && m.status === "played" && m.winner && m.winner !== selectedTeam) break;
+      const won = m && m.status === "played" && m.winner === selectedTeam;
+      const cls = won ? "lit" : (m && classes[m.num] === "lit" ? "lit" : "maybe");
+      nodes[k + "|" + parent] = cls;
+      lines.push({ a: [k - 1, cur], b: [k, parent], cls: cls });
+      cur = parent;
+    }
+    return { nodes: nodes, lines: lines };
+  }
+
+  function linesSvg(litLines) {
+    let s = '<svg class="br-lines" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet">';
+    function seg(a, b, cls) {
+      return '<line class="' + cls + '" x1="' + a.x.toFixed(2) + '" y1="' + a.y.toFixed(2) +
+        '" x2="' + b.x.toFixed(2) + '" y2="' + b.y.toFixed(2) + '"/>';
+    }
+    for (let k = 0; k < 4; k++) {
+      for (let i = 0; i < RL.RINGS[k].n; i++) {
+        s += seg(RL.nodePos(k, i), RL.nodePos(k + 1, RL.parentIndex(i)), "br-line");
       }
     }
-    return mobileSide;
+    for (let i = 0; i < 2; i++) s += seg(RL.nodePos(4, i), { x: 50, y: 50 }, "br-line");
+    litLines.forEach(function (L) {
+      const a = RL.nodePos(L.a[0], L.a[1]);
+      const b = L.b[0] >= 5 ? { x: 50, y: 50 } : RL.nodePos(L.b[0], L.b[1]);
+      s += seg(a, b, "br-line br-line-" + L.cls);
+    });
+    return s + "</svg>";
+  }
+
+  function nodeHtml(ringIdx, i, tree, ctx, byNum, viz) {
+    const pos = RL.nodePos(ringIdx, i);
+    const style = "left:" + pos.x + "%;top:" + pos.y + "%";
+    const info = teamAtNode(ringIdx, i, tree, ctx, byNum);
+    const rc = "br-r" + ringIdx;
+    if (!info.teamId) return '<div class="br-node ' + rc + ' br-dot" style="' + style + '"></div>';
+    const t = WC.state.teams[info.teamId];
+    const src = t && WC.flags.flagSrc(t);
+    const lit = viz.nodes[ringIdx + "|" + i];
+    const cls = ["br-node", rc];
+    if (lit) cls.push("br-lit");
+    if (info.provisional) cls.push("br-prov");
+    if (!lit && teamEliminated(info.teamId)) cls.push("br-dead");
+    if (src) {
+      return '<img class="' + cls.join(" ") + '" style="' + style + '" src="' + src +
+        '" alt="' + esc(t ? t.name : "") + '" data-team="' + info.teamId + '">';
+    }
+    return '<div class="' + cls.join(" ") + ' br-dot" style="' + style + '" data-team="' + info.teamId + '"></div>';
+  }
+
+  function render() {
+    const ctx = WC.slotCtx();
+    const classes = routeClasses();
+    const byNum = matchesByNum();
+    const tree = RL.bracketTree(WC.state.matches);
+    grid.classList.toggle("has-selection", Boolean(selectedTeam));
+    const viz = routeViz(tree, classes, ctx, byNum);
+
+    let html = linesSvg(viz.lines);
+    for (let p = 0; p < 32; p++) html += nodeHtml(0, p, tree, ctx, byNum, viz);
+    for (let k = 1; k <= 4; k++) {
+      for (let i = 0; i < RL.RINGS[k].n; i++) html += nodeHtml(k, i, tree, ctx, byNum, viz);
+    }
+    const champ = championTeam(tree);
+    const champT = champ && WC.state.teams[champ];
+    const champSrc = champT && WC.flags.flagSrc(champT);
+    html += '<div class="br-trophy' + (champ ? " br-has-champ" : "") + '" style="left:50%;top:50%">' +
+      (champSrc ? '<img src="' + champSrc + '" alt="' + esc(champT.name) + '">' : "") +
+      '<span class="br-cup">🏆</span></div>';
+    grid.innerHTML = html;
+    updateToggle();
   }
 
   function updateToggle() {
@@ -142,31 +187,6 @@
     toggle.querySelectorAll("button").forEach(function (b) {
       b.classList.toggle("active", Number(b.dataset.pos) === scenario);
     });
-  }
-
-  function render() {
-    const ctx = WC.slotCtx();
-    const classes = routeClasses();
-    const byNum = matchesByNum();
-    grid.classList.toggle("has-selection", Boolean(selectedTeam));
-
-    // el lado que se muestra en móvil
-    const shownSide = selectedTeam ? routeSide(byNum) : mobileSide;
-    grid.dataset.mobileSide = shownSide;
-
-    grid.innerHTML =
-      sideStackHtml("left", ctx, classes, byNum) +
-      finalColumnHtml(ctx, classes) +
-      sideStackHtml("right", ctx, classes, byNum);
-
-    // toggle de lado: visible en móvil solo cuando NO hay equipo (sin equipo se elige el lado a mano)
-    if (sideTabs) {
-      sideTabs.hidden = Boolean(selectedTeam);
-      sideTabs.querySelectorAll("[data-side]").forEach(function (b) {
-        b.classList.toggle("active", b.dataset.side === shownSide);
-      });
-    }
-    updateToggle();
   }
 
   function selectTeam(teamId) {
@@ -185,14 +205,16 @@
   }
 
   select.addEventListener("change", function () { selectTeam(select.value); });
-  if (sideTabs) {
-    sideTabs.addEventListener("click", function (event) {
-      const b = event.target.closest("[data-side]");
-      if (!b) return;
-      mobileSide = b.dataset.side;
-      render();
-    });
-  }
+
+  // Tocar una bandera → seleccionar equipo (ilumina ruta) + abrir panel.
+  grid.addEventListener("click", function (event) {
+    const node = event.target.closest("[data-team]");
+    if (!node) { if (event.target === grid || event.target.closest(".br-trophy")) selectTeam(""); return; }
+    const teamId = node.dataset.team;
+    selectTeam(teamId);
+    if (WC.teamPanel && WC.teamPanel.open) WC.teamPanel.open(teamId);
+  });
+
   toggle.addEventListener("click", function (event) {
     const b = event.target.closest("[data-pos]");
     if (!b) return;
