@@ -273,12 +273,23 @@
     return snapshot.shareUrl ? text + " " + snapshot.shareUrl : text;
   }
 
+  // Pick de un jugador para la celda del ranking en vivo. Puro: no calcula
+  // puntos ni semáforo (eso es scoring.scoreMatch); solo formatea el pick.
+  // Sin pick válido → null. advSide solo en empate KO con avance elegido.
+  function livePickView(pred, match) {
+    if (!pred || pred.hg == null || pred.ag == null || !isFinite(pred.hg) || !isFinite(pred.ag)) return null;
+    const advSide = match.stage !== "group" && pred.hg === pred.ag &&
+      (pred.adv === "home" || pred.adv === "away") ? pred.adv : null;
+    return { score: pred.hg + "-" + pred.ag, advSide: advSide };
+  }
+
   const engagement = {
     opportunity: opportunity,
     liveTension: liveTension,
     predictionGroups: predictionGroups,
     postMatchSummary: postMatchSummary,
-    whatsappShare: whatsappShare
+    whatsappShare: whatsappShare,
+    livePickView: livePickView
   };
   root.WC = root.WC || {};
   root.WC.engagement = engagement;

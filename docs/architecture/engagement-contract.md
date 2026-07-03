@@ -124,6 +124,18 @@ menor diferencia de puntos → `match_id` estable.
 - Sin datos sensibles ni info fuera de lo visible para el grupo. `null` si no hay
   resumen compartible.
 
+## 6. `livePickView(pred, match)` → vm | null
+
+```js
+{ score: "2-1", advSide: "home"|"away"|null }
+```
+
+- Formatea el pick de un jugador para la columna de picks del ranking en vivo.
+- No recibe snapshot: entrada mínima (`{hg, ag, adv}` + partido). Puro, sin puntos
+  ni semáforo — el color de la celda sale de `scoring.scoreMatch(pred, freezeLive(m))`.
+- Pick ausente/incompleto → `null` (la celda pinta "–").
+- `advSide` solo en empate KO con `adv` válido; en grupos o sin empate → `null`.
+
 ## Matriz de estados UI
 
 `game.js` conserva una sola superficie de Quiniela y debe resolver el estado dominante

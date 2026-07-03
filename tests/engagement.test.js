@@ -254,3 +254,35 @@ test("opportunity: empatado con el de arriba → reachable_rival (perseguir), no
   assert.strictEqual(opp.rival.username, "lider");
   assert.strictEqual(opp.rival.pointsGap, 0);
 });
+
+/* ---------- livePickView ---------- */
+
+test("livePickView: sin pick o pick incompleto → null", () => {
+  assert.strictEqual(eng.livePickView(null, { stage: "r16" }), null);
+  assert.strictEqual(eng.livePickView(undefined, { stage: "r16" }), null);
+  assert.strictEqual(eng.livePickView({ hg: null, ag: 1 }, { stage: "r16" }), null);
+  assert.strictEqual(eng.livePickView({ hg: 2, ag: null }, { stage: "group" }), null);
+});
+
+test("livePickView: marcador simple, sin lado de avance", () => {
+  assert.deepStrictEqual(eng.livePickView({ hg: 2, ag: 1, adv: null }, { stage: "group" }),
+    { score: "2-1", advSide: null });
+  assert.deepStrictEqual(eng.livePickView({ hg: 0, ag: 3, adv: null }, { stage: "qf" }),
+    { score: "0-3", advSide: null });
+});
+
+test("livePickView: empate KO con avance elegido → advSide", () => {
+  assert.deepStrictEqual(eng.livePickView({ hg: 1, ag: 1, adv: "away" }, { stage: "r16" }),
+    { score: "1-1", advSide: "away" });
+  assert.deepStrictEqual(eng.livePickView({ hg: 0, ag: 0, adv: "home" }, { stage: "final" }),
+    { score: "0-0", advSide: "home" });
+});
+
+test("livePickView: adv se ignora si no hay empate, es grupos, o es basura", () => {
+  assert.deepStrictEqual(eng.livePickView({ hg: 2, ag: 0, adv: "away" }, { stage: "qf" }),
+    { score: "2-0", advSide: null });
+  assert.deepStrictEqual(eng.livePickView({ hg: 1, ag: 1, adv: "home" }, { stage: "group" }),
+    { score: "1-1", advSide: null });
+  assert.deepStrictEqual(eng.livePickView({ hg: 1, ag: 1, adv: "banana" }, { stage: "r16" }),
+    { score: "1-1", advSide: null });
+});
