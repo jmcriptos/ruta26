@@ -704,7 +704,7 @@
       const plus = r.livePoints > 0 ? ' <span class="lr-plus' + bump + '">+' + r.livePoints + "</span>" : "";
       return "<tr" + (r.userId === uid ? ' class="me"' : "") + ' data-user="' + r.userId + '">' +
         '<td class="pos"><span class="num">' + r.pos + '</span></td><td class="lr-mov">' + mov +
-        '</td><td class="flag">' + champFlagFor(r.userId) + "</td><td>" + esc(r.username) + plus + "</td>" +
+        '</td><td class="flag">' + champFlagFor(r.userId) + '</td><td class="lr-name"><div class="lr-name-flex"><span class="lr-nm">' + esc(r.username) + "</span>" + plus + "</div></td>" +
         liveMs.map(function (m) { return pickCell(r.userId, m); }).join("") +
         '<td class="pts">' + r.points + "</td></tr>";
     }).join("");

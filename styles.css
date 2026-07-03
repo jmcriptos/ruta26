@@ -1058,7 +1058,19 @@ footer { color: var(--white); }
 .lr-plus.bump { animation: lr-bump .7s cubic-bezier(.22,1,.36,1); }
 /* Picks por jugador en el ranking en vivo: una columna por partido en vivo */
 .lr-scroll { overflow-x: auto; }
-.lr-scroll td { overflow-wrap: normal; } /* nombres enteros; si no cabe, la tabla desliza */
+.lr-scroll td { overflow-wrap: normal; white-space: nowrap; } /* cada jugador en una línea */
+/* La columna del nombre absorbe el ancho sobrante y recorta con … si no cabe:
+   así pos, picks y Pts quedan siempre visibles sin scroll horizontal. */
+.lr-name { width: 100%; max-width: 0; min-width: 88px; }
+.lr-name-flex { display: flex; align-items: center; gap: 6px; min-width: 0; overflow: hidden; }
+.lr-nm { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+/* En pantallas chicas la tabla se densifica para caber sin scroll aun con 2 partidos en vivo */
+@media (max-width: 480px) {
+  .lr-scroll th, .lr-scroll td { padding-left: 2px; padding-right: 2px; }
+  .lr-pick { font-size: 12px; }
+  .lr-pick-cap { font-size: 10px; }
+  .lr-name-flex .lr-plus { padding: 1px 5px; }
+}
 .lr-pick { white-space: nowrap; font-weight: 700; font-size: 13px; }
 .lr-pick.exact { color: var(--success); }
 .lr-pick.outcome { color: var(--orange); }

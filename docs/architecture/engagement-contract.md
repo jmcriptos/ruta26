@@ -134,7 +134,8 @@ menor diferencia de puntos → `match_id` estable.
 - No recibe snapshot: entrada mínima (`{hg, ag, adv}` + partido). Puro, sin puntos
   ni semáforo — el color de la celda sale de `scoring.scoreMatch(pred, freezeLive(m))`.
 - Pick ausente/incompleto → `null` (la celda pinta "–").
-- `advSide` solo en empate KO con `adv` válido; en grupos o sin empate → `null`.
+- `advSide` = lado que avanza según el pick (solo KO): el ganador en 90' o, en
+  empate, el elegido en `adv`. Empate sin `adv` válido o fase de grupos → `null`.
 
 ## Matriz de estados UI
 

@@ -275,11 +275,16 @@
 
   // Pick de un jugador para la celda del ranking en vivo. Puro: no calcula
   // puntos ni semáforo (eso es scoring.scoreMatch); solo formatea el pick.
-  // Sin pick válido → null. advSide solo en empate KO con avance elegido.
+  // Sin pick válido → null. advSide = lado que avanza según el pick (KO):
+  // ganador en 90' o, en empate, el elegido en adv. Grupos → null.
   function livePickView(pred, match) {
     if (!pred || pred.hg == null || pred.ag == null || !isFinite(pred.hg) || !isFinite(pred.ag)) return null;
-    const advSide = match.stage !== "group" && pred.hg === pred.ag &&
-      (pred.adv === "home" || pred.adv === "away") ? pred.adv : null;
+    let advSide = null;
+    if (match.stage !== "group") {
+      if (pred.hg > pred.ag) advSide = "home";
+      else if (pred.hg < pred.ag) advSide = "away";
+      else if (pred.adv === "home" || pred.adv === "away") advSide = pred.adv;
+    }
     return { score: pred.hg + "-" + pred.ag, advSide: advSide };
   }
 
