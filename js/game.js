@@ -693,7 +693,7 @@
       if (!view) return '<td class="lr-pick none">–</td>';
       const s = WC.scoring.scoreMatch({ hg: pr.hg, ag: pr.ag, adv: pr.adv }, WC.scoring.freezeLive(m));
       const adv = view.advSide ? " " + teamFlag(view.advSide === "home" ? m.home : m.away) : "";
-      const cap = capByKey[userId + "|" + m.id] ? ' <span class="lr-pick-cap">Ⓒ</span>' : "";
+      const cap = capByKey[userId + "|" + m.id] ? ' <span class="lr-pick-cap" title="Capitán">Ⓒ</span>' : "";
       return '<td class="lr-pick ' + s.kind + '">' + esc(view.score) + adv + cap + "</td>";
     }
     const table = rows.map(function (r) {
@@ -733,7 +733,7 @@
       headBlock +
       '<p class="lr-note">Provisional: así quedaría si los partidos terminan como van. El oficial suma al final.</p>' +
       '<div class="lr-scroll"><table class="rank-table"><tr><th>#</th><th></th><th></th><th>Jugador</th>' +
-      liveMs.map(function (m) { return '<th class="lr-pick-th">' + teamFlag(m.home) + " " + teamFlag(m.away) + "</th>"; }).join("") +
+      liveMs.map(function (m) { return '<th class="lr-pick-th" title="' + esc(WC.slotName(m, "home")) + " vs " + esc(WC.slotName(m, "away")) + '">' + teamFlag(m.home) + " " + teamFlag(m.away) + "</th>"; }).join("") +
       "<th>Pts</th></tr>" + table + "</table></div>" +
       groupsBlock + "</div>";
   }
