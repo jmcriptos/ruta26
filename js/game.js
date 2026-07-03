@@ -682,6 +682,20 @@
     const rows = WC.scoring.buildLiveLeaderboard(data.profiles, data.predictions, data.picks, matches(), data.captains);
     if (!rows.length) return "";
     const uid = session ? session.user.id : null;
+    // Picks por jugador de los partidos en vivo (bloqueados al kickoff: mostrarlos es fair play)
+    const predByKey = {};
+    data.predictions.forEach(function (pr) { predByKey[pr.user_id + "|" + pr.match_id] = pr; });
+    const capByKey = {};
+    data.captains.forEach(function (c) { capByKey[c.user_id + "|" + c.match_id] = true; });
+    function pickCell(userId, m) {
+      const pr = predByKey[userId + "|" + m.id];
+      const view = WC.engagement ? WC.engagement.livePickView(pr, m) : null;
+      if (!view) return '<td class="lr-pick none">–</td>';
+      const s = WC.scoring.scoreMatch({ hg: pr.hg, ag: pr.ag, adv: pr.adv }, WC.scoring.freezeLive(m));
+      const adv = view.advSide ? " " + teamFlag(view.advSide === "home" ? m.home : m.away) : "";
+      const cap = capByKey[userId + "|" + m.id] ? ' <span class="lr-pick-cap">Ⓒ</span>' : "";
+      return '<td class="lr-pick ' + s.kind + '">' + esc(view.score) + adv + cap + "</td>";
+    }
     const table = rows.map(function (r) {
       const mov = r.delta > 0 ? '<span class="lr-up">▲' + r.delta + "</span>"
         : r.delta < 0 ? '<span class="lr-down">▼' + (-r.delta) + "</span>"
@@ -690,8 +704,9 @@
       const plus = r.livePoints > 0 ? ' <span class="lr-plus' + bump + '">+' + r.livePoints + "</span>" : "";
       return "<tr" + (r.userId === uid ? ' class="me"' : "") + ' data-user="' + r.userId + '">' +
         '<td class="pos"><span class="num">' + r.pos + '</span></td><td class="lr-mov">' + mov +
-        '</td><td class="flag">' + champFlagFor(r.userId) + "</td><td>" + esc(r.username) + plus +
-        '</td><td class="pts">' + r.points + "</td></tr>";
+        '</td><td class="flag">' + champFlagFor(r.userId) + "</td><td>" + esc(r.username) + plus + "</td>" +
+        liveMs.map(function (m) { return pickCell(r.userId, m); }).join("") +
+        '<td class="pts">' + r.points + "</td></tr>";
     }).join("");
     lastLivePoints = {};
     rows.forEach(function (r) { lastLivePoints[r.userId] = r.livePoints; });
@@ -717,7 +732,9 @@
     return '<div class="game-card live-rank" id="liveRank"><h3><span class="lr-dot"></span> Ranking en vivo</h3>' +
       headBlock +
       '<p class="lr-note">Provisional: así quedaría si los partidos terminan como van. El oficial suma al final.</p>' +
-      '<table class="rank-table"><tr><th>#</th><th></th><th></th><th>Jugador</th><th>Pts</th></tr>' + table + "</table>" +
+      '<div class="lr-scroll"><table class="rank-table"><tr><th>#</th><th></th><th></th><th>Jugador</th>' +
+      liveMs.map(function (m) { return '<th class="lr-pick-th">' + teamFlag(m.home) + " " + teamFlag(m.away) + "</th>"; }).join("") +
+      "<th>Pts</th></tr>" + table + "</table></div>" +
       groupsBlock + "</div>";
   }
 

@@ -1056,6 +1056,15 @@ footer { color: var(--white); }
   background: var(--orange); color: var(--white); font-size: 12px; font-weight: 800;
 }
 .lr-plus.bump { animation: lr-bump .7s cubic-bezier(.22,1,.36,1); }
+/* Picks por jugador en el ranking en vivo: una columna por partido en vivo */
+.lr-scroll { overflow-x: auto; }
+.lr-pick { white-space: nowrap; font-weight: 700; font-size: 13px; }
+.lr-pick.exact { color: var(--success); }
+.lr-pick.outcome { color: var(--orange); }
+.lr-pick.miss, .lr-pick.pending { color: var(--muted); opacity: .75; }
+.lr-pick.none { color: var(--muted); font-weight: 400; }
+.lr-pick-cap { font-size: 11px; color: var(--muted); }
+.lr-pick-th { white-space: nowrap; }
 @keyframes lr-bump {
   0% { transform: scale(1); }
   40% { transform: scale(1.45); }
