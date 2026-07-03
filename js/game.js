@@ -693,7 +693,7 @@
       if (!view) return '<td class="lr-pick none">–</td>';
       const s = WC.scoring.scoreMatch({ hg: pr.hg, ag: pr.ag, adv: pr.adv }, WC.scoring.freezeLive(m));
       const adv = view.advSide ? " " + teamFlag(view.advSide === "home" ? m.home : m.away) : "";
-      const cap = capByKey[userId + "|" + m.id] ? ' <span class="lr-pick-cap" title="Capitán">Ⓒ</span>' : "";
+      const cap = capByKey[userId + "|" + m.id] ? ' <span class="lr-pick-cap" title="Batacazo">Ⓑ</span>' : "";
       return '<td class="lr-pick ' + s.kind + '">' + esc(view.score) + adv + cap + "</td>";
     }
     const table = rows.map(function (r) {
