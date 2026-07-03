@@ -1058,6 +1058,7 @@ footer { color: var(--white); }
 .lr-plus.bump { animation: lr-bump .7s cubic-bezier(.22,1,.36,1); }
 /* Picks por jugador en el ranking en vivo: una columna por partido en vivo */
 .lr-scroll { overflow-x: auto; }
+.lr-scroll td { overflow-wrap: normal; } /* nombres enteros; si no cabe, la tabla desliza */
 .lr-pick { white-space: nowrap; font-weight: 700; font-size: 13px; }
 .lr-pick.exact { color: var(--success); }
 .lr-pick.outcome { color: var(--orange); }
