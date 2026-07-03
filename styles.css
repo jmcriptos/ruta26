@@ -1078,6 +1078,15 @@ footer { color: var(--white); }
 .lr-pick.none { color: var(--muted); font-weight: 400; }
 .lr-pick-cap { font-size: 11px; color: var(--muted); }
 .lr-pick-th { white-space: nowrap; }
+/* En PC la tabla respira: nombre acotado, picks centrados y Pts a la derecha
+   (sin esto la columna del nombre acapara el sobrante y aplasta el resto) */
+@media (min-width: 481px) {
+  .lr-name { width: 34%; max-width: none; }
+  .lr-pick-th { width: 16%; }
+  .lr-pick, .lr-pick-th { text-align: center; }
+  .lr-scroll th, .lr-scroll td { padding-left: 12px; padding-right: 12px; }
+  .lr-scroll td.pts, .lr-scroll th:last-child { text-align: right; }
+}
 @keyframes lr-bump {
   0% { transform: scale(1); }
   40% { transform: scale(1.45); }
