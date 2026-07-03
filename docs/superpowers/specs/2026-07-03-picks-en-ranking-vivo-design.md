@@ -40,7 +40,7 @@ partidos en vivo del render actual.
     para avanzar (`1-1 🇦🇷`), usando `adv` (`home | away`).
   - Jugador sin pick para ese partido: `–` en gris tenue.
   - Si el jugador es capitán de ese partido (`data.captains`), un distintivo
-    pequeño Ⓒ junto al pick.
+    pequeño Ⓑ junto al pick (en la UI el capitán se llama "Batacazo").
 
 ### Semáforo
 
