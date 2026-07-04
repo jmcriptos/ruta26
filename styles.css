@@ -450,12 +450,12 @@ footer { display: flex; align-items: center; gap: 25px; padding: 28px 32px; colo
   max-width: 620px;
   margin: 0 auto;
   aspect-ratio: 1 / 1;
-  background: radial-gradient(circle at 50% 50%, rgba(120, 90, 20, .28) 0%, rgba(60, 45, 12, .12) 30%, transparent 62%);
+  background: radial-gradient(circle at 50% 50%, rgba(216, 164, 64, .45) 0%, rgba(140, 100, 30, .18) 34%, transparent 62%);
 }
 .br-lines { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 .br-line { stroke: rgba(255, 255, 255, .16); stroke-width: .22; fill: none; }
-.br-line-maybe { stroke: var(--lime-deep); stroke-width: .32; stroke-dasharray: 1 .8; }
-.br-line-lit { stroke: var(--lime); stroke-width: .45; }
+.br-line-maybe { stroke: rgba(255, 255, 255, .75); stroke-width: .32; stroke-dasharray: 1 .8; }
+.br-line-lit { stroke: #fff; stroke-width: .45; }
 
 .br-node {
   position: absolute;
@@ -493,8 +493,8 @@ img.br-node { object-fit: cover; background: #f3f2eb; cursor: pointer; }
   align-items: center;
   justify-content: center;
 }
-.br-cup { font-size: min(9vw, 54px); line-height: 1; filter: drop-shadow(0 0 12px rgba(215, 255, 67, .55)); }
-.br-trophy.br-has-champ .br-cup { filter: drop-shadow(0 0 16px rgba(215, 255, 67, .9)); }
+.br-cup { font-size: min(13vw, 84px); line-height: 1; filter: drop-shadow(0 0 26px rgba(255, 190, 60, .9)) drop-shadow(0 0 60px rgba(255, 170, 40, .5)); }
+.br-trophy.br-has-champ .br-cup { filter: drop-shadow(0 0 30px rgba(255, 205, 80, 1)) drop-shadow(0 0 70px rgba(255, 175, 45, .7)); }
 .br-trophy img { position: absolute; width: 46%; height: 46%; border-radius: 50%; bottom: -6%; right: -6%; box-shadow: 0 0 0 2px var(--lime); }
 
 @media (max-width: 760px) {

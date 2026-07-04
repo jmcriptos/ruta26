@@ -58,7 +58,7 @@
   }
   function parentIndex(i) { return Math.floor(i / 2); }
 
-  // Ruta rectangular hijo→padre: tramo RADIAL (ángulo del hijo, hasta el radio
+  // Ruta rectangular hijo→padre (ringIdx 0..3): tramo RADIAL (ángulo del hijo, hasta el radio
   // del anillo padre) + tramo de ARCO sobre el anillo padre hasta el padre.
   // a = nodo hijo, c = esquina, b = nodo padre, r = radio del arco (unidades
   // del lienzo), sweep = sentido del arco para el path SVG.

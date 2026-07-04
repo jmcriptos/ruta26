@@ -119,20 +119,25 @@
 
   function linesSvg(litLines) {
     let s = '<svg class="br-lines" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet">';
-    function seg(a, b, cls) {
-      return '<line class="' + cls + '" x1="' + a.x.toFixed(2) + '" y1="' + a.y.toFixed(2) +
-        '" x2="' + b.x.toFixed(2) + '" y2="' + b.y.toFixed(2) + '"/>';
+    // Ruta rectangular hijo→padre: tramo radial + arco sobre el anillo padre.
+    function rectPath(k, i, cls) {
+      const g = RL.rectSegment(k, i);
+      return '<path class="' + cls + '" d="M ' + g.a.x.toFixed(2) + ' ' + g.a.y.toFixed(2) +
+        ' L ' + g.c.x.toFixed(2) + ' ' + g.c.y.toFixed(2) +
+        ' A ' + g.r.toFixed(2) + ' ' + g.r.toFixed(2) + ' 0 0 ' + g.sweep +
+        ' ' + g.b.x.toFixed(2) + ' ' + g.b.y.toFixed(2) + '"/>';
+    }
+    // Finalistas → copa: tramo radial directo al centro.
+    function centerSeg(i, cls) {
+      const p = RL.nodePos(4, i);
+      return '<path class="' + cls + '" d="M ' + p.x.toFixed(2) + ' ' + p.y.toFixed(2) + ' L 50 50"/>';
     }
     for (let k = 0; k < 4; k++) {
-      for (let i = 0; i < RL.RINGS[k].n; i++) {
-        s += seg(RL.nodePos(k, i), RL.nodePos(k + 1, RL.parentIndex(i)), "br-line");
-      }
+      for (let i = 0; i < RL.RINGS[k].n; i++) s += rectPath(k, i, "br-line");
     }
-    for (let i = 0; i < 2; i++) s += seg(RL.nodePos(4, i), { x: 50, y: 50 }, "br-line");
+    for (let i = 0; i < 2; i++) s += centerSeg(i, "br-line");
     litLines.forEach(function (L) {
-      const a = RL.nodePos(L.a[0], L.a[1]);
-      const b = L.b[0] >= 5 ? { x: 50, y: 50 } : RL.nodePos(L.b[0], L.b[1]);
-      s += seg(a, b, "br-line br-line-" + L.cls);
+      s += rectPath(L.a[0], L.a[1], "br-line br-line-" + L.cls);
     });
     return s + "</svg>";
   }
