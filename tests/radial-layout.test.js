@@ -61,3 +61,40 @@ test("geometría: finalistas a las 9 y 3 en punto", () => {
   assert.ok(Math.abs(a.y - 50) < 0.001, "nodo 0 centrado en vertical");
   assert.ok(Math.abs(b.y - 50) < 0.001, "nodo 1 centrado en vertical");
 });
+
+/* ---------- geometría rectangular ---------- */
+
+test("nodeAngleDeg: ángulo del nodo con rotación del lienzo", () => {
+  assert.strictEqual(rl.nodeAngleDeg(0, 0), 0.5 / 32 * 360 + 90);
+  assert.strictEqual(rl.nodeAngleDeg(4, 1), 1.5 / 2 * 360 + 90);
+});
+
+test("rectSegment: a=hijo, b=padre, esquina en el radio del padre y ángulo del hijo", () => {
+  const s = rl.rectSegment(0, 3);
+  const child = rl.nodePos(0, 3), parent = rl.nodePos(1, 1);
+  assert.ok(Math.abs(s.a.x - child.x) < 1e-9 && Math.abs(s.a.y - child.y) < 1e-9);
+  assert.ok(Math.abs(s.b.x - parent.x) < 1e-9 && Math.abs(s.b.y - parent.y) < 1e-9);
+  // esquina: a la distancia del anillo padre del centro…
+  const dc = Math.hypot(s.c.x - 50, s.c.y - 50);
+  assert.ok(Math.abs(dc - rl.RINGS[1].r * 100) < 1e-9);
+  // …y colineal con centro→hijo (mismo ángulo)
+  const da = Math.hypot(s.a.x - 50, s.a.y - 50);
+  assert.ok(Math.abs((s.a.x - 50) / da - (s.c.x - 50) / dc) < 1e-9);
+  assert.ok(Math.abs((s.a.y - 50) / da - (s.c.y - 50) / dc) < 1e-9);
+  assert.strictEqual(s.r, rl.RINGS[1].r * 100);
+});
+
+test("rectSegment: sweep sigue el sentido del delta angular (par adelante, impar atrás)", () => {
+  assert.strictEqual(rl.rectSegment(0, 2).sweep, 1);
+  assert.strictEqual(rl.rectSegment(0, 3).sweep, 0);
+  // extremos del anillo (cruce de las 12 del lienzo): mismo patrón
+  assert.strictEqual(rl.rectSegment(0, 0).sweep, 1);
+  assert.strictEqual(rl.rectSegment(0, 31).sweep, 0);
+});
+
+test("rectSegment: respeta size custom", () => {
+  const s = rl.rectSegment(1, 4, 200);
+  const parent = rl.nodePos(2, 2, 200);
+  assert.ok(Math.abs(s.b.x - parent.x) < 1e-9 && Math.abs(s.b.y - parent.y) < 1e-9);
+  assert.strictEqual(s.r, rl.RINGS[2].r * 200);
+});

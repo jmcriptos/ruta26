@@ -44,18 +44,41 @@
   ];
   const ROTATION_DEG = 90; // rota para que los finalistas caigan a las 9 y 3 en punto
 
+  // Ángulo (grados) del nodo i del anillo ringIdx, con la rotación del lienzo.
+  function nodeAngleDeg(ringIdx, i) {
+    return (i + 0.5) / RINGS[ringIdx].n * 360 + ROTATION_DEG;
+  }
+
   // Posición del nodo i del anillo ringIdx en un lienzo de lado `size` (default 100 → %).
   function nodePos(ringIdx, i, size) {
     size = size || 100;
-    const ring = RINGS[ringIdx];
     const c = size / 2;
-    const deg = (i + 0.5) / ring.n * 360 + ROTATION_DEG;
-    const th = deg * Math.PI / 180;
-    return { x: c + ring.r * size * Math.cos(th), y: c + ring.r * size * Math.sin(th) };
+    const th = nodeAngleDeg(ringIdx, i) * Math.PI / 180;
+    return { x: c + RINGS[ringIdx].r * size * Math.cos(th), y: c + RINGS[ringIdx].r * size * Math.sin(th) };
   }
   function parentIndex(i) { return Math.floor(i / 2); }
 
-  const layout = { bracketTree: bracketTree, isLeaf: isLeaf, RINGS: RINGS, ROTATION_DEG: ROTATION_DEG, nodePos: nodePos, parentIndex: parentIndex };
+  // Ruta rectangular hijo→padre: tramo RADIAL (ángulo del hijo, hasta el radio
+  // del anillo padre) + tramo de ARCO sobre el anillo padre hasta el padre.
+  // a = nodo hijo, c = esquina, b = nodo padre, r = radio del arco (unidades
+  // del lienzo), sweep = sentido del arco para el path SVG.
+  function rectSegment(ringIdx, i, size) {
+    size = size || 100;
+    const c0 = size / 2;
+    const degC = nodeAngleDeg(ringIdx, i);
+    const degP = nodeAngleDeg(ringIdx + 1, parentIndex(i));
+    const rP = RINGS[ringIdx + 1].r * size;
+    function pt(r, d) {
+      const th = d * Math.PI / 180;
+      return { x: c0 + r * Math.cos(th), y: c0 + r * Math.sin(th) };
+    }
+    let dd = degP - degC;
+    while (dd > 180) dd -= 360;
+    while (dd < -180) dd += 360;
+    return { a: pt(RINGS[ringIdx].r * size, degC), c: pt(rP, degC), b: pt(rP, degP), r: rP, sweep: dd > 0 ? 1 : 0 };
+  }
+
+  const layout = { bracketTree: bracketTree, isLeaf: isLeaf, RINGS: RINGS, ROTATION_DEG: ROTATION_DEG, nodePos: nodePos, nodeAngleDeg: nodeAngleDeg, rectSegment: rectSegment, parentIndex: parentIndex };
   root.WC = root.WC || {};
   root.WC.radialLayout = layout;
   if (typeof module !== "undefined" && module.exports) module.exports = layout;
