@@ -111,7 +111,7 @@
       const won = m && m.status === "played" && m.winner === selectedTeam;
       const cls = won ? "lit" : (m && classes[m.num] === "lit" ? "lit" : "maybe");
       nodes[k + "|" + parent] = cls;
-      lines.push({ a: [k - 1, cur], b: [k, parent], cls: cls });
+      lines.push({ a: [k - 1, cur], cls: cls }); // el padre se deriva de a (parentIndex), no se lee
       cur = parent;
     }
     return { nodes: nodes, lines: lines };
