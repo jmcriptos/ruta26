@@ -242,3 +242,58 @@ test("applyGuardrails: el especial dedupe por su propio kind", () => {
   assert.strictEqual(pm.applyGuardrails(cands, { alreadySent: new Set(["u1|400021521|special"]) }).length, 0);
   assert.strictEqual(pm.applyGuardrails(cands, { alreadySent: new Set(["u1|400021521|summary"]) }).length, 1);
 });
+
+/* ---------- promo "Atrévete a Suiza" (+25/+50) ---------- */
+const SUI_PROMO = { matchId: "400021537", teamId: "43971", exact: 50, outcome: 25 };
+const SUI_MATCH = { id: "400021537", num: 90, date: "2026-07-12T01:00:00.000Z", home: "43922", away: "43971", status: "scheduled" };
+const SUI_TEAMS = { "43922": { id: "43922", name: "Argentina", flag: "🇦🇷" }, "43971": { id: "43971", name: "Suiza", flag: "🇨🇭" } };
+
+test("buildSuizaSpecialCandidates: broadcast a todos si el cruce está en la ventana", () => {
+  const now = new Date("2026-07-11T22:30:00Z").getTime(); // 150 min antes → kind estándar
+  const cands = pm.buildSuizaSpecialCandidates(["u1", "u2"], [M1, SUI_MATCH], SUI_PROMO, now);
+  assert.strictEqual(cands.length, 2);
+  assert.strictEqual(cands[0].reason, "special_suiza");
+  assert.strictEqual(cands[0].kind, "special_suiza");
+  assert.strictEqual(cands[0].matchId, "400021537");
+  assert.strictEqual(cands[0].teamId, "43971");
+});
+
+test("buildSuizaSpecialCandidates: dos pulsos con kind distinto (pre vs estándar)", () => {
+  const early = new Date("2026-07-11T19:00:00Z").getTime(); // 360 min antes → adelantado
+  const late = new Date("2026-07-11T22:30:00Z").getTime(); // 150 min antes → estándar
+  assert.strictEqual(pm.buildSuizaSpecialCandidates(["u1"], [SUI_MATCH], SUI_PROMO, early)[0].kind, "special_suiza_pre");
+  assert.strictEqual(pm.buildSuizaSpecialCandidates(["u1"], [SUI_MATCH], SUI_PROMO, late)[0].kind, "special_suiza");
+});
+
+test("buildSuizaSpecialCandidates: nada si el cruce no está en la ventana o sin promo", () => {
+  assert.strictEqual(pm.buildSuizaSpecialCandidates(["u1"], [M1, M2], SUI_PROMO, Date.now()).length, 0);
+  assert.strictEqual(pm.buildSuizaSpecialCandidates(["u1"], [SUI_MATCH], null, Date.now()).length, 0);
+});
+
+test("buildSuizaSpecialPush: copy con +25/+50 y metadata allowlisted", () => {
+  const push = pm.buildSuizaSpecialPush(SUI_MATCH, SUI_TEAMS, "9:00 p. m.", "43971");
+  assert.ok(push.title.indexOf("Atrévete con Suiza") >= 0);
+  assert.ok(push.body.indexOf("🇨🇭 Suiza") >= 0);
+  assert.ok(push.body.indexOf("+25") >= 0 && push.body.indexOf("+50") >= 0);
+  assert.strictEqual(push.data.reason, "special_suiza");
+  assert.strictEqual(push.data.matchId, "400021537");
+  assert.strictEqual(push.data.campaign, "special_suiza");
+});
+
+test("applyGuardrails: los dos pulsos de Suiza son buckets de dedupe distintos", () => {
+  const pre = [{ userId: "u1", matchId: "400021537", reason: "special_suiza", kind: "special_suiza_pre", kickoffAt: "2026-07-12T01:00:00Z" }];
+  const std = [{ userId: "u1", matchId: "400021537", reason: "special_suiza", kind: "special_suiza", kickoffAt: "2026-07-12T01:00:00Z" }];
+  // ya enviado el "pre" NO bloquea el estándar (repetición 3 h antes)
+  assert.strictEqual(pm.applyGuardrails(std, { alreadySent: new Set(["u1|400021537|special_suiza_pre"]) }).length, 1);
+  assert.strictEqual(pm.applyGuardrails(pre, { alreadySent: new Set(["u1|400021537|special_suiza_pre"]) }).length, 0);
+});
+
+test("applyGuardrails: la promo de Suiza gana el bloque sobre el % (prioridad 7)", () => {
+  const cands = [
+    { userId: "u1", matchId: "400021537", reason: "summary", kind: "summary", kickoffAt: "2026-07-12T01:00:00Z" },
+    { userId: "u1", matchId: "400021537", reason: "special_suiza", kind: "special_suiza", kickoffAt: "2026-07-12T01:00:00Z" }
+  ];
+  const out = pm.applyGuardrails(cands, {});
+  assert.strictEqual(out.length, 1);
+  assert.strictEqual(out[0].kind, "special_suiza");
+});

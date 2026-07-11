@@ -236,7 +236,9 @@ async function liveMatches(snapMatches) {
   }).filter(Boolean);
   const specialCands = scoring.SPECIAL_BATACAZO
     ? pm.buildSpecialCandidates(userIds, soon, scoring.SPECIAL_BATACAZO.matchId) : [];
-  const winners = pm.applyGuardrails(specialCands.concat(summaryCands).concat(oppCands), { alreadySent: alreadySent, sentTodayCount: sentTodayCount });
+  const suizaPromo = (scoring.SPECIAL_MATCH_PROMOS || [])[0] || null;
+  const suizaCands = pm.buildSuizaSpecialCandidates(userIds, soon, suizaPromo, now);
+  const winners = pm.applyGuardrails(suizaCands.concat(specialCands).concat(summaryCands).concat(oppCands), { alreadySent: alreadySent, sentTodayCount: sentTodayCount });
   const winnersByUser = {};
   winners.forEach(function (c) { (winnersByUser[c.userId] = winnersByUser[c.userId] || []).push(c); });
 
@@ -247,7 +249,9 @@ async function liveMatches(snapMatches) {
         ? pm.buildPush(candidate.blockMatches, snap.teams, tallies, candidate.missingPick)
         : candidate.kind === "special"
           ? pm.buildSpecialPush(candidate.match, snap.teams, pm.horaTxt(candidate.kickoffAt), scoring.SPECIAL_BATACAZO.teamId)
-          : pm.buildOpportunityPush(candidate.opp, pm.horaTxt(candidate.kickoffAt));
+          : (candidate.kind === "special_suiza" || candidate.kind === "special_suiza_pre")
+            ? pm.buildSuizaSpecialPush(candidate.match, snap.teams, pm.horaTxt(candidate.kickoffAt), candidate.teamId)
+            : pm.buildOpportunityPush(candidate.opp, pm.horaTxt(candidate.kickoffAt));
       if (!msg) continue;
       const payload = pushPayload(msg.title, msg.body, msg.data);
       console.log((DRY ? "[dry-run] " : "") + uid.slice(0, 8) + "… [" + candidate.kind + ":" + candidate.reason + "] ← " + msg.title + " | " + msg.body.replace(/\n/g, " ⏎ "));

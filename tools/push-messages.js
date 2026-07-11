@@ -87,7 +87,7 @@ function buildPush(matches, teams, tallies, missingPick) {
 /* ---------- Story 2.1: guardrails de push (puro, testeable) ---------- */
 // Prioridad de "Oportunidad más fuerte" (PD3 / engagement-contract.md).
 // special_batacazo por encima del % (promo de una jornada: gana su bloque).
-const REASON_PRIORITY = { special_batacazo: 7, summary: 6, pending_pick: 5, captain: 4, reachable_rival: 3, rival_threat: 2, win_matchday: 1 };
+const REASON_PRIORITY = { special_suiza: 7, special_batacazo: 7, summary: 6, pending_pick: 5, captain: 4, reachable_rival: 3, rival_threat: 2, win_matchday: 1 };
 
 // Bloque horario (PD1): hora local Curaçao del kickoff → "YYYY-MM-DDTHH".
 function blockHourKey(iso) {
@@ -149,6 +149,34 @@ function buildSpecialPush(match, teams, hora, teamId) {
     title: "💥 Batacazo ESPECIAL" + (hora ? " · " + hora : ""),
     body: "Marca a " + tname + " como tu Batacazo y gana +50 puntos si avanza hoy. ¡Solo esta jornada!",
     data: { reason: "special_batacazo", matchId: match.id, blockHour: blockHourKey(match.date), campaign: "special_batacazo" }
+  };
+}
+
+// Candidatos del push "Atrévete a Suiza" (promo de un partido: +25/+50 por ir con el
+// underdog, ver scoring.SPECIAL_MATCH_PROMOS). Broadcast a todos los suscriptores si el
+// cruce está en la ventana (soon). Dos pulsos con DEDUPE distinto para poder enviar dos
+// veces (ahora + repetición): "special_suiza_pre" cuando faltan >185 min (envío manual
+// adelantado) y "special_suiza" dentro de la ventana estándar de 180 min (≈3 h antes).
+function buildSuizaSpecialCandidates(userIds, soon, promo, nowMs) {
+  if (!promo) return [];
+  const m = (soon || []).find(function (x) { return x.id === promo.matchId; });
+  if (!m) return [];
+  const now = typeof nowMs === "number" ? nowMs : Date.now();
+  const minsToKick = (new Date(m.date).getTime() - now) / 60000;
+  const kind = minsToKick > 185 ? "special_suiza_pre" : "special_suiza";
+  return (userIds || []).map(function (uid) {
+    return { userId: uid, matchId: m.id, reason: "special_suiza", kind: kind, kickoffAt: m.date, match: m, teamId: promo.teamId };
+  });
+}
+
+// Push {title, body, data} de "Atrévete a Suiza". teamId = el underdog (Suiza).
+function buildSuizaSpecialPush(match, teams, hora, teamId) {
+  const team = teamName(teams, teamId);
+  const tname = team ? (team.flag ? team.flag + " " : "") + team.name : "Suiza";
+  return {
+    title: "🇨🇭 Atrévete con Suiza" + (hora ? " · " + hora : ""),
+    body: "Pon que gana " + tname + " y suma +25 puntos, o +50 si clavas el marcador. ¡Solo hoy: Argentina vs Suiza!",
+    data: { reason: "special_suiza", matchId: match.id, blockHour: blockHourKey(match.date), campaign: "special_suiza" }
   };
 }
 
@@ -250,5 +278,6 @@ module.exports = {
   buildOpportunityCandidates: buildOpportunityCandidates,
   buildSummaryCandidates: buildSummaryCandidates,
   buildSpecialCandidates: buildSpecialCandidates, buildSpecialPush: buildSpecialPush,
+  buildSuizaSpecialCandidates: buildSuizaSpecialCandidates, buildSuizaSpecialPush: buildSuizaSpecialPush,
   applyGuardrails: applyGuardrails, buildOpportunityPush: buildOpportunityPush
 };
