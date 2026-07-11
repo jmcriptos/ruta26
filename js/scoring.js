@@ -31,6 +31,17 @@
   // escala normal). Amarrado por match_id + team_id para que sea un evento único.
   const SPECIAL_BATACAZO = { matchId: "400021521", teamId: "43850", bonus: 50 };
 
+  // Promo "Atrévete a Suiza" — un solo partido (cuartos, Argentina vs Suiza, 12 jul
+  // 2026, id 400021537). Premia ir por el underdog: NO exige batacazo, aplica a
+  // cualquier pick que vaya con Suiza (teamId 43971) y REEMPLAZA el puntaje del
+  // partido si Suiza gana —nunca resta, porque 25/50 siempre supera lo normal de un
+  // cuarto (máx 4)—. Marcador exacto = 50; solo el resultado (gana Suiza) = 25. Si
+  // Suiza no gana o el pick no fue con Suiza, rige el scoring normal. Se apila con el
+  // batacazo si además marcaron el partido como tal (dos mecánicas aditivas).
+  const SPECIAL_MATCH_PROMOS = [
+    { matchId: "400021537", teamId: "43971", exact: 50, outcome: 25 }
+  ];
+
   // Bono aditivo del batacazo para un partido (0 en grupos). pCorrect (0..1) es
   // la fracción de la liga que acertó el avance; sin dato válido se asume 1
   // (favorito obvio → 0).
@@ -97,6 +108,23 @@
     return pred.adv === "home" ? match.home : (pred.adv === "away" ? match.away : null);
   }
 
+  // Puntaje de la promo "Atrévete a Suiza" para un pick, o null si no aplica (y rige
+  // el scoring normal). Aplica cuando: el partido está en SPECIAL_MATCH_PROMOS, el
+  // equipo de la promo GANÓ y el pick fue con ese equipo. Marcador exacto = exact,
+  // solo resultado = outcome. pred = {hg, ag, adv}.
+  function specialMatchScore(pred, match) {
+    if (!match) return null;
+    let promo = null;
+    for (let i = 0; i < SPECIAL_MATCH_PROMOS.length; i++) {
+      if (SPECIAL_MATCH_PROMOS[i].matchId === match.id) { promo = SPECIAL_MATCH_PROMOS[i]; break; }
+    }
+    if (!promo) return null;
+    if (match.winner !== promo.teamId) return null;
+    if (predWinner(pred, match) !== promo.teamId) return null;
+    if (pred.hg === match.hs && pred.ag === match.as) return { points: promo.exact, kind: "exact" };
+    return { points: promo.outcome, kind: "outcome" };
+  }
+
   // pred = {hg, ag, adv}. Grupos: 1X2 (1 pt). KO (incl. 3er y final): marcador
   // exacto = 3, solo el resultado (signo) = 1; en rondas con avance, +1 extra
   // por acertar quién avanza (en empates lo define pred.adv).
@@ -104,6 +132,11 @@
   function scoreMatch(pred, match) {
     if (!pred || pred.hg == null || pred.ag == null || !isFinite(pred.hg) || !isFinite(pred.ag)) return { points: 0, kind: "none" };
     if (match.status !== "played" || match.hs == null) return { points: 0, kind: "pending" };
+
+    // Promo de un partido: si aplica (pick con el underdog y el underdog ganó),
+    // reemplaza el puntaje normal. Solo sube (25/50 > lo normal), nunca resta.
+    const special = specialMatchScore(pred, match);
+    if (special) return special;
 
     if (match.stage === "group") {
       if (sign(pred.hg - pred.ag) === sign(match.hs - match.as)) return { points: POINTS.match, kind: "outcome" };
@@ -235,7 +268,7 @@
     return rows;
   }
 
-  const scoring = { POINTS: POINTS, CAPTAIN_TIERS: CAPTAIN_TIERS, SPECIAL_BATACAZO: SPECIAL_BATACAZO, CHAMPION_TIERS: CHAMPION_TIERS, CHAMPION_LOCK: CHAMPION_LOCK, scoreMatch: scoreMatch, captainBonus: captainBonus, captainTotal: captainTotal, specialBatacazoApplies: specialBatacazoApplies, effectiveBatacazoBonus: effectiveBatacazoBonus, maxCaptainBonus: maxCaptainBonus, maxMatchPoints: maxMatchPoints, scoreChampion: scoreChampion, buildLeaderboard: buildLeaderboard, freezeLive: freezeLive, buildLiveLeaderboard: buildLiveLeaderboard };
+  const scoring = { POINTS: POINTS, CAPTAIN_TIERS: CAPTAIN_TIERS, SPECIAL_BATACAZO: SPECIAL_BATACAZO, SPECIAL_MATCH_PROMOS: SPECIAL_MATCH_PROMOS, specialMatchScore: specialMatchScore, CHAMPION_TIERS: CHAMPION_TIERS, CHAMPION_LOCK: CHAMPION_LOCK, scoreMatch: scoreMatch, captainBonus: captainBonus, captainTotal: captainTotal, specialBatacazoApplies: specialBatacazoApplies, effectiveBatacazoBonus: effectiveBatacazoBonus, maxCaptainBonus: maxCaptainBonus, maxMatchPoints: maxMatchPoints, scoreChampion: scoreChampion, buildLeaderboard: buildLeaderboard, freezeLive: freezeLive, buildLiveLeaderboard: buildLiveLeaderboard };
   root.WC = root.WC || {};
   root.WC.scoring = scoring;
   if (typeof module !== "undefined" && module.exports) module.exports = scoring;

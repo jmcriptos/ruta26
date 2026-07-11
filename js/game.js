@@ -478,16 +478,32 @@
   // ya cerrado (locked/en vivo) o terminado con el premio logrado.
   function specialPromoHtml(m) {
     const sp = WC.scoring.SPECIAL_BATACAZO;
-    if (!sp || m.id !== sp.matchId) return "";
-    const v = mine[m.id];
-    if (m.status === "played" && m.hs != null) {
-      const won = isCaptain(m.id) && v && WC.scoring.specialBatacazoApplies(m, { hg: v.hg, ag: v.ag, adv: v.adv });
-      return won ? '<div class="promo-bat won">💥 ¡Batacazo especial logrado! <b>+50 puntos</b></div>' : "";
+    if (sp && m.id === sp.matchId) {
+      const v = mine[m.id];
+      if (m.status === "played" && m.hs != null) {
+        const won = isCaptain(m.id) && v && WC.scoring.specialBatacazoApplies(m, { hg: v.hg, ag: v.ag, adv: v.adv });
+        return won ? '<div class="promo-bat won">💥 ¡Batacazo especial logrado! <b>+50 puntos</b></div>' : "";
+      }
+      const txt = kicked(m)
+        ? "Batacazo especial: <b>+50 puntos</b> si Cabo Verde avanza."
+        : "Marca a <b>Cabo Verde</b> como tu batacazo y gana <b>+50 puntos</b> si avanza.";
+      return '<div class="promo-bat"><span class="promo-bat-tag">💥 Especial</span> <span class="promo-bat-txt">' + txt + "</span></div>";
     }
-    const txt = kicked(m)
-      ? "Batacazo especial: <b>+50 puntos</b> si Cabo Verde avanza."
-      : "Marca a <b>Cabo Verde</b> como tu batacazo y gana <b>+50 puntos</b> si avanza.";
-    return '<div class="promo-bat"><span class="promo-bat-tag">💥 Especial</span> <span class="promo-bat-txt">' + txt + "</span></div>";
+    // Promo "Atrévete a Suiza": no exige batacazo, aplica a cualquier pick que vaya
+    // con Suiza; muestra el premio logrado cuando el partido se resuelve.
+    const promo = (WC.scoring.SPECIAL_MATCH_PROMOS || []).find(function (p) { return p.matchId === m.id; });
+    if (promo) {
+      const v = mine[m.id];
+      if (m.status === "played" && m.hs != null) {
+        const s = v ? WC.scoring.specialMatchScore({ hg: v.hg, ag: v.ag, adv: v.adv }, m) : null;
+        return s ? '<div class="promo-bat won">🇨🇭 ¡Te atreviste con Suiza! <b>+' + s.points + ' puntos</b></div>' : "";
+      }
+      const txt = kicked(m)
+        ? "Atrévete a <b>Suiza</b>: <b>+25</b> si gana, <b>+50</b> si clavas el marcador."
+        : "Atrévete a <b>Suiza</b>: pon que gana y suma <b>+25</b>, o <b>+50</b> si clavas el marcador.";
+      return '<div class="promo-bat"><span class="promo-bat-tag">🇨🇭 Especial</span> <span class="promo-bat-txt">' + txt + "</span></div>";
+    }
+    return "";
   }
 
   function pickRowHtml(m) {

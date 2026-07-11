@@ -395,6 +395,75 @@ test("promo Cabo Verde: helpers specialBatacazoApplies / effectiveBatacazoBonus"
   assert.strictEqual(sc.effectiveBatacazoBonus(m, 0.1, { hg: 2, ag: 0 }), 3);  // Argentina → escala normal (raro)
 });
 
+// Promo "Atrévete a Suiza": cuartos Argentina (local 43922) vs Suiza (visitante 43971),
+// id 400021537. No exige batacazo; reemplaza el puntaje si el pick va con Suiza y Suiza gana.
+function suiMatch(hs, as, extra) {
+  return Object.assign({ id: "400021537", stage: "qf", status: "played", hs: hs, as: as, home: "43922", away: "43971" }, extra || {});
+}
+
+test("promo Suiza: gana Suiza + marcador exacto = 50 (reemplaza lo normal)", () => {
+  const m = suiMatch(0, 1, { winner: "43971" });   // Suiza gana 0-1
+  const pred = { hg: 0, ag: 1 };                    // predijo Suiza 0-1 (exacto)
+  assert.deepStrictEqual(sc.scoreMatch(pred, m), { points: 50, kind: "exact" });
+});
+
+test("promo Suiza: gana Suiza solo por resultado = 25", () => {
+  const m = suiMatch(0, 2, { winner: "43971" });   // Suiza gana 0-2
+  const pred = { hg: 1, ag: 2 };                    // gana visitante pero no exacto
+  assert.deepStrictEqual(sc.scoreMatch(pred, m), { points: 25, kind: "outcome" });
+});
+
+test("promo Suiza: empate + adv Suiza (penales) también cobra", () => {
+  const m = suiMatch(1, 1, { winner: "43971", hp: 3, ap: 4 });
+  assert.deepStrictEqual(sc.scoreMatch({ hg: 1, ag: 1, adv: "away" }, m), { points: 50, kind: "exact" }); // exacto 1-1 + pasa Suiza
+  assert.deepStrictEqual(sc.scoreMatch({ hg: 0, ag: 0, adv: "away" }, m), { points: 25, kind: "outcome" }); // resultado (empate) + pasa Suiza
+});
+
+test("promo Suiza: NO aplica si el pick va con Argentina (scoring normal)", () => {
+  const m = suiMatch(0, 1, { winner: "43971" });   // Suiza gana
+  assert.deepStrictEqual(sc.scoreMatch({ hg: 2, ag: 0 }, m), { points: 0, kind: "miss" }); // apostó Argentina, perdió
+});
+
+test("promo Suiza: NO aplica si Suiza no gana (pick Suiza pierde = 0)", () => {
+  const m = suiMatch(2, 0, { winner: "43922" });   // Argentina gana
+  assert.deepStrictEqual(sc.scoreMatch({ hg: 0, ag: 1 }, m), { points: 0, kind: "miss" });
+});
+
+test("promo Suiza: amarrada al partido (otro cruce usa la escala normal)", () => {
+  const m = suiMatch(0, 1, { winner: "43971", id: "999" }); // mismo escenario, otro id
+  assert.deepStrictEqual(sc.scoreMatch({ hg: 0, ag: 1 }, m), { points: 4, kind: "exact" }); // exacto 3 + avance 1
+});
+
+test("promo Suiza: se apila con el batacazo (captainTotal suma el bono encima)", () => {
+  const m = suiMatch(0, 1, { winner: "43971" });   // Suiza gana 0-1
+  const pred = { hg: 0, ag: 1 };
+  const s = sc.scoreMatch(pred, m);                 // 50 (promo)
+  assert.strictEqual(s.points, 50);
+  assert.strictEqual(sc.captainTotal(s, m, 0.10, pred), 53); // 50 + 3 (batacazo raro)
+});
+
+test("promo Suiza: helper specialMatchScore aislado", () => {
+  const m = suiMatch(0, 1, { winner: "43971" });
+  assert.deepStrictEqual(sc.specialMatchScore({ hg: 0, ag: 1 }, m), { points: 50, kind: "exact" });
+  assert.deepStrictEqual(sc.specialMatchScore({ hg: 1, ag: 2 }, m), { points: 25, kind: "outcome" });
+  assert.strictEqual(sc.specialMatchScore({ hg: 2, ag: 0 }, m), null);              // pick Argentina
+  assert.strictEqual(sc.specialMatchScore({ hg: 0, ag: 1 }, suiMatch(2, 0, { winner: "43922" })), null); // Suiza perdió
+});
+
+test("promo Suiza: ranking end-to-end reemplaza el puntaje del partido", () => {
+  const profiles = [{ id: "u1", username: "ana" }, { id: "u2", username: "leo" }, { id: "u3", username: "max" }];
+  const matches = [suiMatch(0, 1, { winner: "43971" })];
+  const preds = [
+    { user_id: "u1", match_id: "400021537", hg: 0, ag: 1 }, // Suiza exacto → 50
+    { user_id: "u2", match_id: "400021537", hg: 1, ag: 2 }, // Suiza resultado → 25
+    { user_id: "u3", match_id: "400021537", hg: 2, ag: 0 }  // Argentina → 0
+  ];
+  const rows = sc.buildLeaderboard(profiles, preds, [], matches, []);
+  assert.strictEqual(rows.find(function (r) { return r.userId === "u1"; }).points, 50);
+  assert.strictEqual(rows.find(function (r) { return r.userId === "u2"; }).points, 25);
+  assert.strictEqual(rows.find(function (r) { return r.userId === "u3"; }).points, 0);
+});
+
 test("maxMatchPoints: expone potencial máximo por partido desde scoring", () => {
   assert.strictEqual(sc.maxMatchPoints(played("group", 2, 1)), 1);
   assert.strictEqual(sc.maxMatchPoints(played("r16", 1, 1, "H")), 4); // exacto 3 + avance 1
