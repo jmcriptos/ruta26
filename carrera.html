@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://api.fifa.com https://wwzgpifvfmogjttwstxy.supabase.co; img-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#0a1512">
+  <title>Ruta 26 · La Carrera</title>
+  <link rel="icon" href="favicon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
+  <link href="https://fonts.googleapis.com/css2?family=League+Spartan:wght@600;700;800&amp;family=DM+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      font-family: "DM Sans", system-ui, Arial, sans-serif;
+      background:
+        radial-gradient(120% 80% at 50% -10%, #12261d 0%, #0a1512 55%, #070f0c 100%);
+      color: #f3f2eb; -webkit-font-smoothing: antialiased;
+      min-height: 100dvh;
+    }
+    .wrap { max-width: 440px; margin: 0 auto; padding: 20px 16px 28px; }
+    .head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+    .title { font-family: "League Spartan", sans-serif; font-weight: 800; font-size: 22px; letter-spacing: -.01em; }
+    .title .flag { filter: saturate(1.1); }
+    .brand { font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; opacity: .5; }
+    .datewrap { display: flex; align-items: baseline; gap: 10px; margin: 14px 0 16px; min-height: 46px; }
+    #rc-date { font-family: "League Spartan", sans-serif; font-weight: 800; font-size: 44px; line-height: .95; letter-spacing: -.03em; color: #fff; }
+    #rc-sub { font-size: 12px; font-weight: 600; opacity: .6; }
+    #rc-status { opacity: .7; font-size: 13px; padding: 30px 4px; text-align: center; }
+    #rc-track { position: relative; overflow: hidden; }
+
+    .rc-row {
+      position: absolute; left: 0; right: 0; height: 34px; display: flex; align-items: center;
+      transition: transform .85s cubic-bezier(.4,0,.2,1), opacity .5s ease;
+      will-change: transform, opacity;
+    }
+    .rc-rank { width: 20px; flex: 0 0 20px; text-align: right; font-size: 11px; font-weight: 700; opacity: .45; margin-right: 8px; font-variant-numeric: tabular-nums; }
+    .rc-bar {
+      height: 27px; border-radius: 0 8px 8px 0; min-width: 4px; background: var(--c);
+      transition: width .85s cubic-bezier(.4,0,.2,1); box-shadow: inset 0 1px 0 rgba(255,255,255,.18);
+    }
+    .rc-name { font-size: 13px; font-weight: 700; margin-left: 9px; white-space: nowrap; color: #eef0ea; }
+    .rc-flag { margin-right: 5px; }
+    .rc-val { margin-left: auto; padding-left: 10px; font-size: 13.5px; font-weight: 800; font-variant-numeric: tabular-nums; color: #cdd3cb; }
+    .rc-row.lead .rc-name { color: #ffd54a; }
+    .rc-row.lead .rc-val { color: #ffd54a; }
+    .rc-row.lead .rc-bar { box-shadow: inset 0 1px 0 rgba(255,255,255,.25), 0 0 0 2px rgba(255,213,74,.55), 0 0 16px rgba(255,213,74,.35); }
+
+    .controls { display: flex; align-items: center; gap: 12px; margin-top: 18px; }
+    #rc-play {
+      border: 0; border-radius: 999px; width: 40px; height: 40px; flex: 0 0 40px; font-size: 15px; cursor: pointer;
+      background: #ffd54a; color: #0a1512; font-weight: 700; display: grid; place-items: center;
+      transition: transform .1s; -webkit-tap-highlight-color: transparent;
+    }
+    #rc-play:active { transform: scale(.92); }
+    #rc-scrub { flex: 1; accent-color: #ffd54a; height: 4px; }
+    .foot { display: flex; justify-content: space-between; align-items: center; margin-top: 14px; font-size: 11px; opacity: .5; }
+    .foot a { color: inherit; }
+    .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <h1 class="sr-only">La Carrera: evolución diaria de los puntos de cada jugador de la quiniela Ruta 26.</h1>
+    <div class="head">
+      <div class="title"><span class="flag">🏁</span> La Carrera</div>
+      <div class="brand">Ruta 26 · Mundial 2026</div>
+    </div>
+    <div class="datewrap">
+      <div id="rc-date">·</div>
+      <div id="rc-sub"></div>
+    </div>
+    <div id="rc-status"></div>
+    <div id="rc-track" role="img" aria-label="Barras de puntos acumulados por jugador, animadas día a día"></div>
+    <div class="controls">
+      <button id="rc-play" aria-label="Reproducir">▶</button>
+      <input id="rc-scrub" type="range" min="0" max="1" value="0" step="1" aria-label="Línea de tiempo por día">
+    </div>
+    <div class="foot">
+      <span>Puntos acumulados · top 12</span>
+      <span>Datos <span id="rc-src">…</span> · <a href="index.html">volver</a></span>
+    </div>
+  </main>
+
+  <script src="js/config.js?v=20260711a"></script>
+  <script src="js/data.js?v=20260711a"></script>
+  <script src="js/api.js?v=20260611-security1"></script>
+  <script src="js/scoring.js?v=20260711a"></script>
+  <script src="js/race.js?v=20260711a"></script>
+</body>
+</html>
