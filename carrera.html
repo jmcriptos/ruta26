@@ -38,14 +38,25 @@
       transition: transform .85s cubic-bezier(.4,0,.2,1), opacity .5s ease;
       will-change: transform, opacity;
     }
-    .rc-rank { width: 20px; flex: 0 0 20px; text-align: right; font-size: 11px; font-weight: 700; opacity: .45; margin-right: 8px; font-variant-numeric: tabular-nums; }
+    .rc-rank { flex: 0 0 22px; text-align: right; font-size: 11px; font-weight: 700; opacity: .45; margin-right: 8px; font-variant-numeric: tabular-nums; }
+    /* .rc-main es una pista de ancho ESTABLE: el ancho de la barra (%) se mide contra
+       este contenedor, nunca contra el espacio que deja el nombre → mismo puntaje = misma barra. */
+    .rc-main { position: relative; flex: 1 1 auto; height: 100%; }
     .rc-bar {
-      height: 27px; border-radius: 0 8px 8px 0; min-width: 4px; background: var(--c);
-      transition: width .85s cubic-bezier(.4,0,.2,1); box-shadow: inset 0 1px 0 rgba(255,255,255,.18);
+      position: absolute; left: 0; top: 50%; transform: translateY(-50%);
+      height: 27px; width: 4px; min-width: 4px; border-radius: 0 8px 8px 0; background: var(--c);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.18);
+      transition: width .85s cubic-bezier(.4,0,.2,1);
     }
-    .rc-name { font-size: 13px; font-weight: 700; margin-left: 9px; white-space: nowrap; color: #eef0ea; }
-    .rc-flag { margin-right: 5px; }
-    .rc-val { margin-left: auto; padding-left: 10px; font-size: 13.5px; font-weight: 800; font-variant-numeric: tabular-nums; color: #cdd3cb; }
+    /* etiqueta (bandera + nombre): arranca en el borde de la barra; su left se anima igual que el ancho */
+    .rc-lbl {
+      position: absolute; left: 0; right: 34px; top: 50%; transform: translateY(-50%);
+      margin-left: 8px; display: flex; align-items: center; gap: 5px; overflow: hidden;
+      transition: left .85s cubic-bezier(.4,0,.2,1);
+    }
+    .rc-flag { flex: 0 0 auto; }
+    .rc-name { font-size: 13px; font-weight: 700; color: #eef0ea; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .rc-val { position: absolute; right: 0; top: 50%; transform: translateY(-50%); font-size: 13.5px; font-weight: 800; font-variant-numeric: tabular-nums; color: #cdd3cb; }
     .rc-row.lead .rc-name { color: #ffd54a; }
     .rc-row.lead .rc-val { color: #ffd54a; }
     .rc-row.lead .rc-bar { box-shadow: inset 0 1px 0 rgba(255,255,255,.25), 0 0 0 2px rgba(255,213,74,.55), 0 0 16px rgba(255,213,74,.35); }
@@ -90,6 +101,6 @@
   <script src="js/data.js?v=20260711a"></script>
   <script src="js/api.js?v=20260611-security1"></script>
   <script src="js/scoring.js?v=20260711a"></script>
-  <script src="js/race.js?v=20260711a"></script>
+  <script src="js/race.js?v=20260711b"></script>
 </body>
 </html>

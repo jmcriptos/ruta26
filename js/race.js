@@ -58,7 +58,7 @@
 
   var ROW = 42;          // alto de fila en px
   var TOP_N = 12;        // barras visibles a la vez
-  var BAR_MIN = 5, BAR_SPAN = 56; // ancho de barra en % (mín + proporción)
+  var BAR_MIN = 5, BAR_SPAN = 44; // ancho de barra en % (mín + proporción); deja sitio al nombre tras la barra
   var STEP_MS = 1300;    // tiempo por día
 
   var cfg = root.WC.CONFIG;
@@ -94,9 +94,11 @@
       el.style.setProperty("--c", colorFor(p.id));
       el.innerHTML =
         '<span class="rc-rank"></span>' +
-        '<span class="rc-bar"></span>' +
-        '<span class="rc-name">' + (flag ? '<span class="rc-flag">' + flag + "</span>" : "") + esc(p.username || "—") + "</span>" +
-        '<span class="rc-val"></span>';
+        '<span class="rc-main">' +
+          '<span class="rc-bar"></span>' +
+          '<span class="rc-lbl">' + (flag ? '<span class="rc-flag">' + flag + "</span>" : "") + '<span class="rc-name">' + esc(p.username || "—") + "</span></span>" +
+          '<span class="rc-val"></span>' +
+        "</span>";
       els.track.appendChild(el);
       rowEls[p.id] = el;
     });
@@ -115,7 +117,11 @@
       el.style.opacity = vis ? "1" : "0";
       el.classList.toggle("lead", rank === 0);
       el.querySelector(".rc-rank").textContent = rank + 1;
-      el.querySelector(".rc-bar").style.width = (BAR_MIN + (r.points / max) * BAR_SPAN) + "%";
+      // El ancho de la barra y el inicio de la etiqueta comparten el mismo % (contra
+      // .rc-main, ancho estable): mismo puntaje → misma barra, sin importar el nombre.
+      var w = (BAR_MIN + (r.points / max) * BAR_SPAN) + "%";
+      el.querySelector(".rc-bar").style.width = w;
+      el.querySelector(".rc-lbl").style.left = w;
       el.querySelector(".rc-val").textContent = r.points;
     });
   }
