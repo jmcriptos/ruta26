@@ -87,7 +87,7 @@ function buildPush(matches, teams, tallies, missingPick) {
 /* ---------- Story 2.1: guardrails de push (puro, testeable) ---------- */
 // Prioridad de "Oportunidad más fuerte" (PD3 / engagement-contract.md).
 // special_batacazo por encima del % (promo de una jornada: gana su bloque).
-const REASON_PRIORITY = { special_suiza: 7, special_batacazo: 7, summary: 6, pending_pick: 5, captain: 4, reachable_rival: 3, rival_threat: 2, win_matchday: 1 };
+const REASON_PRIORITY = { special_bat15: 7, special_suiza: 7, special_batacazo: 7, summary: 6, pending_pick: 5, captain: 4, reachable_rival: 3, rival_threat: 2, win_matchday: 1 };
 
 // Bloque horario (PD1): hora local Curaçao del kickoff → "YYYY-MM-DDTHH".
 function blockHourKey(iso) {
@@ -149,6 +149,39 @@ function buildSpecialPush(match, teams, hora, teamId) {
     title: "💥 Batacazo ESPECIAL" + (hora ? " · " + hora : ""),
     body: "Marca a " + tname + " como tu Batacazo y gana +50 puntos si avanza hoy. ¡Solo esta jornada!",
     data: { reason: "special_batacazo", matchId: match.id, blockHour: blockHourKey(match.date), campaign: "special_batacazo" }
+  };
+}
+
+// Candidatos del push "Batacazo de 15" (promo simétrica: el batacazo de ese cruce paga un
+// premio fijo para cualquiera de los dos, ver la entrada con teamId null en
+// scoring.SPECIAL_BATACAZOS). Broadcast a todos los suscriptores si el cruce está en la
+// ventana (soon): es un anuncio, no se gatilla por el estado del pick. Doble pulso con
+// DEDUPE distinto para poder enviar dos veces (ahora + repetición): "special_bat15_pre"
+// cuando faltan >185 min (envío manual adelantado) y "special_bat15" dentro de la ventana
+// estándar de 180 min (≈3 h antes), que es la que dispara el cron.
+function buildBat15Candidates(userIds, soon, promo, nowMs) {
+  if (!promo) return [];
+  const m = (soon || []).find(function (x) { return x.id === promo.matchId; });
+  if (!m) return [];
+  const now = typeof nowMs === "number" ? nowMs : Date.now();
+  const minsToKick = (new Date(m.date).getTime() - now) / 60000;
+  const kind = minsToKick > 185 ? "special_bat15_pre" : "special_bat15";
+  return (userIds || []).map(function (uid) {
+    return { userId: uid, matchId: m.id, reason: "special_bat15", kind: kind, kickoffAt: m.date, match: m, bonus: promo.bonus };
+  });
+}
+
+// Push {title, body, data} del "Batacazo de 15". Simétrico: nombra a los dos equipos
+// porque el premio no depende de cuál gane.
+function buildBat15Push(match, teams, hora, bonus) {
+  const pts = bonus || 15;
+  const h = teamName(teams, match.home), a = teamName(teams, match.away);
+  const hn = h ? (h.flag ? h.flag + " " : "") + h.name : "el local";
+  const an = a ? (a.flag ? a.flag + " " : "") + a.name : "el visitante";
+  return {
+    title: "💥 Batacazo de " + pts + (hora ? " · " + hora : ""),
+    body: "Hoy el Batacazo paga +" + pts + " puntos: marca la semi y acierta quién avanza, " + hn + " o " + an + ". ¡Da igual cuál, solo hoy!",
+    data: { reason: "special_bat15", matchId: match.id, blockHour: blockHourKey(match.date), campaign: "special_bat15" }
   };
 }
 
@@ -279,5 +312,6 @@ module.exports = {
   buildSummaryCandidates: buildSummaryCandidates,
   buildSpecialCandidates: buildSpecialCandidates, buildSpecialPush: buildSpecialPush,
   buildSuizaSpecialCandidates: buildSuizaSpecialCandidates, buildSuizaSpecialPush: buildSuizaSpecialPush,
+  buildBat15Candidates: buildBat15Candidates, buildBat15Push: buildBat15Push,
   applyGuardrails: applyGuardrails, buildOpportunityPush: buildOpportunityPush
 };

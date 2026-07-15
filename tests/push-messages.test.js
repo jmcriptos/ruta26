@@ -297,3 +297,51 @@ test("applyGuardrails: la promo de Suiza gana el bloque sobre el % (prioridad 7)
   assert.strictEqual(out.length, 1);
   assert.strictEqual(out[0].kind, "special_suiza");
 });
+
+/* ---------- promo especial: batacazo de 15 simétrico (semi 15 jul) ---------- */
+const SF_MATCH = { id: "400021540", num: 102, date: "2026-07-15T19:00:00.000Z", home: "43942", away: "43922", status: "scheduled" };
+const SF_TEAMS = { "43942": { id: "43942", name: "Inglaterra", flag: "🏴" }, "43922": { id: "43922", name: "Argentina", flag: "🇦🇷" } };
+const SF_PROMO = { matchId: "400021540", teamId: null, bonus: 15 };
+
+test("buildBat15Candidates: broadcast a todos si el cruce está en la ventana", () => {
+  const now = new Date("2026-07-15T17:00:00Z").getTime();   // faltan 120 min
+  const cands = pm.buildBat15Candidates(["u1", "u2"], [M1, SF_MATCH], SF_PROMO, now);
+  assert.strictEqual(cands.length, 2);
+  assert.strictEqual(cands[0].reason, "special_bat15");
+  assert.strictEqual(cands[0].kind, "special_bat15");
+  assert.strictEqual(cands[0].matchId, "400021540");
+  assert.strictEqual(cands[0].bonus, 15);
+});
+
+test("buildBat15Candidates: doble pulso — kind _pre cuando faltan más de 185 min", () => {
+  const now = new Date("2026-07-15T10:30:00Z").getTime();   // faltan 510 min
+  const cands = pm.buildBat15Candidates(["u1"], [SF_MATCH], SF_PROMO, now);
+  assert.strictEqual(cands[0].kind, "special_bat15_pre");
+});
+
+test("buildBat15Candidates: nada si el cruce no está en la ventana o no hay promo", () => {
+  const now = new Date("2026-07-15T17:00:00Z").getTime();
+  assert.strictEqual(pm.buildBat15Candidates(["u1"], [M1, M2], SF_PROMO, now).length, 0);
+  assert.strictEqual(pm.buildBat15Candidates(["u1"], [SF_MATCH], null, now).length, 0);
+});
+
+test("buildBat15Push: copy simétrico con los dos equipos, +15 y metadata allowlisted", () => {
+  const push = pm.buildBat15Push(SF_MATCH, SF_TEAMS, "3:00 p. m.", 15);
+  assert.ok(push.title.indexOf("Batacazo de 15") >= 0);
+  assert.ok(push.body.indexOf("Inglaterra") >= 0);
+  assert.ok(push.body.indexOf("Argentina") >= 0);
+  assert.ok(push.body.indexOf("+15") >= 0);
+  assert.strictEqual(push.data.reason, "special_bat15");
+  assert.strictEqual(push.data.matchId, "400021540");
+  assert.strictEqual(push.data.campaign, "special_bat15");
+});
+
+test("applyGuardrails: el batacazo de 15 gana el bloque sobre el % (summary)", () => {
+  const cands = [
+    { userId: "u1", matchId: "400021540", reason: "summary", kind: "summary", kickoffAt: SF_MATCH.date },
+    { userId: "u1", matchId: "400021540", reason: "special_bat15", kind: "special_bat15", kickoffAt: SF_MATCH.date }
+  ];
+  const winners = pm.applyGuardrails(cands, {});
+  assert.strictEqual(winners.length, 1);
+  assert.strictEqual(winners[0].reason, "special_bat15");
+});
