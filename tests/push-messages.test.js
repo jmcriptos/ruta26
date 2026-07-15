@@ -336,6 +336,14 @@ test("buildBat15Push: copy simétrico con los dos equipos, +15 y metadata allowl
   assert.strictEqual(push.data.campaign, "special_bat15");
 });
 
+test("applyGuardrails: los dos pulsos del batacazo de 15 son buckets de dedupe distintos", () => {
+  const pre = [{ userId: "u1", matchId: "400021540", reason: "special_bat15", kind: "special_bat15_pre", kickoffAt: SF_MATCH.date }];
+  const std = [{ userId: "u1", matchId: "400021540", reason: "special_bat15", kind: "special_bat15", kickoffAt: SF_MATCH.date }];
+  // ya enviado el "pre" NO bloquea el estándar (repetición 3 h antes)
+  assert.strictEqual(pm.applyGuardrails(std, { alreadySent: new Set(["u1|400021540|special_bat15_pre"]) }).length, 1);
+  assert.strictEqual(pm.applyGuardrails(pre, { alreadySent: new Set(["u1|400021540|special_bat15_pre"]) }).length, 0);
+});
+
 test("applyGuardrails: el batacazo de 15 gana el bloque sobre el % (summary)", () => {
   const cands = [
     { userId: "u1", matchId: "400021540", reason: "summary", kind: "summary", kickoffAt: SF_MATCH.date },

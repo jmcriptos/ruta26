@@ -4,6 +4,13 @@
 
 const MIN_PICKS = 3;
 
+// Umbral del "pulso adelantado" de las promos: la ventana estándar del cron son 180 min
+// (WINDOW_MIN en send-push-reminders.js) + 5 de margen para que un cron que corre tarde no
+// mande el pre y el estándar en la misma pasada. Por encima → kind "..._pre" (envío manual
+// adelantado); por debajo → kind estándar, el que dispara el cron. Los dos kinds son
+// buckets de dedupe distintos: por eso el mismo anuncio puede salir dos veces.
+const PRE_PULSE_MIN = 185;
+
 // hora local de Curaçao, p. ej. "3:00 p. m."
 function horaTxt(iso) {
   return new Intl.DateTimeFormat("es", { hour: "numeric", minute: "2-digit", hourCycle: "h12", timeZone: "America/Curacao" })
@@ -156,25 +163,25 @@ function buildSpecialPush(match, teams, hora, teamId) {
 // premio fijo para cualquiera de los dos, ver la entrada con teamId null en
 // scoring.SPECIAL_BATACAZOS). Broadcast a todos los suscriptores si el cruce está en la
 // ventana (soon): es un anuncio, no se gatilla por el estado del pick. Doble pulso con
-// DEDUPE distinto para poder enviar dos veces (ahora + repetición): "special_bat15_pre"
-// cuando faltan >185 min (envío manual adelantado) y "special_bat15" dentro de la ventana
-// estándar de 180 min (≈3 h antes), que es la que dispara el cron.
+// DEDUPE distinto para poder enviar dos veces (ahora + repetición), ver PRE_PULSE_MIN.
 function buildBat15Candidates(userIds, soon, promo, nowMs) {
   if (!promo) return [];
   const m = (soon || []).find(function (x) { return x.id === promo.matchId; });
   if (!m) return [];
   const now = typeof nowMs === "number" ? nowMs : Date.now();
   const minsToKick = (new Date(m.date).getTime() - now) / 60000;
-  const kind = minsToKick > 185 ? "special_bat15_pre" : "special_bat15";
+  const kind = minsToKick > PRE_PULSE_MIN ? "special_bat15_pre" : "special_bat15";
   return (userIds || []).map(function (uid) {
     return { userId: uid, matchId: m.id, reason: "special_bat15", kind: kind, kickoffAt: m.date, match: m, bonus: promo.bonus };
   });
 }
 
 // Push {title, body, data} del "Batacazo de 15". Simétrico: nombra a los dos equipos
-// porque el premio no depende de cuál gane.
+// porque el premio no depende de cuál gane. bonus viene de la entrada en
+// scoring.SPECIAL_BATACAZOS (única fuente de verdad del premio): sin valor por defecto,
+// para que un cableado mal hecho se vea en el dry-run y no se invente un "+15".
 function buildBat15Push(match, teams, hora, bonus) {
-  const pts = bonus || 15;
+  const pts = bonus;
   const h = teamName(teams, match.home), a = teamName(teams, match.away);
   const hn = h ? (h.flag ? h.flag + " " : "") + h.name : "el local";
   const an = a ? (a.flag ? a.flag + " " : "") + a.name : "el visitante";
@@ -188,15 +195,14 @@ function buildBat15Push(match, teams, hora, bonus) {
 // Candidatos del push "Atrévete a Suiza" (promo de un partido: +25/+50 por ir con el
 // underdog, ver scoring.SPECIAL_MATCH_PROMOS). Broadcast a todos los suscriptores si el
 // cruce está en la ventana (soon). Dos pulsos con DEDUPE distinto para poder enviar dos
-// veces (ahora + repetición): "special_suiza_pre" cuando faltan >185 min (envío manual
-// adelantado) y "special_suiza" dentro de la ventana estándar de 180 min (≈3 h antes).
+// veces (ahora + repetición), ver PRE_PULSE_MIN.
 function buildSuizaSpecialCandidates(userIds, soon, promo, nowMs) {
   if (!promo) return [];
   const m = (soon || []).find(function (x) { return x.id === promo.matchId; });
   if (!m) return [];
   const now = typeof nowMs === "number" ? nowMs : Date.now();
   const minsToKick = (new Date(m.date).getTime() - now) / 60000;
-  const kind = minsToKick > 185 ? "special_suiza_pre" : "special_suiza";
+  const kind = minsToKick > PRE_PULSE_MIN ? "special_suiza_pre" : "special_suiza";
   return (userIds || []).map(function (uid) {
     return { userId: uid, matchId: m.id, reason: "special_suiza", kind: kind, kickoffAt: m.date, match: m, teamId: promo.teamId };
   });
