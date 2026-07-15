@@ -4,7 +4,11 @@ const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
 
-const HTML_FILES = ["index.html", "stats.html", "como-jugar.html"];
+// Toda página servida a jugadores va aquí. Si falta una, sus assets se quedan con el ?v=
+// escrito a mano y el navegador sirve la versión cacheada para siempre: carrera.html quedó
+// fuera al nacer y La Carrera habría pagado el bono viejo del batacazo mientras el ranking
+// pagaba el nuevo, porque ambas cargan js/scoring.js.
+const HTML_FILES = ["index.html", "carrera.html", "stats.html", "como-jugar.html"];
 
 // Reescribe src/href locales a .js/.css/.html poniendo ?v=<hash>.
 // resolveHash(relPath) → string | null (null = externa/desconocida → sin cambios).
