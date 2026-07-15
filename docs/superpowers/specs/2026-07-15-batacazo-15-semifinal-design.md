@@ -79,7 +79,9 @@ Dedupe por `push_sent.kind` → los dos pulsos pueden salir sin bloquearse.
 
 Nuevos en `push-messages.js`:
 - `buildBat15Candidates(userIds, soon, promo, nowMs)` — broadcast a todos los suscriptores si el cruce está en `soon`; elige el `kind` por minutos al kickoff.
-- `buildBat15Push(match, teams, hora)` — title `"💥 Batacazo de 15 · <hora>"`, body `"Hoy el Batacazo paga +15 puntos: marca la semi y acierta quién gana, Inglaterra o Argentina. ¡Solo hoy!"`.
+- `buildBat15Push(match, teams, hora, bonus)` — title `"💥 Batacazo de 15 · <hora>"`, body `"Hoy el Batacazo paga +15 puntos: marca la semi y acierta quién avanza, 🏴 Inglaterra o 🇦🇷 Argentina. ¡Da igual cuál, solo hoy!"`.
+
+**Nota de copy:** las dos superficies (banner y push) dicen **"quién avanza"**, no "quién gana". El resto de la app usa "avanza" como el verbo del scoring, la semi puede irse a penales, y el premio efectivamente se paga sobre quién avanza (`specialBatacazoFor` compara contra `match.winner`). Decidido durante la implementación, tras la revisión de código del banner.
 - `REASON_PRIORITY.special_bat15 = 7` (mismo nivel que las otras promos: gana su bloque sobre el %).
 
 En `send-push-reminders.js`: la rama que hoy lee `scoring.SPECIAL_BATACAZO` se sustituye por la entrada simétrica de `SPECIAL_BATACAZOS`. Los candidatos de Cabo Verde ya no aplican (partido jugado, nunca cae en `soon`), así que `buildSpecialCandidates`/`buildSpecialPush` quedan sin uso desde el runner pero se conservan con sus tests.

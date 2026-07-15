@@ -475,7 +475,7 @@
 
   // Aviso de una promo de batacazo amarrada a un partido (ver scoring.SPECIAL_BATACAZOS).
   // Con teamId hay que ir por ese equipo (Cabo Verde +50); sin teamId es simétrica y basta
-  // acertar quién gana (semi Inglaterra–Argentina +15). El copy se adapta a si el partido
+  // acertar quién avanza (semi Inglaterra–Argentina +15). El copy se adapta a si el partido
   // está por jugarse, ya cerrado (locked/en vivo) o terminado con el premio logrado.
   function specialPromoHtml(m) {
     const sp = (WC.scoring.SPECIAL_BATACAZOS || []).find(function (x) { return x.matchId === m.id; });
