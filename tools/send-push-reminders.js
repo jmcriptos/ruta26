@@ -234,11 +234,12 @@ async function liveMatches(snapMatches) {
   const oppCands = userIds.map(function (uid) {
     return pushOpp.userOpportunityCandidate(uid, soon, snap.teams, official, preds || [], caps || [], now, matches);
   }).filter(Boolean);
-  const specialCands = scoring.SPECIAL_BATACAZO
-    ? pm.buildSpecialCandidates(userIds, soon, scoring.SPECIAL_BATACAZO.matchId) : [];
+  // Promo de batacazo simétrica (la entrada sin teamId): hoy, la semi con +15.
+  const bat15Promo = (scoring.SPECIAL_BATACAZOS || []).find(function (p) { return !p.teamId; }) || null;
+  const bat15Cands = pm.buildBat15Candidates(userIds, soon, bat15Promo, now);
   const suizaPromo = (scoring.SPECIAL_MATCH_PROMOS || [])[0] || null;
   const suizaCands = pm.buildSuizaSpecialCandidates(userIds, soon, suizaPromo, now);
-  const winners = pm.applyGuardrails(suizaCands.concat(specialCands).concat(summaryCands).concat(oppCands), { alreadySent: alreadySent, sentTodayCount: sentTodayCount });
+  const winners = pm.applyGuardrails(bat15Cands.concat(suizaCands).concat(summaryCands).concat(oppCands), { alreadySent: alreadySent, sentTodayCount: sentTodayCount });
   const winnersByUser = {};
   winners.forEach(function (c) { (winnersByUser[c.userId] = winnersByUser[c.userId] || []).push(c); });
 
@@ -247,8 +248,8 @@ async function liveMatches(snapMatches) {
     for (const candidate of winnersByUser[uid]) {
       const msg = candidate.kind === "summary"
         ? pm.buildPush(candidate.blockMatches, snap.teams, tallies, candidate.missingPick)
-        : candidate.kind === "special"
-          ? pm.buildSpecialPush(candidate.match, snap.teams, pm.horaTxt(candidate.kickoffAt), scoring.SPECIAL_BATACAZO.teamId)
+        : (candidate.kind === "special_bat15" || candidate.kind === "special_bat15_pre")
+          ? pm.buildBat15Push(candidate.match, snap.teams, pm.horaTxt(candidate.kickoffAt), candidate.bonus)
           : (candidate.kind === "special_suiza" || candidate.kind === "special_suiza_pre")
             ? pm.buildSuizaSpecialPush(candidate.match, snap.teams, pm.horaTxt(candidate.kickoffAt), candidate.teamId)
             : pm.buildOpportunityPush(candidate.opp, pm.horaTxt(candidate.kickoffAt));
