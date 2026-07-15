@@ -336,6 +336,14 @@ test("buildBat15Push: copy simétrico con los dos equipos, +15 y metadata allowl
   assert.strictEqual(push.data.campaign, "special_bat15");
 });
 
+test("buildBat15Push: sin bonus válido no arma mensaje (el runner no manda '+undefined')", () => {
+  assert.strictEqual(pm.buildBat15Push(SF_MATCH, SF_TEAMS, "3:00 p. m.", undefined), null);
+  assert.strictEqual(pm.buildBat15Push(SF_MATCH, SF_TEAMS, "3:00 p. m.", null), null);
+  assert.strictEqual(pm.buildBat15Push(SF_MATCH, SF_TEAMS, "3:00 p. m.", "15"), null);
+  // 0 es un bonus válido (no es "falta el dato"): arma mensaje, no lo miente como +15
+  assert.ok(pm.buildBat15Push(SF_MATCH, SF_TEAMS, "3:00 p. m.", 0).body.indexOf("+0") >= 0);
+});
+
 test("applyGuardrails: los dos pulsos del batacazo de 15 son buckets de dedupe distintos", () => {
   const pre = [{ userId: "u1", matchId: "400021540", reason: "special_bat15", kind: "special_bat15_pre", kickoffAt: SF_MATCH.date }];
   const std = [{ userId: "u1", matchId: "400021540", reason: "special_bat15", kind: "special_bat15", kickoffAt: SF_MATCH.date }];

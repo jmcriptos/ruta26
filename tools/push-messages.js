@@ -179,8 +179,10 @@ function buildBat15Candidates(userIds, soon, promo, nowMs) {
 // Push {title, body, data} del "Batacazo de 15". Simétrico: nombra a los dos equipos
 // porque el premio no depende de cuál gane. bonus viene de la entrada en
 // scoring.SPECIAL_BATACAZOS (única fuente de verdad del premio): sin valor por defecto,
-// para que un cableado mal hecho se vea en el dry-run y no se invente un "+15".
+// para no inventarse un "+15". Si el cableado falla devuelve null y el runner no manda
+// nada, en vez de anunciarle "+undefined" a la liga.
 function buildBat15Push(match, teams, hora, bonus) {
+  if (typeof bonus !== "number") return null;
   const pts = bonus;
   const h = teamName(teams, match.home), a = teamName(teams, match.away);
   const hn = h ? (h.flag ? h.flag + " " : "") + h.name : "el local";

@@ -228,14 +228,19 @@ async function liveMatches(snapMatches) {
   const tallies = pm.tallyByMatch(preds || []);
   const hasPred = new Set((preds || []).map(function (p) { return p.user_id + "|" + p.match_id; }));
 
-  // Candidatos: special (promo de una jornada, máxima prioridad) + summary (%, principal)
-  // + oportunidad (batacazo/rival; pending_pick lo cubre el %).
+  // Candidatos: promos de una jornada (bat15/suiza, máxima prioridad) + summary (%,
+  // principal) + oportunidad (batacazo/rival; pending_pick lo cubre el %).
   const summaryCands = pm.buildSummaryCandidates(userIds, soon, hasPred);
   const oppCands = userIds.map(function (uid) {
     return pushOpp.userOpportunityCandidate(uid, soon, snap.teams, official, preds || [], caps || [], now, matches);
   }).filter(Boolean);
-  // Promo de batacazo simétrica (la entrada sin teamId): hoy, la semi con +15.
-  const bat15Promo = (scoring.SPECIAL_BATACAZOS || []).find(function (p) { return !p.teamId; }) || null;
+  // Promo de batacazo simétrica (entrada sin teamId) cuyo cruce esté por jugarse. El filtro
+  // por `soon` no es de adorno: las entradas viejas NO se borran nunca (alterarlas reescribe
+  // el histórico), así que sin él la primera simétrica de la lista taparía para siempre a la
+  // siguiente y su push jamás saldría.
+  const bat15Promo = (scoring.SPECIAL_BATACAZOS || []).find(function (p) {
+    return !p.teamId && soon.some(function (m) { return m.id === p.matchId; });
+  }) || null;
   const bat15Cands = pm.buildBat15Candidates(userIds, soon, bat15Promo, now);
   const suizaPromo = (scoring.SPECIAL_MATCH_PROMOS || [])[0] || null;
   const suizaCands = pm.buildSuizaSpecialCandidates(userIds, soon, suizaPromo, now);
