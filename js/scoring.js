@@ -23,13 +23,19 @@
     { maxP: Infinity, bonus: 0 } // favorito obvio
   ];
 
-  // Promo de una jornada (viernes 3 jul 2026): quien marque el cruce
-  // Argentina–Cabo Verde (R32, id 400021521) como batacazo APOSTANDO por Cabo
-  // Verde (predijo que Cabo Verde avanza) cobra un premio fijo de +50 —encima de
-  // lo que gane el pick, en lugar de la escala de rareza— si Cabo Verde avanza.
-  // Si el pick va con Argentina, o Cabo Verde no avanza, no aplica (rige la
-  // escala normal). Amarrado por match_id + team_id para que sea un evento único.
-  const SPECIAL_BATACAZO = { matchId: "400021521", teamId: "43850", bonus: 50 };
+  // Promos de batacazo amarradas a un partido: sustituyen la escala de rareza por un
+  // premio fijo, si el jugador marcó ese cruce como batacazo y acertó quién avanza.
+  //   teamId con valor → solo paga si gana ESE equipo (premia ir por el underdog).
+  //   teamId null      → simétrico: paga por cualquiera de los dos, basta acertar.
+  // NO tocar ni borrar entradas viejas: el scoring se recalcula sobre todo el histórico
+  // en cada carga, así que quitarlas le arrebataría puntos ya cobrados a los jugadores.
+  // Una sola entrada por matchId: specialBatacazoFor se queda con la primera que coincida.
+  const SPECIAL_BATACAZOS = [
+    // 3 jul 2026 — Argentina vs Cabo Verde (R32): +50 por ir con Cabo Verde si avanza.
+    { matchId: "400021521", teamId: "43850", bonus: 50 },
+    // 15 jul 2026 — semi Inglaterra vs Argentina: +15 para cualquiera de los dos.
+    { matchId: "400021540", teamId: null, bonus: 15 }
+  ];
 
   // Promo "Atrévete a Suiza" — un solo partido (cuartos, Argentina vs Suiza, 12 jul
   // 2026, id 400021537). Premia ir por el underdog: NO exige batacazo, aplica a
@@ -54,19 +60,32 @@
     return 0;
   }
 
-  // ¿La apuesta ya resuelta cae en la promo especial? (batacazo sobre el cruce
-  // marcado, el pick va con Cabo Verde y Cabo Verde avanzó). pred = {hg,ag,adv}.
+  // La entrada de SPECIAL_BATACAZOS que cubre esta apuesta ya resuelta, o null. Siempre
+  // exige acertar quién avanza; si la entrada amarra un teamId, además exige que gane ese
+  // equipo. pred = {hg,ag,adv}.
+  function specialBatacazoFor(match, pred) {
+    if (!match || !pred || !match.winner) return null;
+    for (let i = 0; i < SPECIAL_BATACAZOS.length; i++) {
+      const sp = SPECIAL_BATACAZOS[i];
+      if (sp.matchId !== match.id) continue;
+      if (sp.teamId && match.winner !== sp.teamId) return null;
+      if (predWinner(pred, match) !== match.winner) return null;
+      return sp;
+    }
+    return null;
+  }
+
+  // ¿La apuesta ya resuelta cae en una promo especial? (marcó el cruce como batacazo y
+  // acertó). Lo usa game.js para el banner.
   function specialBatacazoApplies(match, pred) {
-    return !!match && !!pred && match.id === SPECIAL_BATACAZO.matchId &&
-      match.winner === SPECIAL_BATACAZO.teamId &&
-      predWinner(pred, match) === SPECIAL_BATACAZO.teamId;
+    return !!specialBatacazoFor(match, pred);
   }
 
   // Bono efectivo del batacazo: el premio especial si aplica, si no la escala de
   // rareza. Única fuente de verdad para scoring y para el display del bono.
   function effectiveBatacazoBonus(match, pCorrect, pred) {
-    if (specialBatacazoApplies(match, pred)) return SPECIAL_BATACAZO.bonus;
-    return captainBonus(match, pCorrect);
+    const sp = specialBatacazoFor(match, pred);
+    return sp ? sp.bonus : captainBonus(match, pCorrect);
   }
 
   // Total de un partido con batacazo: lo ganado + el bono (solo si acertó).
@@ -268,7 +287,7 @@
     return rows;
   }
 
-  const scoring = { POINTS: POINTS, CAPTAIN_TIERS: CAPTAIN_TIERS, SPECIAL_BATACAZO: SPECIAL_BATACAZO, SPECIAL_MATCH_PROMOS: SPECIAL_MATCH_PROMOS, specialMatchScore: specialMatchScore, CHAMPION_TIERS: CHAMPION_TIERS, CHAMPION_LOCK: CHAMPION_LOCK, scoreMatch: scoreMatch, captainBonus: captainBonus, captainTotal: captainTotal, specialBatacazoApplies: specialBatacazoApplies, effectiveBatacazoBonus: effectiveBatacazoBonus, maxCaptainBonus: maxCaptainBonus, maxMatchPoints: maxMatchPoints, scoreChampion: scoreChampion, buildLeaderboard: buildLeaderboard, freezeLive: freezeLive, buildLiveLeaderboard: buildLiveLeaderboard };
+  const scoring = { POINTS: POINTS, CAPTAIN_TIERS: CAPTAIN_TIERS, SPECIAL_BATACAZOS: SPECIAL_BATACAZOS, specialBatacazoFor: specialBatacazoFor, SPECIAL_MATCH_PROMOS: SPECIAL_MATCH_PROMOS, specialMatchScore: specialMatchScore, CHAMPION_TIERS: CHAMPION_TIERS, CHAMPION_LOCK: CHAMPION_LOCK, scoreMatch: scoreMatch, captainBonus: captainBonus, captainTotal: captainTotal, specialBatacazoApplies: specialBatacazoApplies, effectiveBatacazoBonus: effectiveBatacazoBonus, maxCaptainBonus: maxCaptainBonus, maxMatchPoints: maxMatchPoints, scoreChampion: scoreChampion, buildLeaderboard: buildLeaderboard, freezeLive: freezeLive, buildLiveLeaderboard: buildLiveLeaderboard };
   root.WC = root.WC || {};
   root.WC.scoring = scoring;
   if (typeof module !== "undefined" && module.exports) module.exports = scoring;

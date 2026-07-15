@@ -581,3 +581,79 @@ test("buildLeaderboard: empate REAL (mismos puntos y mismo %) comparte posición
   assert.strictEqual(rows[0].pos, rows[1].pos);   // empate real → misma posición
   assert.strictEqual(rows[0].tier, rows[1].tier);
 });
+
+// Promo simétrica (15 jul 2026): semifinal Inglaterra (local 43942) vs Argentina
+// (visitante 43922), id 400021540. El batacazo paga +15 fijos para cualquiera de los
+// dos: basta marcar el partido y acertar quién gana/avanza. Reemplaza la escala.
+function sfMatch(hs, as, extra) {
+  return Object.assign({ id: "400021540", stage: "sf", status: "played", hs: hs, as: as, home: "43942", away: "43922" }, extra || {});
+}
+
+test("batacazo 15: gana Inglaterra y la marcaste = +15 encima (aunque sea el favorito obvio)", () => {
+  const m = sfMatch(2, 1, { winner: "43942" });
+  const pred = { hg: 2, ag: 1 };                              // exacto
+  const s = sc.scoreMatch(pred, m);
+  assert.deepStrictEqual(s, { points: 4, kind: "exact" });    // 3 exacto + 1 avance
+  assert.strictEqual(sc.captainTotal(s, m, 0.9, pred), 19);   // 4 + 15 (ignora la escala)
+});
+
+test("batacazo 15: simétrico — gana Argentina y la marcaste también paga +15", () => {
+  const m = sfMatch(0, 1, { winner: "43922" });               // Argentina gana 0-1
+  const pred = { hg: 0, ag: 2 };                              // gana visitante, no exacto
+  const s = sc.scoreMatch(pred, m);
+  assert.deepStrictEqual(s, { points: 2, kind: "outcome" });  // 1 resultado + 1 avance
+  assert.strictEqual(sc.captainTotal(s, m, 0.9, pred), 17);   // 2 + 15
+});
+
+test("batacazo 15: fallar el ganador no paga bono", () => {
+  const m = sfMatch(2, 0, { winner: "43942" });               // gana Inglaterra
+  const pred = { hg: 0, ag: 2 };                              // apostó Argentina
+  const s = sc.scoreMatch(pred, m);
+  assert.strictEqual(s.points, 0);
+  assert.strictEqual(sc.captainTotal(s, m, 0.1, pred), 0);
+});
+
+test("batacazo 15: empate predicho con adv correcto (penales) paga +15", () => {
+  const m = sfMatch(1, 1, { winner: "43922", hp: 3, ap: 4 }); // Argentina pasa por penales
+  const pred = { hg: 1, ag: 1, adv: "away" };
+  const s = sc.scoreMatch(pred, m);
+  assert.deepStrictEqual(s, { points: 4, kind: "exact" });    // exacto 1-1 + avance
+  assert.strictEqual(sc.captainTotal(s, m, 0.5, pred), 19);
+});
+
+test("batacazo 15: sin marcar batacazo rige el scoring normal", () => {
+  const m = sfMatch(2, 1, { winner: "43942" });
+  assert.deepStrictEqual(sc.scoreMatch({ hg: 2, ag: 1 }, m), { points: 4, kind: "exact" });
+});
+
+test("batacazo 15: amarrado al partido (la otra semi usa la escala de rareza)", () => {
+  const m = sfMatch(2, 1, { winner: "43942", id: "400021541" });
+  const pred = { hg: 2, ag: 1 };
+  const s = sc.scoreMatch(pred, m);
+  assert.strictEqual(sc.captainTotal(s, m, 0.9, pred), 4);    // favorito obvio → 0 de bono
+  assert.strictEqual(sc.captainTotal(s, m, 0.1, pred), 7);    // raro → +3
+});
+
+test("batacazo 15: helpers specialBatacazoFor / specialBatacazoApplies / effectiveBatacazoBonus", () => {
+  const m = sfMatch(2, 1, { winner: "43942" });                      // gana Inglaterra
+  const arg = sfMatch(0, 1, { winner: "43922" });                    // gana Argentina
+  const otra = sfMatch(2, 1, { winner: "43942", id: "400021541" });  // otra semi, sin promo
+  // La entrada cubre la apuesta si el pick acierta quién avanza, gane quien gane.
+  assert.strictEqual(sc.specialBatacazoFor(m, { hg: 2, ag: 1 }).bonus, 15);
+  assert.strictEqual(sc.specialBatacazoFor(m, { hg: 2, ag: 1 }).matchId, "400021540");
+  assert.strictEqual(sc.specialBatacazoFor(arg, { hg: 0, ag: 2 }).bonus, 15);   // simétrico
+  assert.strictEqual(sc.specialBatacazoFor(m, { hg: 0, ag: 2 }), null);         // falló el ganador
+  assert.strictEqual(sc.specialBatacazoFor(otra, { hg: 2, ag: 1 }), null);      // otro cruce
+  assert.strictEqual(sc.specialBatacazoApplies(m, { hg: 2, ag: 1 }), true);
+  assert.strictEqual(sc.specialBatacazoApplies(m, { hg: 0, ag: 2 }), false);
+  assert.strictEqual(sc.effectiveBatacazoBonus(m, 0.9, { hg: 2, ag: 1 }), 15);  // ignora pCorrect
+  assert.strictEqual(sc.effectiveBatacazoBonus(m, 0.1, { hg: 2, ag: 1 }), 15);  // ignora pCorrect
+  assert.strictEqual(sc.effectiveBatacazoBonus(otra, 0.9, { hg: 2, ag: 1 }), 0); // sin promo → escala (favorito obvio)
+  assert.strictEqual(sc.effectiveBatacazoBonus(otra, 0.1, { hg: 2, ag: 1 }), 3); // sin promo → escala (raro)
+});
+
+test("batacazo 15: la promo de Cabo Verde sigue en el array (histórico intacto)", () => {
+  const ids = sc.SPECIAL_BATACAZOS.map(function (s) { return s.matchId; });
+  assert.ok(ids.indexOf("400021521") >= 0);                   // Cabo Verde +50
+  assert.ok(ids.indexOf("400021540") >= 0);                   // semi +15
+});
