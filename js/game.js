@@ -492,7 +492,7 @@
             : "Marca a <b>" + teamName(sp.teamId) + "</b> como tu batacazo y gana " + bonus + " si avanza.")
         : (kicked(m)
             ? "Batacazo especial: " + bonus + " si aciertas quién avanza."
-            : "Marca este partido como tu <b>Batacazo</b> y gana " + bonus + " si aciertas quién gana — " +
+            : "Marca este partido como tu <b>Batacazo</b> y gana " + bonus + " si aciertas quién avanza — " +
               esc(WC.slotName(m, "home")) + " o " + esc(WC.slotName(m, "away")) + ", da igual cuál.");
       return '<div class="promo-bat"><span class="promo-bat-tag">💥 Especial</span> <span class="promo-bat-txt">' + txt + "</span></div>";
     }
