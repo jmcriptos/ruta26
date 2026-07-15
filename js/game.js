@@ -429,7 +429,7 @@
       const pw = pr.hg > pr.ag ? m.home : (pr.hg < pr.ag ? m.away : (pr.adv === "home" ? m.home : pr.adv === "away" ? m.away : null));
       if (m.winner && pw === m.winner) correct++;
     });
-    // Usa el bono efectivo (incluye la promo especial de Cabo Verde) con el pick propio.
+    // Usa el bono efectivo (incluye las promos de scoring.SPECIAL_BATACAZOS) con el pick propio.
     const v = mine[m.id];
     const pred = v ? { hg: v.hg, ag: v.ag, adv: v.adv } : null;
     return WC.scoring.effectiveBatacazoBonus(m, total > 0 ? correct / total : 1, pred);
@@ -473,20 +473,27 @@
     return ' <small class="adv-band adv-' + band + '">' + txt + "</small>";
   }
 
-  // Aviso de la promo de una jornada (batacazo Cabo Verde = +50). Solo aparece en
-  // la tarjeta de ese cruce; el copy se adapta a si el partido está por jugarse,
-  // ya cerrado (locked/en vivo) o terminado con el premio logrado.
+  // Aviso de una promo de batacazo amarrada a un partido (ver scoring.SPECIAL_BATACAZOS).
+  // Con teamId hay que ir por ese equipo (Cabo Verde +50); sin teamId es simétrica y basta
+  // acertar quién gana (semi Inglaterra–Argentina +15). El copy se adapta a si el partido
+  // está por jugarse, ya cerrado (locked/en vivo) o terminado con el premio logrado.
   function specialPromoHtml(m) {
-    const sp = WC.scoring.SPECIAL_BATACAZO;
-    if (sp && m.id === sp.matchId) {
+    const sp = (WC.scoring.SPECIAL_BATACAZOS || []).find(function (x) { return x.matchId === m.id; });
+    if (sp) {
       const v = mine[m.id];
       if (m.status === "played" && m.hs != null) {
         const won = isCaptain(m.id) && v && WC.scoring.specialBatacazoApplies(m, { hg: v.hg, ag: v.ag, adv: v.adv });
-        return won ? '<div class="promo-bat won">💥 ¡Batacazo especial logrado! <b>+50 puntos</b></div>' : "";
+        return won ? '<div class="promo-bat won">💥 ¡Batacazo especial logrado! <b>+' + sp.bonus + " puntos</b></div>" : "";
       }
-      const txt = kicked(m)
-        ? "Batacazo especial: <b>+50 puntos</b> si Cabo Verde avanza."
-        : "Marca a <b>Cabo Verde</b> como tu batacazo y gana <b>+50 puntos</b> si avanza.";
+      const bonus = "<b>+" + sp.bonus + " puntos</b>";
+      const txt = sp.teamId
+        ? (kicked(m)
+            ? "Batacazo especial: " + bonus + " si " + teamName(sp.teamId) + " avanza."
+            : "Marca a <b>" + teamName(sp.teamId) + "</b> como tu batacazo y gana " + bonus + " si avanza.")
+        : (kicked(m)
+            ? "Batacazo especial: " + bonus + " si aciertas quién avanza."
+            : "Marca este partido como tu <b>Batacazo</b> y gana " + bonus + " si aciertas quién gana — " +
+              esc(WC.slotName(m, "home")) + " o " + esc(WC.slotName(m, "away")) + ", da igual cuál.");
       return '<div class="promo-bat"><span class="promo-bat-tag">💥 Especial</span> <span class="promo-bat-txt">' + txt + "</span></div>";
     }
     // Promo "Atrévete a Suiza": no exige batacazo, aplica a cualquier pick que vaya
