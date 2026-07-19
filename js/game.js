@@ -404,7 +404,13 @@
 
   function predType(m) { return m.stage === "group" ? "1x2" : "score"; }
   // Rondas KO donde alguien avanza (el toggle de empate y la pista del batacazo aplican).
-  function isAdvancingStage(m) { return m.stage === "r32" || m.stage === "r16" || m.stage === "qf" || m.stage === "sf"; }
+  // La final España–Argentina también necesita el selector para resolver quién gana por
+  // penales a efectos de su promo; ninguna otra final/terminal obtiene ese comportamiento.
+  function isAdvancingStage(m) {
+    return m.stage === "r32" || m.stage === "r16" || m.stage === "qf" || m.stage === "sf" ||
+      (m.stage === "final" && m.id === "400021543");
+  }
+  function isSpainFinal(m) { return m && m.stage === "final" && m.id === "400021543"; }
 
   // Día calendario del partido en Curazao (UTC-4, sin DST) → "YYYY-MM-DD".
   function matchDay(m) {
@@ -443,9 +449,13 @@
       if (v.hg < v.ag) return "Gana " + esc(WC.slotName(m, "away"));
       return "Empate";
     }
-    // KO (incl. final): marcador; si es empate, además a quién pasa por penales
+    // KO (incl. final): marcador; si es empate, además quién resuelve por penales.
     let s = v.hg + "–" + v.ag;
-    if (v.hg === v.ag && v.adv) s += " (pasa " + esc(WC.slotName(m, v.adv)) + ")";
+    if (v.hg === v.ag && v.adv) {
+      s += isSpainFinal(m)
+        ? " (gana " + esc(WC.slotName(m, v.adv)) + " por penales)"
+        : " (pasa " + esc(WC.slotName(m, v.adv)) + ")";
+    }
     return s;
   }
 
@@ -486,7 +496,11 @@
         return won ? '<div class="promo-bat won">💥 ¡Batacazo especial logrado! <b>+' + sp.bonus + " puntos</b></div>" : "";
       }
       const bonus = "<b>+" + sp.bonus + " puntos</b>";
-      const txt = sp.teamId
+      const txt = isSpainFinal(m)
+        ? (kicked(m)
+            ? "Batacazo especial: " + bonus + " si " + teamName(sp.teamId) + " gana y sale campeona."
+            : "Marca a <b>" + teamName(sp.teamId) + "</b> como tu <b>Batacazo</b> y gana " + bonus + " si sale campeona.")
+        : sp.teamId
         ? (kicked(m)
             ? "Batacazo especial: " + bonus + " si " + teamName(sp.teamId) + " avanza."
             : "Marca a <b>" + teamName(sp.teamId) + "</b> como tu batacazo y gana " + bonus + " si avanza.")
@@ -529,7 +543,11 @@
         : s.points > 0 ? '<span class="pts-chip win">+' + s.points + " " + (s.points === 1 ? "punto" : "puntos") + "</span>"
         : '<span class="pts-chip zero">0 puntos</span>';
       const wasCap = m.stage !== "group" && isCaptain(m.id);
-      const capBonus = wasCap && s.points > 0 ? captainBonusFor(m) : 0;
+      const pred = v ? { hg: v.hg, ag: v.ag, adv: v.adv } : null;
+      const specialWon = pred && WC.scoring.specialBatacazoApplies(m, pred);
+      // La promo de España puede cobrar con base 0 si solo difiere el método de victoria;
+      // el batacazo ordinario conserva el requisito histórico de haber sumado base.
+      const capBonus = wasCap && (s.points > 0 || specialWon) ? captainBonusFor(m) : 0;
       const capTag = wasCap ? ' <span class="cap-tag">💥 Batacazo' + (capBonus > 0 ? " +" + capBonus : "") + "</span>" : "";
       return '<div class="pick-card locked" data-match="' + m.id + '">' + head +
         '<div class="pick-foot"><small>Tu pick: ' + pickLabel(m, v) + " · Real: " + real + capTag + "</small>" + chip + "</div></div>";
@@ -548,14 +566,14 @@
         '<button type="button" data-step="ag,-1" aria-label="Menos goles visitante">−</button><b data-val="ag">' + ag + "</b>" +
         '<button type="button" data-step="ag,1" aria-label="Más goles visitante">+</button>' +
         '<span class="pcf">' + (aId ? teamFlag(aId) : "🏳️") + "</span></div>";
-      // pista gruesa del batacazo + toggle de avance (solo rondas con avance)
+      // pista gruesa del batacazo + selector de desempate donde scoring lo necesita
       if (isAdvancingStage(m)) {
         const hint = data.koHints[m.id] || {};
         const hb = bandLabel(hint.home), ab = bandLabel(hint.away);
         if (hb || ab) controls += '<div class="adv-hints"><span>' + (hId ? teamFlag(hId) : "🏳️") + hb + '</span><span>' + (aId ? teamFlag(aId) : "🏳️") + ab + "</span></div>";
         const isDraw = v && v.hg != null && v.hg === v.ag;
         controls += '<div class="ko-adv' + (isDraw ? "" : " hidden") + '">' +
-          '<span class="ko-adv-q">Empate → ¿quién avanza por penales?</span>' +
+          '<span class="ko-adv-q">Empate → ¿quién ' + (isSpainFinal(m) ? "gana" : "avanza") + ' por penales?</span>' +
           '<button type="button" data-adv="home" class="' + (v && v.adv === "home" ? "on" : "") + '"><span class="b1f">' + (hId ? teamFlag(hId) : "🏳️") + "</span>" + esc(WC.slotName(m, "home")) + "</button>" +
           '<button type="button" data-adv="away" class="' + (v && v.adv === "away" ? "on" : "") + '"><span class="b1f">' + (aId ? teamFlag(aId) : "🏳️") + "</span>" + esc(WC.slotName(m, "away")) + "</button></div>";
       }

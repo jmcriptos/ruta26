@@ -34,7 +34,9 @@
     // 3 jul 2026 — Argentina vs Cabo Verde (R32): +50 por ir con Cabo Verde si avanza.
     { matchId: "400021521", teamId: "43850", bonus: 50 },
     // 15 jul 2026 — semi Inglaterra vs Argentina: +15 para cualquiera de los dos.
-    { matchId: "400021540", teamId: null, bonus: 15 }
+    { matchId: "400021540", teamId: null, bonus: 15 },
+    // 19 jul 2026 — final España vs Argentina: +25 solo si España sale campeona.
+    { matchId: "400021543", teamId: "43969", bonus: 25 }
   ];
 
   // Promo "Atrévete a Suiza" — un solo partido (cuartos, Argentina vs Suiza, 12 jul
@@ -64,7 +66,7 @@
   // exige acertar quién avanza; si la entrada amarra un teamId, además exige que gane ese
   // equipo. pred = {hg,ag,adv}.
   function specialBatacazoFor(match, pred) {
-    if (!match || !pred || !match.winner) return null;
+    if (!match || match.status !== "played" || !pred || !match.winner) return null;
     for (let i = 0; i < SPECIAL_BATACAZOS.length; i++) {
       const sp = SPECIAL_BATACAZOS[i];
       if (sp.matchId !== match.id) continue;
@@ -90,8 +92,15 @@
 
   // Total de un partido con batacazo: lo ganado + el bono (solo si acertó).
   function captainTotal(s, match, pCorrect, pred) {
-    if (!s || s.points <= 0 || match.stage === "group") return s ? s.points : 0;
-    return s.points + effectiveBatacazoBonus(match, pCorrect, pred);
+    const points = s ? s.points : 0;
+    if (!s || s.kind === "none" || s.kind === "pending" || !match || match.stage === "group") return points;
+    // Una promo especial puede reconocer al ganador pronosticado aunque el método
+    // difiera del resultado real (p. ej. España en juego vs España por penales).
+    const sp = specialBatacazoFor(match, pred);
+    if (sp) return points + sp.bonus;
+    // El batacazo ordinario conserva su guard histórico: un fallo base nunca cobra.
+    if (points <= 0) return points;
+    return points + captainBonus(match, pCorrect);
   }
 
   function maxCaptainBonus(match) {
@@ -108,7 +117,13 @@
     let base;
     if (match.stage === "group") base = POINTS.match;
     else base = POINTS.finalExact + (isAdvancingRound(match.stage) ? POINTS.koAdvance : 0);
-    return base + (opts && opts.captain ? maxCaptainBonus(match) : 0);
+    if (!opts || !opts.captain) return base;
+    // Solo la promo nueva de la final entra en el potencial; las promos históricas
+    // conservaron deliberadamente el techo ordinario en engagement.
+    const sp = match.id === "400021543"
+      ? SPECIAL_BATACAZOS.find(function (promo) { return promo.matchId === match.id; })
+      : null;
+    return base + (sp ? sp.bonus : maxCaptainBonus(match));
   }
 
   function sign(n) { return n > 0 ? 1 : (n < 0 ? -1 : 0); }
