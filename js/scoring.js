@@ -35,8 +35,8 @@
     { matchId: "400021521", teamId: "43850", bonus: 50 },
     // 15 jul 2026 — semi Inglaterra vs Argentina: +15 para cualquiera de los dos.
     { matchId: "400021540", teamId: null, bonus: 15 },
-    // 19 jul 2026 — final España vs Argentina: +25 solo si España sale campeona.
-    { matchId: "400021543", teamId: "43969", bonus: 25 }
+    // 19 jul 2026 — final España vs Argentina: +25 para quien acierte al campeón.
+    { matchId: "400021543", teamId: null, bonus: 25 }
   ];
 
   // Promo "Atrévete a Suiza" — un solo partido (cuartos, Argentina vs Suiza, 12 jul
@@ -95,7 +95,7 @@
     const points = s ? s.points : 0;
     if (!s || s.kind === "none" || s.kind === "pending" || !match || match.stage === "group") return points;
     // Una promo especial puede reconocer al ganador pronosticado aunque el método
-    // difiera del resultado real (p. ej. España en juego vs España por penales).
+    // difiera del resultado real (victoria en juego vs victoria por penales).
     const sp = specialBatacazoFor(match, pred);
     if (sp) return points + sp.bonus;
     // El batacazo ordinario conserva su guard histórico: un fallo base nunca cobra.

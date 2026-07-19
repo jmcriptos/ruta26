@@ -658,15 +658,15 @@ test("batacazo 15: la promo de Cabo Verde sigue en el array (histórico intacto)
   assert.ok(ids.indexOf("400021540") >= 0);                   // semi +15
 });
 
-// Promo de la final (19 jul 2026): España (local 43969) vs Argentina
-// (visitante 43922), id 400021543. El batacazo paga +25 únicamente si España
-// sale campeona y el pick también la da ganadora, sin importar el método.
-function finalEspMatch(hs, as, extra) {
+// Promo simétrica de la final (19 jul 2026): España (local 43969) vs Argentina
+// (visitante 43922), id 400021543. El batacazo paga +25 si el pick da ganador
+// al campeón real, cualquiera de los dos, sin importar el método de victoria.
+function finalMatch(hs, as, extra) {
   return Object.assign({ id: "400021543", stage: "final", status: "played", hs: hs, as: as, home: "43969", away: "43922" }, extra || {});
 }
 
 test("batacazo final España: exacto suma 3 + 25 = 28", () => {
-  const m = finalEspMatch(2, 1, { winner: "43969" });
+  const m = finalMatch(2, 1, { winner: "43969" });
   const pred = { hg: 2, ag: 1 };
   const s = sc.scoreMatch(pred, m);
   assert.deepStrictEqual(s, { points: 3, kind: "exact" });
@@ -674,7 +674,7 @@ test("batacazo final España: exacto suma 3 + 25 = 28", () => {
 });
 
 test("batacazo final España: resultado no exacto suma 1 + 25 = 26", () => {
-  const m = finalEspMatch(2, 1, { winner: "43969" });
+  const m = finalMatch(2, 1, { winner: "43969" });
   const pred = { hg: 1, ag: 0 };
   const s = sc.scoreMatch(pred, m);
   assert.deepStrictEqual(s, { points: 1, kind: "outcome" });
@@ -682,7 +682,7 @@ test("batacazo final España: resultado no exacto suma 1 + 25 = 26", () => {
 });
 
 test("batacazo final España: cobra 25 con base 0 si España gana por penales", () => {
-  const m = finalEspMatch(1, 1, { winner: "43969", hp: 4, ap: 3 });
+  const m = finalMatch(1, 1, { winner: "43969", hp: 4, ap: 3 });
   const pred = { hg: 2, ag: 1 };                              // España en juego
   const s = sc.scoreMatch(pred, m);
   assert.deepStrictEqual(s, { points: 0, kind: "miss" });     // el marcador real fue empate
@@ -691,7 +691,7 @@ test("batacazo final España: cobra 25 con base 0 si España gana por penales", 
 });
 
 test("batacazo final España: empate pronosticado + España por penales cobra 28 si es exacto", () => {
-  const m = finalEspMatch(1, 1, { winner: "43969", hp: 4, ap: 3 });
+  const m = finalMatch(1, 1, { winner: "43969", hp: 4, ap: 3 });
   const pred = { hg: 1, ag: 1, adv: "home" };
   const s = sc.scoreMatch(pred, m);
   assert.deepStrictEqual(s, { points: 3, kind: "exact" });
@@ -699,7 +699,7 @@ test("batacazo final España: empate pronosticado + España por penales cobra 28
 });
 
 test("batacazo final España: cobra 25 con base 0 si predijo penales y España gana en juego", () => {
-  const m = finalEspMatch(2, 1, { winner: "43969" });
+  const m = finalMatch(2, 1, { winner: "43969" });
   const pred = { hg: 1, ag: 1, adv: "home" };                 // España por penales
   const s = sc.scoreMatch(pred, m);
   assert.deepStrictEqual(s, { points: 0, kind: "miss" });
@@ -707,7 +707,7 @@ test("batacazo final España: cobra 25 con base 0 si predijo penales y España g
 });
 
 test("batacazo final España: empate pronosticado sin lado no cobra el fijo", () => {
-  const m = finalEspMatch(1, 1, { winner: "43969", hp: 4, ap: 3 });
+  const m = finalMatch(1, 1, { winner: "43969", hp: 4, ap: 3 });
   const pred = { hg: 1, ag: 1 };
   const s = sc.scoreMatch(pred, m);
   assert.deepStrictEqual(s, { points: 3, kind: "exact" });
@@ -716,7 +716,7 @@ test("batacazo final España: empate pronosticado sin lado no cobra el fijo", ()
 });
 
 test("batacazo final España: si España gana pero el pick da Argentina no cobra", () => {
-  const m = finalEspMatch(2, 1, { winner: "43969" });
+  const m = finalMatch(2, 1, { winner: "43969" });
   const pred = { hg: 1, ag: 2 };
   const s = sc.scoreMatch(pred, m);
   assert.deepStrictEqual(s, { points: 0, kind: "miss" });
@@ -724,18 +724,59 @@ test("batacazo final España: si España gana pero el pick da Argentina no cobra
   assert.strictEqual(sc.captainTotal(s, m, 0.1, pred), 0);
 });
 
-test("batacazo final España: si gana Argentina nunca paga 25 y conserva la escala normal", () => {
-  const m = finalEspMatch(1, 2, { winner: "43922" });
-  const predArgentina = { hg: 1, ag: 2 };
-  const predEspana = { hg: 1, ag: 0 };
-  const exact = sc.scoreMatch(predArgentina, m);
-  assert.strictEqual(sc.specialBatacazoFor(m, predArgentina), null);
-  assert.strictEqual(sc.captainTotal(exact, m, 0.1, predArgentina), 6); // 3 + 3 ordinario
-  assert.strictEqual(sc.captainTotal(sc.scoreMatch(predEspana, m), m, 0.1, predEspana), 0);
+test("batacazo final Argentina: exacto suma 3 + 25 = 28", () => {
+  const m = finalMatch(1, 2, { winner: "43922" });
+  const pred = { hg: 1, ag: 2 };
+  const s = sc.scoreMatch(pred, m);
+  assert.deepStrictEqual(s, { points: 3, kind: "exact" });
+  assert.strictEqual(sc.specialBatacazoFor(m, pred).bonus, 25);
+  assert.strictEqual(sc.captainTotal(s, m, 0.9, pred), 28);
 });
 
-test("batacazo final España: está aislado por matchId", () => {
-  const m = finalEspMatch(2, 1, { winner: "43969", id: "otro-partido" });
+test("batacazo final Argentina: resultado no exacto suma 1 + 25 = 26", () => {
+  const m = finalMatch(1, 2, { winner: "43922" });
+  const pred = { hg: 0, ag: 1 };
+  const s = sc.scoreMatch(pred, m);
+  assert.deepStrictEqual(s, { points: 1, kind: "outcome" });
+  assert.strictEqual(sc.captainTotal(s, m, 0.9, pred), 26);
+});
+
+test("batacazo final Argentina: cobra 25 con base 0 si Argentina gana por penales", () => {
+  const m = finalMatch(1, 1, { winner: "43922", hp: 3, ap: 4 });
+  const pred = { hg: 1, ag: 2 };                              // Argentina en juego
+  const s = sc.scoreMatch(pred, m);
+  assert.deepStrictEqual(s, { points: 0, kind: "miss" });
+  assert.strictEqual(sc.specialBatacazoFor(m, pred).teamId, null);
+  assert.strictEqual(sc.captainTotal(s, m, 0.9, pred), 25);
+});
+
+test("batacazo final Argentina: empate pronosticado + adv away cobra 28 si es exacto", () => {
+  const m = finalMatch(1, 1, { winner: "43922", hp: 3, ap: 4 });
+  const pred = { hg: 1, ag: 1, adv: "away" };
+  const s = sc.scoreMatch(pred, m);
+  assert.deepStrictEqual(s, { points: 3, kind: "exact" });
+  assert.strictEqual(sc.captainTotal(s, m, 0.9, pred), 28);
+});
+
+test("batacazo final Argentina: cobra 25 con base 0 si predijo penales y Argentina gana en juego", () => {
+  const m = finalMatch(1, 2, { winner: "43922" });
+  const pred = { hg: 1, ag: 1, adv: "away" };
+  const s = sc.scoreMatch(pred, m);
+  assert.deepStrictEqual(s, { points: 0, kind: "miss" });
+  assert.strictEqual(sc.captainTotal(s, m, 0.9, pred), 25);
+});
+
+test("batacazo final Argentina: si Argentina gana pero el pick da España no cobra", () => {
+  const m = finalMatch(1, 2, { winner: "43922" });
+  const pred = { hg: 1, ag: 0 };
+  const s = sc.scoreMatch(pred, m);
+  assert.deepStrictEqual(s, { points: 0, kind: "miss" });
+  assert.strictEqual(sc.specialBatacazoFor(m, pred), null);
+  assert.strictEqual(sc.captainTotal(s, m, 0.1, pred), 0);
+});
+
+test("batacazo final: está aislado por matchId", () => {
+  const m = finalMatch(2, 1, { winner: "43969", id: "otro-partido" });
   const pred = { hg: 2, ag: 1 };
   const s = sc.scoreMatch(pred, m);
   assert.strictEqual(sc.specialBatacazoFor(m, pred), null);
@@ -744,7 +785,7 @@ test("batacazo final España: está aislado por matchId", () => {
 
 test("batacazo final España: ranking exige haber marcado el partido", () => {
   const profiles = [{ id: "u1", username: "ana" }, { id: "u2", username: "leo" }];
-  const matches = [finalEspMatch(2, 1, { winner: "43969" })];
+  const matches = [finalMatch(2, 1, { winner: "43969" })];
   const predictions = [
     { user_id: "u1", match_id: "400021543", hg: 2, ag: 1 },
     { user_id: "u2", match_id: "400021543", hg: 2, ag: 1 }
@@ -754,10 +795,40 @@ test("batacazo final España: ranking exige haber marcado el partido", () => {
   assert.strictEqual(rows.find(function (r) { return r.userId === "u2"; }).points, 3);
 });
 
+test("batacazo final Argentina: ranking suma 28 solo a quien marcó Batacazo", () => {
+  const profiles = [{ id: "u1", username: "ana" }, { id: "u2", username: "leo" }];
+  const matches = [finalMatch(1, 2, { winner: "43922" })];
+  const predictions = [
+    { user_id: "u1", match_id: "400021543", hg: 1, ag: 2 },
+    { user_id: "u2", match_id: "400021543", hg: 1, ag: 2 }
+  ];
+  const rows = sc.buildLeaderboard(profiles, predictions, [], matches, [{ user_id: "u1", match_id: "400021543" }]);
+  assert.strictEqual(rows.find(function (r) { return r.userId === "u1"; }).points, 28);
+  assert.strictEqual(rows.find(function (r) { return r.userId === "u2"; }).points, 3);
+});
+
+test("batacazo final Argentina: ranking paga 25 con adv away y base 0", () => {
+  const profiles = [{ id: "u1", username: "ana" }];
+  const matches = [finalMatch(1, 2, { winner: "43922" })];
+  const predictions = [{ user_id: "u1", match_id: "400021543", hg: 1, ag: 1, adv: "away" }];
+  const rows = sc.buildLeaderboard(profiles, predictions, [], matches, [{ user_id: "u1", match_id: "400021543" }]);
+  assert.strictEqual(sc.scoreMatch({ hg: 1, ag: 1, adv: "away" }, matches[0]).points, 0);
+  assert.strictEqual(rows[0].points, 25);
+});
+
 test("batacazo final España: ranking en vivo paga 25 aunque la base sea 0", () => {
   const profiles = [{ id: "u1", username: "ana" }];
-  const matches = [finalEspMatch(1, 1, { status: "live", winner: null, hp: 4, ap: 3 })];
+  const matches = [finalMatch(1, 1, { status: "live", winner: null, hp: 4, ap: 3 })];
   const predictions = [{ user_id: "u1", match_id: "400021543", hg: 2, ag: 1 }];
+  const rows = sc.buildLiveLeaderboard(profiles, predictions, [], matches, [{ user_id: "u1", match_id: "400021543" }]);
+  assert.strictEqual(rows[0].points, 25);
+  assert.strictEqual(rows[0].livePoints, 25);
+});
+
+test("batacazo final Argentina: ranking en vivo paga 25 con adv away/base 0", () => {
+  const profiles = [{ id: "u1", username: "ana" }];
+  const matches = [finalMatch(1, 1, { status: "live", winner: null, hp: 3, ap: 4 })];
+  const predictions = [{ user_id: "u1", match_id: "400021543", hg: 1, ag: 2 }];
   const rows = sc.buildLiveLeaderboard(profiles, predictions, [], matches, [{ user_id: "u1", match_id: "400021543" }]);
   assert.strictEqual(rows[0].points, 25);
   assert.strictEqual(rows[0].livePoints, 25);
@@ -765,7 +836,7 @@ test("batacazo final España: ranking en vivo paga 25 aunque la base sea 0", () 
 
 test("batacazo final España: ganador provisional live no contamina el ranking oficial", () => {
   const profiles = [{ id: "u1", username: "ana" }];
-  const liveFinal = finalEspMatch(1, 1, { status: "live", winner: "43969", hp: 4, ap: 3 });
+  const liveFinal = finalMatch(1, 1, { status: "live", winner: "43969", hp: 4, ap: 3 });
   const predictions = [{ user_id: "u1", match_id: "400021543", hg: 2, ag: 1 }];
   const captains = [{ user_id: "u1", match_id: "400021543" }];
   assert.strictEqual(sc.specialBatacazoFor(liveFinal, { hg: 2, ag: 1 }), null);
@@ -776,7 +847,7 @@ test("batacazo final España: ganador provisional live no contamina el ranking o
 });
 
 test("batacazo final España: scoring ausente o pendiente nunca cobra la promo", () => {
-  const playedFinal = finalEspMatch(2, 1, { winner: "43969" });
+  const playedFinal = finalMatch(2, 1, { winner: "43969" });
   const pred = { hg: 2, ag: 1 };
   assert.strictEqual(sc.captainTotal(null, playedFinal, 0.9, pred), 0);
   assert.strictEqual(sc.captainTotal({ points: 0, kind: "pending" }, playedFinal, 0.9, pred), 0);
@@ -785,7 +856,7 @@ test("batacazo final España: scoring ausente o pendiente nunca cobra la promo",
 
 test("batacazo final España: el campeón elegido sigue siendo acumulado hasta 15", () => {
   const profiles = [{ id: "u1", username: "ana" }, { id: "u2", username: "leo" }];
-  const matches = [finalEspMatch(2, 1, { winner: "43969" })];
+  const matches = [finalMatch(2, 1, { winner: "43969" })];
   const predictions = [
     { user_id: "u1", match_id: "400021543", hg: 2, ag: 1 },
     { user_id: "u2", match_id: "400021543", hg: 2, ag: 1 }
@@ -800,8 +871,19 @@ test("batacazo final España: el campeón elegido sigue siendo acumulado hasta 1
   assert.strictEqual(rows.find(function (r) { return r.userId === "u2"; }).points, 18); // 3 + 15
 });
 
-test("batacazo final España: potencial máximo y promos históricas permanecen correctos", () => {
-  const scheduled = finalEspMatch(null, null, { status: "scheduled", winner: null });
+test("batacazo final Argentina: campeón elegido conserva acumulado 15", () => {
+  const profiles = [{ id: "u1", username: "ana" }];
+  const matches = [finalMatch(1, 2, { winner: "43922" })];
+  const predictions = [{ user_id: "u1", match_id: "400021543", hg: 1, ag: 2 }];
+  const picks = [{ user_id: "u1", team_id: "43922" }];
+  const captains = [{ user_id: "u1", match_id: "400021543" }];
+  const rows = sc.buildLeaderboard(profiles, predictions, picks, matches, captains);
+  assert.strictEqual(rows[0].bonus, 15);
+  assert.strictEqual(rows[0].points, 43); // 3 + 25 + 15 acumulados
+});
+
+test("batacazo final simétrico: potencial máximo y promos históricas permanecen correctos", () => {
+  const scheduled = finalMatch(null, null, { status: "scheduled", winner: null });
   assert.strictEqual(sc.maxMatchPoints(scheduled), 3);
   assert.strictEqual(sc.maxMatchPoints(scheduled, { captain: true }), 28);
   assert.strictEqual(sc.maxMatchPoints(cvMatch(null, null, { status: "scheduled", winner: null }), { captain: true }), 7);
@@ -811,6 +893,6 @@ test("batacazo final España: potencial máximo y promos históricas permanecen 
   }), [
     { matchId: "400021521", teamId: "43850", bonus: 50 },
     { matchId: "400021540", teamId: null, bonus: 15 },
-    { matchId: "400021543", teamId: "43969", bonus: 25 }
+    { matchId: "400021543", teamId: null, bonus: 25 }
   ]);
 });

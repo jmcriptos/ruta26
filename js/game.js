@@ -410,7 +410,7 @@
     return m.stage === "r32" || m.stage === "r16" || m.stage === "qf" || m.stage === "sf" ||
       (m.stage === "final" && m.id === "400021543");
   }
-  function isSpainFinal(m) { return m && m.stage === "final" && m.id === "400021543"; }
+  function isBat25Final(m) { return m && m.stage === "final" && m.id === "400021543"; }
 
   // Día calendario del partido en Curazao (UTC-4, sin DST) → "YYYY-MM-DD".
   function matchDay(m) {
@@ -452,7 +452,7 @@
     // KO (incl. final): marcador; si es empate, además quién resuelve por penales.
     let s = v.hg + "–" + v.ag;
     if (v.hg === v.ag && v.adv) {
-      s += isSpainFinal(m)
+      s += isBat25Final(m)
         ? " (gana " + esc(WC.slotName(m, v.adv)) + " por penales)"
         : " (pasa " + esc(WC.slotName(m, v.adv)) + ")";
     }
@@ -496,10 +496,11 @@
         return won ? '<div class="promo-bat won">💥 ¡Batacazo especial logrado! <b>+' + sp.bonus + " puntos</b></div>" : "";
       }
       const bonus = "<b>+" + sp.bonus + " puntos</b>";
-      const txt = isSpainFinal(m)
+      const txt = isBat25Final(m)
         ? (kicked(m)
-            ? "Batacazo especial: " + bonus + " si " + teamName(sp.teamId) + " gana y sale campeona."
-            : "Marca a <b>" + teamName(sp.teamId) + "</b> como tu <b>Batacazo</b> y gana " + bonus + " si sale campeona.")
+            ? "Batacazo especial: " + bonus + " si aciertas quién sale campeón."
+            : "Marca esta final como tu <b>Batacazo</b> y gana " + bonus + " si aciertas quién sale campeón — " +
+              esc(WC.slotName(m, "home")) + " o " + esc(WC.slotName(m, "away")) + ".")
         : sp.teamId
         ? (kicked(m)
             ? "Batacazo especial: " + bonus + " si " + teamName(sp.teamId) + " avanza."
@@ -545,7 +546,7 @@
       const wasCap = m.stage !== "group" && isCaptain(m.id);
       const pred = v ? { hg: v.hg, ag: v.ag, adv: v.adv } : null;
       const specialWon = pred && WC.scoring.specialBatacazoApplies(m, pred);
-      // La promo de España puede cobrar con base 0 si solo difiere el método de victoria;
+      // La promo de la final puede cobrar con base 0 si solo difiere el método de victoria;
       // el batacazo ordinario conserva el requisito histórico de haber sumado base.
       const capBonus = wasCap && (s.points > 0 || specialWon) ? captainBonusFor(m) : 0;
       const capTag = wasCap ? ' <span class="cap-tag">💥 Batacazo' + (capBonus > 0 ? " +" + capBonus : "") + "</span>" : "";
@@ -573,7 +574,7 @@
         if (hb || ab) controls += '<div class="adv-hints"><span>' + (hId ? teamFlag(hId) : "🏳️") + hb + '</span><span>' + (aId ? teamFlag(aId) : "🏳️") + ab + "</span></div>";
         const isDraw = v && v.hg != null && v.hg === v.ag;
         controls += '<div class="ko-adv' + (isDraw ? "" : " hidden") + '">' +
-          '<span class="ko-adv-q">Empate → ¿quién ' + (isSpainFinal(m) ? "gana" : "avanza") + ' por penales?</span>' +
+          '<span class="ko-adv-q">Empate → ¿quién ' + (isBat25Final(m) ? "gana" : "avanza") + ' por penales?</span>' +
           '<button type="button" data-adv="home" class="' + (v && v.adv === "home" ? "on" : "") + '"><span class="b1f">' + (hId ? teamFlag(hId) : "🏳️") + "</span>" + esc(WC.slotName(m, "home")) + "</button>" +
           '<button type="button" data-adv="away" class="' + (v && v.adv === "away" ? "on" : "") + '"><span class="b1f">' + (aId ? teamFlag(aId) : "🏳️") + "</span>" + esc(WC.slotName(m, "away")) + "</button></div>";
       }
